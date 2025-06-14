@@ -1,13 +1,24 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { MainLayout } from '@/components/layout/MainLayout';
+import { Dashboard } from '@/components/dashboard/Dashboard';
+import { CapTableEditor } from '@/components/cap-table/CapTableEditor';
+import { EntityCanvas } from '@/components/canvas/EntityCanvas';
+import { DocumentRepository } from '@/components/documents/DocumentRepository';
+import { ComplianceTimeline } from '@/components/compliance/ComplianceTimeline';
 
 const Index = () => {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">Welcome to Your Blank App</h1>
-        <p className="text-xl text-muted-foreground">Start building your amazing project here!</p>
-      </div>
-    </div>
+    <MainLayout>
+      <Routes>
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/cap-table" element={<CapTableEditor />} />
+        <Route path="/structure" element={<EntityCanvas />} />
+        <Route path="/documents" element={<DocumentRepository />} />
+        <Route path="/compliance" element={<ComplianceTimeline />} />
+      </Routes>
+    </MainLayout>
   );
 };
 
