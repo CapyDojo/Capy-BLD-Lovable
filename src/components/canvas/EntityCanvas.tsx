@@ -194,7 +194,7 @@ export const EntityCanvas: React.FC = () => {
               </label>
               <input
                 type="text"
-                value={selectedNode.data.name}
+                value={String(selectedNode.data.name || '')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 onChange={(e) => {
                   const updatedNodes = nodes.map((node) =>
@@ -213,7 +213,7 @@ export const EntityCanvas: React.FC = () => {
                 Entity Type
               </label>
               <select
-                value={selectedNode.data.type}
+                value={String(selectedNode.data.type || '')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 onChange={(e) => {
                   const updatedNodes = nodes.map((node) =>
@@ -237,7 +237,7 @@ export const EntityCanvas: React.FC = () => {
                 Jurisdiction
               </label>
               <select
-                value={selectedNode.data.jurisdiction}
+                value={String(selectedNode.data.jurisdiction || '')}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 onChange={(e) => {
                   const updatedNodes = nodes.map((node) =>
