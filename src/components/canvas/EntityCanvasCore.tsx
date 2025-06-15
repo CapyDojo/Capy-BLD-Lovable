@@ -1,3 +1,4 @@
+
 import React, { useCallback } from 'react';
 import { 
   ReactFlow, 
@@ -99,17 +100,6 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
     navigate(`/cap-table?entityId=${node.id}`);
   }, [navigate]);
 
-  const getConnectionPoints = (node: Node) => {
-    const position = node.position;
-    const width = 200;
-    const height = 80;
-    
-    return {
-      top: { x: position.x + width / 2, y: position.y },
-      bottom: { x: position.x + width / 2, y: position.y + height }
-    };
-  };
-
   return (
     <div className="flex-1 relative" ref={reactFlowWrapper}>
       <div className="absolute top-4 left-4 z-10 bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
@@ -124,20 +114,14 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
       </div>
       
       {/* Magnetic Field Overlays */}
-      {isDragging && magneticZones.map((zone) => {
-        const node = nodes.find(n => n.id === zone.nodeId);
-        if (!node) return null;
-        
-        const connectionPoints = getConnectionPoints(node);
-        return (
-          <MagneticField
-            key={`${zone.nodeId}-${zone.zone}`}
-            zone={zone.zone!}
-            nodeId={zone.nodeId}
-            position={connectionPoints.top}
-          />
-        );
-      })}
+      {isDragging && magneticZones.map((zone, index) => (
+        <MagneticField
+          key={`${zone.nodeId}-${zone.zone}-${index}`}
+          zone={zone.zone!}
+          nodeId={zone.nodeId}
+          position={zone.screenPosition}
+        />
+      ))}
 
       {/* Connection Preview */}
       {connectionPreview && (

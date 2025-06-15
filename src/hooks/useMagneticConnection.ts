@@ -1,11 +1,12 @@
 
 import { useState, useCallback, useRef } from 'react';
-import { Node, Edge } from '@xyflow/react';
+import { Node, Edge, useReactFlow } from '@xyflow/react';
 
 interface MagneticZone {
   nodeId: string;
   zone: 'detection' | 'strongPull' | 'snap' | null;
   distance: number;
+  screenPosition: { x: number; y: number };
 }
 
 interface ConnectionPreview {
@@ -20,6 +21,7 @@ export const useMagneticConnection = (
   edges: Edge[],
   onConnect: (connection: { source: string; target: string; label: string }) => void
 ) => {
+  const { getViewport, project, getNode } = useReactFlow();
   const [isDragging, setIsDragging] = useState(false);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [magneticZones, setMagneticZones] = useState<MagneticZone[]>([]);
@@ -67,9 +69,13 @@ export const useMagneticConnection = (
     const width = 200; // Default node width
     const height = 80; // Default node height
     
+    // Convert flow coordinates to screen coordinates
+    const topPoint = project({ x: position.x + width / 2, y: position.y });
+    const bottomPoint = project({ x: position.x + width / 2, y: position.y + height });
+
     const points = {
-      top: { x: position.x + width / 2, y: position.y },
-      bottom: { x: position.x + width / 2, y: position.y + height }
+      top: topPoint,
+      bottom: bottomPoint
     };
 
     // Individuals only have bottom connector
@@ -78,7 +84,7 @@ export const useMagneticConnection = (
     }
 
     return points;
-  }, []);
+  }, [project]);
 
   const updateMagneticZones = useCallback((draggedNode: Node, draggedNodePosition: { x: number; y: number }) => {
     console.log('🎯 Updating magnetic zones for:', draggedNode.id, 'at position:', draggedNodePosition);
@@ -91,7 +97,9 @@ export const useMagneticConnection = (
       const newZones: MagneticZone[] = [];
       let closestSnap: MagneticZone | null = null;
 
-      const draggedPoints = getConnectionPoints({ ...draggedNode, position: draggedNodePosition });
+      // Get the current dragged node with updated position
+      const currentDraggedNode = { ...draggedNode, position: draggedNodePosition };
+      const draggedPoints = getConnectionPoints(currentDraggedNode);
 
       nodes.forEach(node => {
         if (node.id === draggedNode.id) return;
@@ -115,7 +123,8 @@ export const useMagneticConnection = (
               const magneticZone: MagneticZone = {
                 nodeId: node.id,
                 zone,
-                distance
+                distance,
+                screenPosition: targetPos
               };
 
               newZones.push(magneticZone);
