@@ -1,4 +1,3 @@
-
 import React, { useCallback } from 'react';
 import { 
   ReactFlow, 
@@ -101,14 +100,14 @@ const ReactFlowCanvas: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: Reac
     navigate(`/cap-table?entityId=${node.id}`);
   }, [navigate]);
 
-  // Convert ReactFlow-relative coordinates to page-absolute coordinates
-  const getAbsolutePosition = useCallback((reactFlowPosition: { x: number; y: number }) => {
-    if (!reactFlowWrapper.current) return reactFlowPosition;
+  // Convert viewport-relative coordinates to coordinates relative to the ReactFlow wrapper
+  const getWrapperRelativePosition = useCallback((viewportPosition: { x: number; y: number }) => {
+    if (!reactFlowWrapper.current) return viewportPosition;
     
     const rect = reactFlowWrapper.current.getBoundingClientRect();
     return {
-      x: reactFlowPosition.x + rect.left,
-      y: reactFlowPosition.y + rect.top
+      x: viewportPosition.x - rect.left,
+      y: viewportPosition.y - rect.top,
     };
   }, [reactFlowWrapper]);
 
@@ -125,15 +124,15 @@ const ReactFlowCanvas: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: Reac
         )}
       </div>
       
-      {/* Magnetic Field Overlays - positioned absolutely on the page */}
+      {/* Magnetic Field Overlays - positioned relative to the wrapper */}
       {isDragging && magneticZones.map((zone, index) => {
-        const absolutePosition = getAbsolutePosition(zone.screenPosition);
+        const relativePosition = getWrapperRelativePosition(zone.screenPosition);
         return (
           <MagneticField
             key={`${zone.nodeId}-${zone.zone}-${index}`}
             zone={zone.zone!}
             nodeId={zone.nodeId}
-            position={absolutePosition}
+            position={relativePosition}
           />
         );
       })}
@@ -141,8 +140,8 @@ const ReactFlowCanvas: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: Reac
       {/* Connection Preview */}
       {connectionPreview && (
         <ConnectionPreview
-          sourcePosition={getAbsolutePosition(connectionPreview.sourcePosition)}
-          targetPosition={getAbsolutePosition(connectionPreview.targetPosition)}
+          sourcePosition={getWrapperRelativePosition(connectionPreview.sourcePosition)}
+          targetPosition={getWrapperRelativePosition(connectionPreview.targetPosition)}
         />
       )}
       
