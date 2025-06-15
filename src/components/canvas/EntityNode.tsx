@@ -9,6 +9,8 @@ interface EntityNodeData {
   jurisdiction: string;
   isInMagneticField?: boolean;
   magneticZone?: 'detection' | 'strongPull' | 'snap';
+  onDragStart?: (nodeId: string) => void;
+  onDragEnd?: () => void;
 }
 
 interface EntityNodeProps {
@@ -73,8 +75,8 @@ export const EntityNode: React.FC<EntityNodeProps> = ({
   const colorClass = getEntityColor(data.type);
   const magneticGlow = getMagneticGlow(data.magneticZone);
 
-  const handleDragStart = () => {
-    console.log('🎯 EntityNode drag start:', id);
+  const handleMouseDown = () => {
+    console.log('🎯 EntityNode mouse down (drag start):', id);
     if (data.onDragStart) {
       data.onDragStart(id);
     }
@@ -83,8 +85,8 @@ export const EntityNode: React.FC<EntityNodeProps> = ({
     }
   };
 
-  const handleDragEnd = () => {
-    console.log('🎯 EntityNode drag end:', id);
+  const handleMouseUp = () => {
+    console.log('🎯 EntityNode mouse up (drag end):', id);
     if (data.onDragEnd) {
       data.onDragEnd();
     }
@@ -102,8 +104,8 @@ export const EntityNode: React.FC<EntityNodeProps> = ({
         ${magneticGlow}
         hover:shadow-md cursor-pointer
       `}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
     >
       <Handle 
         type="target" 
