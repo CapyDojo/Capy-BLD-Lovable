@@ -63,13 +63,13 @@ export const useMagneticConnection = (
   }, [nodes, edges]);
 
   const getConnectionPoints = useCallback((node: Node) => {
-    const rect = node.data?.basePosition || node.position;
+    const position = node.position;
     const width = 200; // Default node width
     const height = 80; // Default node height
     
     const points = {
-      top: { x: rect.x + width / 2, y: rect.y },
-      bottom: { x: rect.x + width / 2, y: rect.y + height }
+      top: { x: position.x + width / 2, y: position.y },
+      bottom: { x: position.x + width / 2, y: position.y + height }
     };
 
     // Individuals only have bottom connector
@@ -138,14 +138,17 @@ export const useMagneticConnection = (
   }, [nodes, isValidConnection, getConnectionPoints, calculateDistance, getMagneticZone]);
 
   const handleDragStart = useCallback((nodeId: string) => {
+    console.log('Magnetic drag start:', nodeId);
     setIsDragging(true);
     setDraggedNodeId(nodeId);
   }, []);
 
   const handleDragEnd = useCallback(() => {
+    console.log('Magnetic drag end, checking for snap zones');
     // Check for snap zone connection
     const snapZone = magneticZones.find(zone => zone.zone === 'snap');
     if (snapZone && draggedNodeId && connectionPreview) {
+      console.log('Creating connection:', connectionPreview);
       setPendingConnection({
         source: connectionPreview.sourceId,
         target: connectionPreview.targetId

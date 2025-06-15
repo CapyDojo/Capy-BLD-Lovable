@@ -80,13 +80,13 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
   }, [navigate]);
 
   const getConnectionPoints = (node: Node) => {
-    const rect = node.data?.basePosition || node.position;
+    const position = node.position;
     const width = 200;
     const height = 80;
     
     return {
-      top: { x: rect.x + width / 2, y: rect.y },
-      bottom: { x: rect.x + width / 2, y: rect.y + height }
+      top: { x: position.x + width / 2, y: position.y },
+      bottom: { x: position.x + width / 2, y: position.y + height }
     };
   };
 
@@ -159,8 +159,8 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
         onConfirm={handleOwnershipConfirm}
       />
 
-      {/* Add CSS for animations */}
-      <style jsx>{`
+      {/* CSS Animations */}
+      <style>{`
         @keyframes magnetic-pulse {
           0%, 100% { transform: scale(1); opacity: 0.7; }
           50% { transform: scale(1.1); opacity: 1; }
