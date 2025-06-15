@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { 
   Node, 
@@ -120,14 +121,14 @@ export const useEntityCanvas = () => {
   const { initialNodes, initialEdges } = useMemo(() => generateInitialState(), []);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesState] = useEdgesState(initialEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const onConnect = useCallback(
     (params: Connection | { source: string; target: string; label: string }) => {
-      const edge = {
+      const edge: Edge = {
         id: `e-${params.source}-${params.target}`,
         source: params.source,
         target: params.target,
