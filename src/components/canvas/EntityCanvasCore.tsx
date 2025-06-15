@@ -1,4 +1,3 @@
-
 import React, { useCallback } from 'react';
 import { 
   ReactFlow, 
@@ -8,7 +7,7 @@ import {
   Controls,
   MiniMap,
   ReactFlowProvider,
-  NodeDragHandler
+  OnNodeDrag
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { EntityNode } from './EntityNode';
@@ -64,17 +63,17 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
   } = useMagneticConnection(nodes, edges, onConnect);
 
   // React Flow drag handlers
-  const onNodeDragStart: NodeDragHandler = useCallback((event, node) => {
+  const onNodeDragStart: OnNodeDrag = useCallback((event, node) => {
     console.log('🎯 React Flow drag start:', node.id);
     handleNodeDragStart(node.id);
   }, [handleNodeDragStart]);
 
-  const onNodeDrag: NodeDragHandler = useCallback((event, node) => {
+  const onNodeDrag: OnNodeDrag = useCallback((event, node) => {
     console.log('🎯 React Flow drag:', node.id, node.position);
     handleNodeDrag(node.id, node.position);
   }, [handleNodeDrag]);
 
-  const onNodeDragStop: NodeDragHandler = useCallback((event, node) => {
+  const onNodeDragStop: OnNodeDrag = useCallback((event, node) => {
     console.log('🎯 React Flow drag stop:', node.id);
     handleNodeDragStop();
   }, [handleNodeDragStop]);
