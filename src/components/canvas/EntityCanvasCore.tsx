@@ -36,7 +36,8 @@ interface EntityCanvasCoreProps {
   reactFlowWrapper: React.RefObject<HTMLDivElement>;
 }
 
-export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
+// Inner component that uses the magnetic connection hook
+const ReactFlowCanvas: React.FC<EntityCanvasCoreProps> = ({
   nodes,
   edges,
   onNodesChange,
@@ -49,7 +50,7 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
 }) => {
   const navigate = useNavigate();
 
-  // Initialize magnetic connection system
+  // Initialize magnetic connection system (now inside ReactFlowProvider)
   const {
     isDragging,
     draggedNodeId,
@@ -101,7 +102,7 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
   }, [navigate]);
 
   return (
-    <div className="flex-1 relative" ref={reactFlowWrapper}>
+    <>
       <div className="absolute top-4 left-4 z-10 bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
         <p className="text-sm text-gray-600">
           💡 <strong>Tip:</strong> Double-click an entity to view its cap table
@@ -131,33 +132,31 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
         />
       )}
       
-      <ReactFlowProvider>
-        <ReactFlow
-          nodes={enhancedNodes}
-          edges={edges}
-          onNodesChange={handleNodesChange}
-          onEdgesChange={onEdgesChange}
-          onConnect={onConnect}
-          onNodeClick={onNodeClick}
-          onNodeDoubleClick={onNodeDoubleClick}
-          onNodeDragStart={onNodeDragStart}
-          onNodeDrag={onNodeDrag}
-          onNodeDragStop={onNodeDragStop}
-          onDrop={onDrop}
-          onDragOver={onDragOver}
-          nodeTypes={nodeTypes}
-          fitView
-          className="bg-gray-50"
-        >
-          <Controls />
-          <MiniMap 
-            nodeStrokeColor="#3b82f6"
-            nodeColor="#dbeafe"
-            nodeBorderRadius={8}
-          />
-          <Background color="#e5e7eb" gap={20} />
-        </ReactFlow>
-      </ReactFlowProvider>
+      <ReactFlow
+        nodes={enhancedNodes}
+        edges={edges}
+        onNodesChange={handleNodesChange}
+        onEdgesChange={onEdgesChange}
+        onConnect={onConnect}
+        onNodeClick={onNodeClick}
+        onNodeDoubleClick={onNodeDoubleClick}
+        onNodeDragStart={onNodeDragStart}
+        onNodeDrag={onNodeDrag}
+        onNodeDragStop={onNodeDragStop}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
+        nodeTypes={nodeTypes}
+        fitView
+        className="bg-gray-50"
+      >
+        <Controls />
+        <MiniMap 
+          nodeStrokeColor="#3b82f6"
+          nodeColor="#dbeafe"
+          nodeBorderRadius={8}
+        />
+        <Background color="#e5e7eb" gap={20} />
+      </ReactFlow>
 
       {/* Ownership Percentage Modal */}
       <OwnershipPercentageModal
@@ -186,6 +185,16 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
           transform: scale(1.2);
         }
       `}</style>
+    </>
+  );
+};
+
+export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = (props) => {
+  return (
+    <div className="flex-1 relative" ref={props.reactFlowWrapper}>
+      <ReactFlowProvider>
+        <ReactFlowCanvas {...props} />
+      </ReactFlowProvider>
     </div>
   );
 };
