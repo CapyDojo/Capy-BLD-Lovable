@@ -1,69 +1,58 @@
 
 import React from 'react';
 import { Building2, User, Users } from 'lucide-react';
+import { getCapTableByEntityId, getEntityById } from '@/data/mockData';
 
-const capTableData = [
-  {
-    id: 1,
-    name: 'Founders',
-    type: 'Individual',
-    sharesOwned: 7000000,
-    shareClass: 'Common Stock',
-    ownershipPercentage: 70.0,
-    fullyDiluted: 58.3,
-    pricePerShare: 0.001,
-    investmentAmount: 7000,
-    icon: User,
-  },
-  {
-    id: 2,
-    name: 'Series A Investors',
-    type: 'Entity',
-    sharesOwned: 2000000,
-    shareClass: 'Preferred Series A',
-    ownershipPercentage: 20.0,
-    fullyDiluted: 16.7,
-    pricePerShare: 1.00,
-    investmentAmount: 2000000,
-    icon: Building2,
-  },
-  {
-    id: 3,
-    name: 'Employee Stock Option Pool',
-    type: 'Pool',
-    sharesOwned: 1000000,
-    shareClass: 'Stock Options',
-    ownershipPercentage: 10.0,
-    fullyDiluted: 8.3,
-    pricePerShare: 0.001,
-    investmentAmount: 1000,
-    icon: Users,
-  },
-  {
-    id: 4,
-    name: 'Convertible Note Holders',
-    type: 'Entity',
-    sharesOwned: 0,
-    shareClass: 'Convertible Notes',
-    ownershipPercentage: 0.0,
-    fullyDiluted: 16.7,
-    pricePerShare: 0.80,
-    investmentAmount: 500000,
-    icon: Building2,
-  },
-];
+interface CapTableViewProps {
+  entityId: string;
+}
 
-export const CapTableView: React.FC = () => {
-  const totalShares = capTableData.reduce((sum, item) => sum + item.sharesOwned, 0);
-  const totalInvestment = capTableData.reduce((sum, item) => sum + item.investmentAmount, 0);
-  const authorizedShares = 12000000;
-  const availableShares = authorizedShares - totalShares;
+export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
+  const entity = getEntityById(entityId);
+  const capTable = getCapTableByEntityId(entityId);
+
+  if (!entity || !capTable) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="text-center text-gray-500">
+          <p>No cap table data found for this entity.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate totals
+  const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
+  const totalInvestment = capTable.investments.reduce((sum, inv) => sum + inv.investmentAmount, 0);
+  const availableShares = capTable.authorizedShares - totalShares;
+
+  // Combine investment data with shareholder and share class info
+  const capTableData = capTable.investments.map((investment) => {
+    const shareholder = capTable.shareholders.find(s => s.id === investment.shareholderId);
+    const shareClass = capTable.shareClasses.find(sc => sc.id === investment.shareClassId);
+    const ownershipPercentage = totalShares > 0 ? (investment.sharesOwned / totalShares) * 100 : 0;
+    
+    return {
+      id: investment.id,
+      name: shareholder?.name || 'Unknown',
+      type: shareholder?.type || 'Unknown',
+      sharesOwned: investment.sharesOwned,
+      shareClass: shareClass?.name || 'Unknown',
+      ownershipPercentage,
+      fullyDiluted: totalShares > 0 ? (investment.sharesOwned / capTable.authorizedShares) * 100 : 0,
+      pricePerShare: investment.pricePerShare,
+      investmentAmount: investment.investmentAmount,
+      icon: shareholder?.type === 'Individual' ? User : shareholder?.type === 'Pool' ? Users : Building2,
+    };
+  });
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Capitalization Table</h3>
+          <h3 className="text-lg font-medium text-gray-900">
+            Capitalization Table - {entity.name}
+          </h3>
           <div className="text-sm text-gray-600 space-x-4">
             <span>Total Investment: <span className="font-medium">${totalInvestment.toLocaleString()}</span></span>
             <span>Outstanding Shares: <span className="font-medium">{totalShares.toLocaleString()}</span></span>
@@ -134,10 +123,10 @@ export const CapTableView: React.FC = () => {
                   ${item.investmentAmount.toLocaleString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                  {item.ownershipPercentage}%
+                  {item.ownershipPercentage.toFixed(1)}%
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                  {item.fullyDiluted}%
+                  {item.fullyDiluted.toFixed(1)}%
                 </td>
               </tr>
             ))}
@@ -160,7 +149,7 @@ export const CapTableView: React.FC = () => {
                 100.0%
               </td>
               <td className="px-6 py-3 text-right text-sm font-medium text-gray-900">
-                100.0%
+                {((totalShares / capTable.authorizedShares) * 100).toFixed(1)}%
               </td>
             </tr>
             <tr>
@@ -171,7 +160,7 @@ export const CapTableView: React.FC = () => {
                 {availableShares.toLocaleString()}
               </td>
               <td className="px-6 py-3 text-right text-sm text-gray-500" colSpan={4}>
-                Authorized: {authorizedShares.toLocaleString()} shares
+                Authorized: {capTable.authorizedShares.toLocaleString()} shares
               </td>
             </tr>
           </tfoot>

@@ -1,4 +1,3 @@
-
 import React, { useState, useCallback, useRef } from 'react';
 import { 
   ReactFlow, 
@@ -17,67 +16,42 @@ import '@xyflow/react/dist/style.css';
 import { EntityNode } from './EntityNode';
 import { EntitySidebar } from './EntitySidebar';
 import { EntityTypes } from '@/types/entity';
+import { useNavigate } from 'react-router-dom';
+import { getAllEntities } from '@/data/mockData';
 
 const nodeTypes = {
   entity: EntityNode,
 };
 
-const initialNodes: Node[] = [
-  {
-    id: '1',
-    type: 'entity',
-    position: { x: 250, y: 100 },
-    data: {
-      name: 'Parent Corporation',
-      type: 'Corporation',
-      jurisdiction: 'Delaware',
-      ownership: 100,
-    },
+const initialNodes: Node[] = getAllEntities().map((entity, index) => ({
+  id: entity.id,
+  type: 'entity',
+  position: { 
+    x: 250 + (index % 2) * 300, 
+    y: 100 + Math.floor(index / 2) * 200 
   },
-  {
-    id: '2',
-    type: 'entity',
-    position: { x: 100, y: 300 },
-    data: {
-      name: 'Subsidiary LLC',
-      type: 'LLC',
-      jurisdiction: 'California',
-      ownership: 85,
-    },
+  data: {
+    name: entity.name,
+    type: entity.type,
+    jurisdiction: entity.jurisdiction,
+    ownership: entity.ownership,
   },
-  {
-    id: '3',
-    type: 'entity',
-    position: { x: 400, y: 300 },
-    data: {
-      name: 'Tech Holdings Inc',
-      type: 'Corporation',
-      jurisdiction: 'Delaware',
-      ownership: 100,
-    },
-  },
-];
+}));
 
-const initialEdges: Edge[] = [
-  {
-    id: 'e1-2',
-    source: '1',
-    target: '2',
-    label: '85%',
+const initialEdges: Edge[] = getAllEntities()
+  .filter(entity => entity.parentId)
+  .map(entity => ({
+    id: `e-${entity.parentId}-${entity.id}`,
+    source: entity.parentId!,
+    target: entity.id,
+    label: `${entity.ownership}%`,
     style: { stroke: '#3b82f6', strokeWidth: 2 },
     labelStyle: { fill: '#3b82f6', fontWeight: 600 },
-  },
-  {
-    id: 'e1-3',
-    source: '1',
-    target: '3',
-    label: '100%',
-    style: { stroke: '#3b82f6', strokeWidth: 2 },
-    labelStyle: { fill: '#3b82f6', fontWeight: 600 },
-  },
-];
+  }));
 
 export const EntityCanvas: React.FC = () => {
+  const navigate = useNavigate();
+  
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -101,6 +75,11 @@ export const EntityCanvas: React.FC = () => {
     setSelectedNode(node);
     setSidebarOpen(true);
   }, []);
+
+  const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
+    // Navigate to cap table for this entity
+    navigate(`/cap-table?entityId=${node.id}`);
+  }, [navigate]);
 
   const createEntity = useCallback((type: EntityTypes, position: { x: number; y: number }) => {
     const newNode: Node = {
@@ -150,6 +129,12 @@ export const EntityCanvas: React.FC = () => {
       </div>
       
       <div className="flex-1 relative" ref={reactFlowWrapper}>
+        <div className="absolute top-4 left-4 z-10 bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
+          <p className="text-sm text-gray-600">
+            💡 <strong>Tip:</strong> Double-click an entity to view its cap table
+          </p>
+        </div>
+        
         <ReactFlowProvider>
           <ReactFlow
             nodes={nodes}
@@ -158,6 +143,7 @@ export const EntityCanvas: React.FC = () => {
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
             onNodeClick={onNodeClick}
+            onNodeDoubleClick={onNodeDoubleClick}
             onDrop={onDrop}
             onDragOver={onDragOver}
             nodeTypes={nodeTypes}
@@ -179,12 +165,20 @@ export const EntityCanvas: React.FC = () => {
         <div className="w-80 bg-white border-l border-gray-200 p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-medium text-gray-900">Entity Details</h3>
-            <button
-              onClick={() => setSidebarOpen(false)}
-              className="text-gray-400 hover:text-gray-600"
-            >
-              ×
-            </button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => navigate(`/cap-table?entityId=${selectedNode.id}`)}
+                className="px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+              >
+                View Cap Table
+              </button>
+              <button
+                onClick={() => setSidebarOpen(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ×
+              </button>
+            </div>
           </div>
           
           <div className="space-y-4">
@@ -252,7 +246,6 @@ export const EntityCanvas: React.FC = () => {
                 <option value="Delaware">Delaware</option>
                 <option value="California">California</option>
                 <option value="New York">New York</option>
-                <option value="Texas">Texas</option>
                 <option value="Nevada">Nevada</option>
               </select>
             </div>

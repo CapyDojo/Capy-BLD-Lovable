@@ -2,10 +2,26 @@
 import React, { useState } from 'react';
 import { CapTableView } from './CapTableView';
 import { OwnershipChart } from './OwnershipChart';
-import { Plus, Download, Upload } from 'lucide-react';
+import { Plus, Download, Upload, Building2 } from 'lucide-react';
+import { getAllEntities, getEntityById } from '@/data/mockData';
+import { useSearchParams } from 'react-router-dom';
 
 export const CapTableEditor: React.FC = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const entityIdFromUrl = searchParams.get('entityId');
+  
+  const entities = getAllEntities();
+  const [selectedEntityId, setSelectedEntityId] = useState<string>(
+    entityIdFromUrl || entities[0]?.id || ''
+  );
   const [view, setView] = useState<'table' | 'chart'>('table');
+
+  const selectedEntity = getEntityById(selectedEntityId);
+
+  const handleEntityChange = (entityId: string) => {
+    setSelectedEntityId(entityId);
+    setSearchParams({ entityId });
+  };
 
   return (
     <div className="space-y-6">
@@ -47,7 +63,40 @@ export const CapTableEditor: React.FC = () => {
         </div>
       </div>
 
-      {view === 'table' ? <CapTableView /> : <OwnershipChart />}
+      {/* Entity Selector */}
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <div className="flex items-center space-x-4">
+          <Building2 className="h-5 w-5 text-gray-400" />
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Select Entity
+            </label>
+            <select
+              value={selectedEntityId}
+              onChange={(e) => handleEntityChange(e.target.value)}
+              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              {entities.map((entity) => (
+                <option key={entity.id} value={entity.id}>
+                  {entity.name} ({entity.type} • {entity.jurisdiction})
+                </option>
+              ))}
+            </select>
+          </div>
+          {selectedEntity && (
+            <div className="text-sm text-gray-600">
+              <div>Registration: {selectedEntity.registrationNumber}</div>
+              <div>Incorporated: {selectedEntity.incorporationDate?.toLocaleDateString()}</div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {selectedEntityId && (
+        view === 'table' ? 
+          <CapTableView entityId={selectedEntityId} /> : 
+          <OwnershipChart entityId={selectedEntityId} />
+      )}
     </div>
   );
 };
