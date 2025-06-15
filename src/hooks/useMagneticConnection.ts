@@ -28,15 +28,16 @@ export const useMagneticConnection = (
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
   
   const animationFrameRef = useRef<number>();
+  const reactFlowInstanceRef = useRef<any>();
 
   const calculateDistance = useCallback((pos1: { x: number; y: number }, pos2: { x: number; y: number }) => {
     return Math.sqrt(Math.pow(pos2.x - pos1.x, 2) + Math.pow(pos2.y - pos1.y, 2));
   }, []);
 
   const getMagneticZone = useCallback((distance: number): MagneticZone['zone'] => {
-    if (distance <= 20) return 'snap';
-    if (distance <= 40) return 'strongPull';
-    if (distance <= 80) return 'detection';
+    if (distance <= 50) return 'snap';
+    if (distance <= 100) return 'strongPull';
+    if (distance <= 150) return 'detection';
     return null;
   }, []);
 
@@ -80,18 +81,21 @@ export const useMagneticConnection = (
     return points;
   }, []);
 
-  const updateMagneticZones = useCallback((draggedNode: Node, mousePosition: { x: number; y: number }) => {
+  const updateMagneticZones = useCallback((draggedNode: Node, draggedNodePosition: { x: number; y: number }) => {
+    console.log('Updating magnetic zones for:', draggedNode.id, 'at position:', draggedNodePosition);
+    
     if (!animationFrameRef.current) {
       animationFrameRef.current = requestAnimationFrame(() => {
         const newZones: MagneticZone[] = [];
         let closestSnap: MagneticZone | null = null;
+
+        const draggedPoints = getConnectionPoints({ ...draggedNode, position: draggedNodePosition });
 
         nodes.forEach(node => {
           if (node.id === draggedNode.id) return;
           
           if (!isValidConnection(draggedNode.id, node.id)) return;
 
-          const draggedPoints = getConnectionPoints(draggedNode);
           const targetPoints = getConnectionPoints(node);
 
           // Check all valid connection combinations
@@ -100,8 +104,10 @@ export const useMagneticConnection = (
               // Only allow valid connections (bottom to top, top to bottom)
               if (draggedPoint === targetPoint) return;
               
-              const distance = calculateDistance(mousePosition, targetPos);
+              const distance = calculateDistance(draggedPos, targetPos);
               const zone = getMagneticZone(distance);
+
+              console.log(`Distance from ${draggedNode.id} to ${node.id}: ${distance}, zone: ${zone}`);
 
               if (zone) {
                 const magneticZone: MagneticZone = {
@@ -121,6 +127,7 @@ export const useMagneticConnection = (
                     sourcePosition: draggedPos,
                     targetPosition: targetPos
                   });
+                  console.log('Setting connection preview:', draggedNode.id, '->', node.id);
                 }
               }
             });
@@ -131,6 +138,7 @@ export const useMagneticConnection = (
           setConnectionPreview(null);
         }
 
+        console.log('New magnetic zones:', newZones);
         setMagneticZones(newZones);
         animationFrameRef.current = undefined;
       });
@@ -138,17 +146,17 @@ export const useMagneticConnection = (
   }, [nodes, isValidConnection, getConnectionPoints, calculateDistance, getMagneticZone]);
 
   const handleDragStart = useCallback((nodeId: string) => {
-    console.log('Magnetic drag start:', nodeId);
+    console.log('🎯 Magnetic drag start:', nodeId);
     setIsDragging(true);
     setDraggedNodeId(nodeId);
   }, []);
 
   const handleDragEnd = useCallback(() => {
-    console.log('Magnetic drag end, checking for snap zones');
+    console.log('🎯 Magnetic drag end, checking for snap zones. Zones:', magneticZones);
     // Check for snap zone connection
     const snapZone = magneticZones.find(zone => zone.zone === 'snap');
     if (snapZone && draggedNodeId && connectionPreview) {
-      console.log('Creating connection:', connectionPreview);
+      console.log('🎯 Creating connection:', connectionPreview);
       setPendingConnection({
         source: connectionPreview.sourceId,
         target: connectionPreview.targetId
@@ -169,6 +177,7 @@ export const useMagneticConnection = (
 
   const handleOwnershipConfirm = useCallback((percentage: number) => {
     if (pendingConnection) {
+      console.log('🎯 Confirming ownership connection:', pendingConnection, percentage);
       onConnect({
         source: pendingConnection.source,
         target: pendingConnection.target,
@@ -179,21 +188,16 @@ export const useMagneticConnection = (
     setPendingConnection(null);
   }, [pendingConnection, onConnect]);
 
-  const handleMouseMove = useCallback((event: MouseEvent) => {
-    if (isDragging && draggedNodeId) {
-      const draggedNode = nodes.find(n => n.id === draggedNodeId);
+  // Enhanced node change tracking for magnetic zones
+  const handleNodeDrag = useCallback((nodeId: string, newPosition: { x: number; y: number }) => {
+    if (isDragging && draggedNodeId === nodeId) {
+      const draggedNode = nodes.find(n => n.id === nodeId);
       if (draggedNode) {
-        updateMagneticZones(draggedNode, { x: event.clientX, y: event.clientY });
+        console.log('🎯 Node dragging:', nodeId, newPosition);
+        updateMagneticZones(draggedNode, newPosition);
       }
     }
   }, [isDragging, draggedNodeId, nodes, updateMagneticZones]);
-
-  useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      return () => document.removeEventListener('mousemove', handleMouseMove);
-    }
-  }, [isDragging, handleMouseMove]);
 
   return {
     isDragging,
@@ -204,6 +208,7 @@ export const useMagneticConnection = (
     handleDragStart,
     handleDragEnd,
     handleOwnershipConfirm,
+    handleNodeDrag,
     setShowOwnershipModal
   };
 };

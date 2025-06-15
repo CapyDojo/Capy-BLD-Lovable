@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { User } from 'lucide-react';
@@ -39,13 +38,21 @@ export const ShareholderNode: React.FC<ShareholderNodeProps> = ({
 }) => {
   const magneticGlow = getMagneticGlow(data.magneticZone);
 
-  const handleMouseDown = () => {
+  const handleDragStart = () => {
+    console.log('🎯 ShareholderNode drag start:', id);
+    if (data.onDragStart) {
+      data.onDragStart(id);
+    }
     if (onDragStart) {
       onDragStart(id);
     }
   };
 
-  const handleMouseUp = () => {
+  const handleDragEnd = () => {
+    console.log('🎯 ShareholderNode drag end:', id);
+    if (data.onDragEnd) {
+      data.onDragEnd();
+    }
     if (onDragEnd) {
       onDragEnd();
     }
@@ -60,8 +67,8 @@ export const ShareholderNode: React.FC<ShareholderNodeProps> = ({
         ${magneticGlow}
         hover:shadow-md cursor-pointer
       `}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
     >
       {/* Individuals don't have top handle */}
       

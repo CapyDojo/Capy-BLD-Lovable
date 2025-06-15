@@ -58,8 +58,19 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
     handleDragStart,
     handleDragEnd,
     handleOwnershipConfirm,
+    handleNodeDrag,
     setShowOwnershipModal
   } = useMagneticConnection(nodes, edges, onConnect);
+
+  // Enhanced onNodesChange to track dragging
+  const handleNodesChange = useCallback((changes: any) => {
+    changes.forEach((change: any) => {
+      if (change.type === 'position' && change.dragging && change.position) {
+        handleNodeDrag(change.id, change.position);
+      }
+    });
+    onNodesChange(changes);
+  }, [onNodesChange, handleNodeDrag]);
 
   // Enhance nodes with magnetic field data
   const enhancedNodes = nodes.map(node => {
@@ -98,7 +109,7 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
         </p>
         {isDragging && (
           <p className="text-xs text-blue-600 mt-1 font-medium">
-            🎯 Drag near another entity to create magnetic connection!
+            🎯 Drag near another entity to create magnetic connection! Zones: {magneticZones.length}
           </p>
         )}
       </div>
@@ -131,7 +142,7 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
         <ReactFlow
           nodes={enhancedNodes}
           edges={edges}
-          onNodesChange={onNodesChange}
+          onNodesChange={handleNodesChange}
           onEdgesChange={onEdgesChange}
           onConnect={onConnect}
           onNodeClick={onNodeClick}
