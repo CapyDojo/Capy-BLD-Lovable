@@ -37,7 +37,7 @@ interface EntityCanvasCoreProps {
 }
 
 // Inner component that uses the magnetic connection hook
-const ReactFlowCanvas: React.FC<EntityCanvasCoreProps> = ({
+const ReactFlowCanvas: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: React.RefObject<HTMLDivElement> }> = ({
   nodes,
   edges,
   onNodesChange,
@@ -101,6 +101,17 @@ const ReactFlowCanvas: React.FC<EntityCanvasCoreProps> = ({
     navigate(`/cap-table?entityId=${node.id}`);
   }, [navigate]);
 
+  // Convert ReactFlow-relative coordinates to page-absolute coordinates
+  const getAbsolutePosition = useCallback((reactFlowPosition: { x: number; y: number }) => {
+    if (!reactFlowWrapper.current) return reactFlowPosition;
+    
+    const rect = reactFlowWrapper.current.getBoundingClientRect();
+    return {
+      x: reactFlowPosition.x + rect.left,
+      y: reactFlowPosition.y + rect.top
+    };
+  }, [reactFlowWrapper]);
+
   return (
     <>
       <div className="absolute top-4 left-4 z-10 bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
@@ -114,21 +125,24 @@ const ReactFlowCanvas: React.FC<EntityCanvasCoreProps> = ({
         )}
       </div>
       
-      {/* Magnetic Field Overlays */}
-      {isDragging && magneticZones.map((zone, index) => (
-        <MagneticField
-          key={`${zone.nodeId}-${zone.zone}-${index}`}
-          zone={zone.zone!}
-          nodeId={zone.nodeId}
-          position={zone.screenPosition}
-        />
-      ))}
+      {/* Magnetic Field Overlays - positioned absolutely on the page */}
+      {isDragging && magneticZones.map((zone, index) => {
+        const absolutePosition = getAbsolutePosition(zone.screenPosition);
+        return (
+          <MagneticField
+            key={`${zone.nodeId}-${zone.zone}-${index}`}
+            zone={zone.zone!}
+            nodeId={zone.nodeId}
+            position={absolutePosition}
+          />
+        );
+      })}
 
       {/* Connection Preview */}
       {connectionPreview && (
         <ConnectionPreview
-          sourcePosition={connectionPreview.sourcePosition}
-          targetPosition={connectionPreview.targetPosition}
+          sourcePosition={getAbsolutePosition(connectionPreview.sourcePosition)}
+          targetPosition={getAbsolutePosition(connectionPreview.targetPosition)}
         />
       )}
       

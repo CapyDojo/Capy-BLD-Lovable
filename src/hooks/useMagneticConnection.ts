@@ -68,9 +68,15 @@ export const useMagneticConnection = (
     const width = 200; // Default node width
     const height = 80; // Default node height
     
-    // Convert flow coordinates to screen coordinates
+    // Convert flow coordinates to screen coordinates relative to the ReactFlow component
     const topPoint = flowToScreenPosition({ x: position.x + width / 2, y: position.y });
     const bottomPoint = flowToScreenPosition({ x: position.x + width / 2, y: position.y + height });
+
+    console.log(`🎯 Connection points for ${node.id}:`, {
+      flowPosition: position,
+      topPoint,
+      bottomPoint
+    });
 
     const points = {
       top: topPoint,
