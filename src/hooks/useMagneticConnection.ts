@@ -100,7 +100,7 @@ export const useMagneticConnection = (
 
     animationFrameRef.current = requestAnimationFrame(() => {
       const newZones: MagneticZone[] = [];
-      let closestSnap: MagneticZone | null = null;
+      let closestSnapConnection: (ConnectionPreview & { distance: number }) | null = null;
 
       // Get the current dragged node with updated position
       const currentDraggedNode = { ...draggedNode, position: draggedNodePosition };
@@ -113,44 +113,59 @@ export const useMagneticConnection = (
 
         const targetPoints = getConnectionPoints(node);
 
-        // Check all valid connection combinations
-        Object.entries(draggedPoints).forEach(([draggedPoint, draggedPos]) => {
-          Object.entries(targetPoints).forEach(([targetPoint, targetPos]) => {
-            // Only allow valid connections (bottom to top, top to bottom)
-            if (draggedPoint === targetPoint) return;
-            
-            const distance = calculateDistance(draggedPos, targetPos);
-            const zone = getMagneticZone(distance);
+        const potentialConnections: Array<ConnectionPreview & { distance: number }> = [];
 
-            console.log(`🎯 Distance from ${draggedNode.id} to ${node.id}: ${distance}, zone: ${zone}`);
-
-            if (zone) {
-              const magneticZone: MagneticZone = {
-                nodeId: node.id,
-                zone,
-                distance,
-                screenPosition: targetPos
-              };
-
-              newZones.push(magneticZone);
-
-              // Track closest snap zone for preview
-              if (zone === 'snap' && (!closestSnap || distance < closestSnap.distance)) {
-                closestSnap = magneticZone;
-                setConnectionPreview({
-                  sourceId: draggedNode.id,
-                  targetId: node.id,
-                  sourcePosition: draggedPos,
-                  targetPosition: targetPos
-                });
-                console.log('🎯 Setting connection preview:', draggedNode.id, '->', node.id);
-              }
-            }
+        // Possibility 1: dragged node is owner (bottom handle) -> target node is owned (top handle)
+        if (draggedPoints.bottom && targetPoints.top) {
+          const distance = calculateDistance(draggedPoints.bottom, targetPoints.top);
+          potentialConnections.push({
+            sourceId: draggedNode.id,
+            targetId: node.id,
+            sourcePosition: draggedPoints.bottom,
+            targetPosition: targetPoints.top,
+            distance,
           });
-        });
+        }
+        
+        // Possibility 2: target node is owner (bottom handle) -> dragged node is owned (top handle)
+        if (targetPoints.bottom && draggedPoints.top) {
+          const distance = calculateDistance(targetPoints.bottom, draggedPoints.top);
+          potentialConnections.push({
+            sourceId: node.id,
+            targetId: draggedNode.id,
+            sourcePosition: targetPoints.bottom,
+            targetPosition: draggedPoints.top,
+            distance,
+          });
+        }
+
+        if (potentialConnections.length > 0) {
+          // Find the closest of the potential connections for this node pair
+          const bestConnection = potentialConnections.sort((a, b) => a.distance - b.distance)[0];
+          const { distance, sourceId, targetId, sourcePosition, targetPosition } = bestConnection;
+          const zone = getMagneticZone(distance);
+
+          if (zone) {
+            newZones.push({
+              nodeId: node.id,
+              zone,
+              distance,
+              // The magnetic field should be on the handle of the non-dragged node.
+              screenPosition: draggedNode.id === sourceId ? targetPosition : sourcePosition,
+            });
+
+            // If this is the closest snap connection found so far, store it
+            if (zone === 'snap' && (!closestSnapConnection || distance < closestSnapConnection.distance)) {
+              closestSnapConnection = bestConnection;
+            }
+          }
+        }
       });
 
-      if (!closestSnap) {
+      if (closestSnapConnection) {
+        setConnectionPreview(closestSnapConnection);
+        console.log('🎯 Setting connection preview:', closestSnapConnection.sourceId, '->', closestSnapConnection.targetId);
+      } else {
         setConnectionPreview(null);
       }
 
