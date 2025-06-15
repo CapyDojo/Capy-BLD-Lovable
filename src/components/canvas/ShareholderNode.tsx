@@ -7,16 +7,12 @@ interface ShareholderNodeData {
   name: string;
   ownershipPercentage: number;
   magneticZone?: 'detection' | 'strongPull' | 'snap';
-  onDragStart?: (nodeId: string) => void;
-  onDragEnd?: () => void;
 }
 
 interface ShareholderNodeProps {
   data: ShareholderNodeData;
   selected?: boolean;
   id: string;
-  onDragStart?: (nodeId: string) => void;
-  onDragEnd?: () => void;
 }
 
 const getMagneticGlow = (zone?: 'detection' | 'strongPull' | 'snap') => {
@@ -35,31 +31,9 @@ const getMagneticGlow = (zone?: 'detection' | 'strongPull' | 'snap') => {
 export const ShareholderNode: React.FC<ShareholderNodeProps> = ({ 
   data, 
   selected, 
-  id, 
-  onDragStart, 
-  onDragEnd 
+  id
 }) => {
   const magneticGlow = getMagneticGlow(data.magneticZone);
-
-  const handleMouseDown = () => {
-    console.log('🎯 ShareholderNode mouse down (drag start):', id);
-    if (data.onDragStart) {
-      data.onDragStart(id);
-    }
-    if (onDragStart) {
-      onDragStart(id);
-    }
-  };
-
-  const handleMouseUp = () => {
-    console.log('🎯 ShareholderNode mouse up (drag end):', id);
-    if (data.onDragEnd) {
-      data.onDragEnd();
-    }
-    if (onDragEnd) {
-      onDragEnd();
-    }
-  };
 
   return (
     <div 
@@ -70,8 +44,6 @@ export const ShareholderNode: React.FC<ShareholderNodeProps> = ({
         ${magneticGlow}
         hover:shadow-md cursor-pointer
       `}
-      onMouseDown={handleMouseDown}
-      onMouseUp={handleMouseUp}
     >
       {/* Individuals don't have top handle */}
       

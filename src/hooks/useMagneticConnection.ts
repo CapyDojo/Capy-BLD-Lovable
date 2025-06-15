@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef, useEffect } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { Node, Edge } from '@xyflow/react';
 
 interface MagneticZone {
@@ -28,7 +28,6 @@ export const useMagneticConnection = (
   const [pendingConnection, setPendingConnection] = useState<{ source: string; target: string } | null>(null);
   
   const animationFrameRef = useRef<number>();
-  const reactFlowInstanceRef = useRef<any>();
 
   const calculateDistance = useCallback((pos1: { x: number; y: number }, pos2: { x: number; y: number }) => {
     return Math.sqrt(Math.pow(pos2.x - pos1.x, 2) + Math.pow(pos2.y - pos1.y, 2));
@@ -82,77 +81,89 @@ export const useMagneticConnection = (
   }, []);
 
   const updateMagneticZones = useCallback((draggedNode: Node, draggedNodePosition: { x: number; y: number }) => {
-    console.log('Updating magnetic zones for:', draggedNode.id, 'at position:', draggedNodePosition);
+    console.log('🎯 Updating magnetic zones for:', draggedNode.id, 'at position:', draggedNodePosition);
     
-    if (!animationFrameRef.current) {
-      animationFrameRef.current = requestAnimationFrame(() => {
-        const newZones: MagneticZone[] = [];
-        let closestSnap: MagneticZone | null = null;
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+    }
 
-        const draggedPoints = getConnectionPoints({ ...draggedNode, position: draggedNodePosition });
+    animationFrameRef.current = requestAnimationFrame(() => {
+      const newZones: MagneticZone[] = [];
+      let closestSnap: MagneticZone | null = null;
 
-        nodes.forEach(node => {
-          if (node.id === draggedNode.id) return;
-          
-          if (!isValidConnection(draggedNode.id, node.id)) return;
+      const draggedPoints = getConnectionPoints({ ...draggedNode, position: draggedNodePosition });
 
-          const targetPoints = getConnectionPoints(node);
+      nodes.forEach(node => {
+        if (node.id === draggedNode.id) return;
+        
+        if (!isValidConnection(draggedNode.id, node.id)) return;
 
-          // Check all valid connection combinations
-          Object.entries(draggedPoints).forEach(([draggedPoint, draggedPos]) => {
-            Object.entries(targetPoints).forEach(([targetPoint, targetPos]) => {
-              // Only allow valid connections (bottom to top, top to bottom)
-              if (draggedPoint === targetPoint) return;
-              
-              const distance = calculateDistance(draggedPos, targetPos);
-              const zone = getMagneticZone(distance);
+        const targetPoints = getConnectionPoints(node);
 
-              console.log(`Distance from ${draggedNode.id} to ${node.id}: ${distance}, zone: ${zone}`);
+        // Check all valid connection combinations
+        Object.entries(draggedPoints).forEach(([draggedPoint, draggedPos]) => {
+          Object.entries(targetPoints).forEach(([targetPoint, targetPos]) => {
+            // Only allow valid connections (bottom to top, top to bottom)
+            if (draggedPoint === targetPoint) return;
+            
+            const distance = calculateDistance(draggedPos, targetPos);
+            const zone = getMagneticZone(distance);
 
-              if (zone) {
-                const magneticZone: MagneticZone = {
-                  nodeId: node.id,
-                  zone,
-                  distance
-                };
+            console.log(`🎯 Distance from ${draggedNode.id} to ${node.id}: ${distance}, zone: ${zone}`);
 
-                newZones.push(magneticZone);
+            if (zone) {
+              const magneticZone: MagneticZone = {
+                nodeId: node.id,
+                zone,
+                distance
+              };
 
-                // Track closest snap zone for preview
-                if (zone === 'snap' && (!closestSnap || distance < closestSnap.distance)) {
-                  closestSnap = magneticZone;
-                  setConnectionPreview({
-                    sourceId: draggedNode.id,
-                    targetId: node.id,
-                    sourcePosition: draggedPos,
-                    targetPosition: targetPos
-                  });
-                  console.log('Setting connection preview:', draggedNode.id, '->', node.id);
-                }
+              newZones.push(magneticZone);
+
+              // Track closest snap zone for preview
+              if (zone === 'snap' && (!closestSnap || distance < closestSnap.distance)) {
+                closestSnap = magneticZone;
+                setConnectionPreview({
+                  sourceId: draggedNode.id,
+                  targetId: node.id,
+                  sourcePosition: draggedPos,
+                  targetPosition: targetPos
+                });
+                console.log('🎯 Setting connection preview:', draggedNode.id, '->', node.id);
               }
-            });
+            }
           });
         });
-
-        if (!closestSnap) {
-          setConnectionPreview(null);
-        }
-
-        console.log('New magnetic zones:', newZones);
-        setMagneticZones(newZones);
-        animationFrameRef.current = undefined;
       });
-    }
+
+      if (!closestSnap) {
+        setConnectionPreview(null);
+      }
+
+      console.log('🎯 New magnetic zones:', newZones);
+      setMagneticZones(newZones);
+      animationFrameRef.current = undefined;
+    });
   }, [nodes, isValidConnection, getConnectionPoints, calculateDistance, getMagneticZone]);
 
-  const handleDragStart = useCallback((nodeId: string) => {
+  const handleNodeDragStart = useCallback((nodeId: string) => {
     console.log('🎯 Magnetic drag start:', nodeId);
     setIsDragging(true);
     setDraggedNodeId(nodeId);
   }, []);
 
-  const handleDragEnd = useCallback(() => {
-    console.log('🎯 Magnetic drag end, checking for snap zones. Zones:', magneticZones);
+  const handleNodeDrag = useCallback((nodeId: string, newPosition: { x: number; y: number }) => {
+    if (isDragging && draggedNodeId === nodeId) {
+      const draggedNode = nodes.find(n => n.id === nodeId);
+      if (draggedNode) {
+        console.log('🎯 Node dragging:', nodeId, newPosition);
+        updateMagneticZones(draggedNode, newPosition);
+      }
+    }
+  }, [isDragging, draggedNodeId, nodes, updateMagneticZones]);
+
+  const handleNodeDragStop = useCallback(() => {
+    console.log('🎯 Magnetic drag stop, checking for snap zones. Zones:', magneticZones);
     // Check for snap zone connection
     const snapZone = magneticZones.find(zone => zone.zone === 'snap');
     if (snapZone && draggedNodeId && connectionPreview) {
@@ -188,27 +199,16 @@ export const useMagneticConnection = (
     setPendingConnection(null);
   }, [pendingConnection, onConnect]);
 
-  // Enhanced node change tracking for magnetic zones
-  const handleNodeDrag = useCallback((nodeId: string, newPosition: { x: number; y: number }) => {
-    if (isDragging && draggedNodeId === nodeId) {
-      const draggedNode = nodes.find(n => n.id === nodeId);
-      if (draggedNode) {
-        console.log('🎯 Node dragging:', nodeId, newPosition);
-        updateMagneticZones(draggedNode, newPosition);
-      }
-    }
-  }, [isDragging, draggedNodeId, nodes, updateMagneticZones]);
-
   return {
     isDragging,
     draggedNodeId,
     magneticZones,
     connectionPreview,
     showOwnershipModal,
-    handleDragStart,
-    handleDragEnd,
-    handleOwnershipConfirm,
+    handleNodeDragStart,
     handleNodeDrag,
+    handleNodeDragStop,
+    handleOwnershipConfirm,
     setShowOwnershipModal
   };
 };

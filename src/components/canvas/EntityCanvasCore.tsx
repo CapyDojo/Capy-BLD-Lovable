@@ -7,7 +7,8 @@ import {
   Background,
   Controls,
   MiniMap,
-  ReactFlowProvider
+  ReactFlowProvider,
+  NodeDragHandler
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { EntityNode } from './EntityNode';
@@ -55,22 +56,33 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
     magneticZones,
     connectionPreview,
     showOwnershipModal,
-    handleDragStart,
-    handleDragEnd,
-    handleOwnershipConfirm,
+    handleNodeDragStart,
     handleNodeDrag,
+    handleNodeDragStop,
+    handleOwnershipConfirm,
     setShowOwnershipModal
   } = useMagneticConnection(nodes, edges, onConnect);
 
-  // Enhanced onNodesChange to track dragging
+  // React Flow drag handlers
+  const onNodeDragStart: NodeDragHandler = useCallback((event, node) => {
+    console.log('🎯 React Flow drag start:', node.id);
+    handleNodeDragStart(node.id);
+  }, [handleNodeDragStart]);
+
+  const onNodeDrag: NodeDragHandler = useCallback((event, node) => {
+    console.log('🎯 React Flow drag:', node.id, node.position);
+    handleNodeDrag(node.id, node.position);
+  }, [handleNodeDrag]);
+
+  const onNodeDragStop: NodeDragHandler = useCallback((event, node) => {
+    console.log('🎯 React Flow drag stop:', node.id);
+    handleNodeDragStop();
+  }, [handleNodeDragStop]);
+
+  // Enhanced onNodesChange to work with magnetic system
   const handleNodesChange = useCallback((changes: any) => {
-    changes.forEach((change: any) => {
-      if (change.type === 'position' && change.dragging && change.position) {
-        handleNodeDrag(change.id, change.position);
-      }
-    });
     onNodesChange(changes);
-  }, [onNodesChange, handleNodeDrag]);
+  }, [onNodesChange]);
 
   // Enhance nodes with magnetic field data
   const enhancedNodes = nodes.map(node => {
@@ -80,8 +92,6 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
       data: {
         ...node.data,
         magneticZone: magneticZone?.zone,
-        onDragStart: handleDragStart,
-        onDragEnd: handleDragEnd,
       }
     };
   });
@@ -125,7 +135,7 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
             key={`${zone.nodeId}-${zone.zone}`}
             zone={zone.zone!}
             nodeId={zone.nodeId}
-            position={connectionPoints.top} // Show field at connection point
+            position={connectionPoints.top}
           />
         );
       })}
@@ -147,6 +157,9 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = ({
           onConnect={onConnect}
           onNodeClick={onNodeClick}
           onNodeDoubleClick={onNodeDoubleClick}
+          onNodeDragStart={onNodeDragStart}
+          onNodeDrag={onNodeDrag}
+          onNodeDragStop={onNodeDragStop}
           onDrop={onDrop}
           onDragOver={onDragOver}
           nodeTypes={nodeTypes}
