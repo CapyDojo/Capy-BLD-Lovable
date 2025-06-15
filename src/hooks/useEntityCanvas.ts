@@ -1,5 +1,5 @@
 
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useMemo } from 'react';
 import { 
   Node, 
   Edge, 
@@ -9,35 +9,115 @@ import {
   addEdge
 } from '@xyflow/react';
 import { EntityTypes } from '@/types/entity';
-import { getAllEntities } from '@/data/mockData';
+import { Shareholder } from '@/types/capTable';
+import { getAllEntities, getCapTableByEntityId } from '@/data/mockData';
 
-const initialNodes: Node[] = getAllEntities().map((entity, index) => ({
-  id: entity.id,
-  type: 'entity',
-  position: { 
-    x: 250 + (index % 2) * 300, 
-    y: 100 + Math.floor(index / 2) * 200 
-  },
-  data: {
-    name: entity.name,
-    type: entity.type,
-    jurisdiction: entity.jurisdiction,
-    ownership: entity.ownership,
-  },
-}));
+const generateInitialState = () => {
+  const allEntities = getAllEntities();
+  const nodes: Node[] = [];
+  const edges: Edge[] = [];
+  const nodeIds = new Set<string>();
 
-const initialEdges: Edge[] = getAllEntities()
-  .filter(entity => entity.parentId)
-  .map(entity => ({
-    id: `e-${entity.parentId}-${entity.id}`,
-    source: entity.parentId!,
-    target: entity.id,
-    label: `${entity.ownership}%`,
-    style: { stroke: '#3b82f6', strokeWidth: 2 },
-    labelStyle: { fill: '#3b82f6', fontWeight: 600 },
-  }));
+  // Pass 1: Create all entity nodes with initial positions
+  allEntities.forEach((entity, index) => {
+    const position = { 
+      x: 250 + (index % 3) * 400, 
+      y: 100 + Math.floor(index / 3) * 300
+    };
+    const entityNode: Node = {
+      id: entity.id,
+      type: 'entity',
+      position,
+      data: {
+        name: entity.name,
+        type: entity.type,
+        jurisdiction: entity.jurisdiction,
+        basePosition: position, // Store for shareholder layout
+      },
+    };
+    nodes.push(entityNode);
+    nodeIds.add(entity.id);
+  });
+
+  // Pass 2: Create edges and shareholder nodes from cap tables
+  allEntities.forEach((entity) => {
+    const capTable = getCapTableByEntityId(entity.id);
+    if (!capTable) return;
+
+    const parentNode = nodes.find(n => n.id === entity.id);
+    if (!parentNode) return;
+
+    const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
+    if (totalShares === 0) return;
+
+    const shareholdersById = capTable.investments.reduce((acc, investment) => {
+      const shareholder = capTable.shareholders.find(s => s.id === investment.shareholderId);
+      if (shareholder) {
+        if (!acc[shareholder.id]) {
+          acc[shareholder.id] = {
+            ...shareholder,
+            totalSharesOwned: 0,
+          };
+        }
+        acc[shareholder.id].totalSharesOwned += investment.sharesOwned;
+      }
+      return acc;
+    }, {} as Record<string, Shareholder & { totalSharesOwned: number }>);
+    
+    const individualShareholders = Object.values(shareholdersById).filter(sh => sh.type === 'Individual' || sh.type === 'Pool');
+    const totalIndividuals = individualShareholders.length;
+
+    Object.values(shareholdersById).forEach((shareholder, index) => {
+      const ownershipPercentage = (shareholder.totalSharesOwned / totalShares) * 100;
+
+      if (shareholder.type === 'Entity' && shareholder.entityId) {
+        edges.push({
+          id: `e-${shareholder.entityId}-${entity.id}`,
+          source: shareholder.entityId,
+          target: entity.id,
+          label: `${ownershipPercentage.toFixed(1)}%`,
+          style: { stroke: '#3b82f6', strokeWidth: 2 },
+          labelStyle: { fill: '#3b82f6', fontWeight: 600 },
+        });
+      } else if (shareholder.type === 'Individual' || shareholder.type === 'Pool') {
+        const shareholderNodeId = `shareholder-${shareholder.id}-of-${entity.id}`;
+        if (nodeIds.has(shareholderNodeId)) return;
+
+        const parentPosition = parentNode.data.basePosition;
+        const individualIndex = individualShareholders.findIndex(sh => sh.id === shareholder.id);
+        const offset = (individualIndex - (totalIndividuals - 1) / 2) * 220;
+        
+        const shareholderPosition = {
+          x: parentPosition.x + offset,
+          y: parentPosition.y + 150,
+        };
+        
+        nodes.push({
+          id: shareholderNodeId,
+          type: 'shareholder',
+          position: shareholderPosition,
+          data: { name: shareholder.name, ownershipPercentage },
+        });
+        nodeIds.add(shareholderNodeId);
+        
+        edges.push({
+          id: `e-${entity.id}-${shareholderNodeId}`,
+          source: entity.id,
+          target: shareholderNodeId,
+          label: `${ownershipPercentage.toFixed(1)}%`,
+          style: { stroke: '#8b5cf6', strokeWidth: 1.5 },
+          labelStyle: { fill: '#8b5cf6', fontWeight: 500 },
+        });
+      }
+    });
+  });
+
+  return { initialNodes: nodes, initialEdges: edges };
+};
 
 export const useEntityCanvas = () => {
+  const { initialNodes, initialEdges } = useMemo(() => generateInitialState(), []);
+
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
@@ -48,7 +128,7 @@ export const useEntityCanvas = () => {
     (params: Connection) => {
       const edge = {
         ...params,
-        label: '100%',
+        label: 'Connection',
         style: { stroke: '#3b82f6', strokeWidth: 2 },
         labelStyle: { fill: '#3b82f6', fontWeight: 600 },
       };
@@ -58,20 +138,21 @@ export const useEntityCanvas = () => {
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    setSelectedNode(node);
-    setSidebarOpen(true);
+    if (node.type === 'entity') {
+      setSelectedNode(node);
+      setSidebarOpen(true);
+    }
   }, []);
 
   const createEntity = useCallback((type: EntityTypes, position: { x: number; y: number }) => {
     const newNode: Node = {
-      id: Date.now().toString(),
+      id: `new-${Date.now().toString()}`,
       type: 'entity',
       position,
       data: {
         name: `New ${type}`,
         type,
         jurisdiction: 'Delaware',
-        ownership: 100,
       },
     };
     setNodes((nds) => [...nds, newNode]);
@@ -86,10 +167,13 @@ export const useEntityCanvas = () => {
     (event: React.DragEvent) => {
       event.preventDefault();
 
-      const reactFlowBounds = reactFlowWrapper.current?.getBoundingClientRect();
+      const reactFlowWrapperCurrent = reactFlowWrapper.current;
+      if (!reactFlowWrapperCurrent) return;
+
+      const reactFlowBounds = reactFlowWrapperCurrent.getBoundingClientRect();
       const type = event.dataTransfer.getData('application/reactflow') as EntityTypes;
 
-      if (typeof type === 'undefined' || !type || !reactFlowBounds) {
+      if (typeof type === 'undefined' || !type) {
         return;
       }
 
@@ -105,15 +189,16 @@ export const useEntityCanvas = () => {
 
   const updateSelectedNode = useCallback((updates: Partial<Node['data']>) => {
     if (!selectedNode) return;
-
-    const updatedNodes = nodes.map((node) =>
-      node.id === selectedNode.id
-        ? { ...node, data: { ...node.data, ...updates } }
-        : node
+    
+    setNodes((nds) =>
+      nds.map((node) =>
+        node.id === selectedNode.id
+          ? { ...node, data: { ...node.data, ...updates } }
+          : node
+      )
     );
-    setNodes(updatedNodes);
-    setSelectedNode({ ...selectedNode, data: { ...selectedNode.data, ...updates } });
-  }, [selectedNode, nodes, setNodes]);
+    setSelectedNode((current) => current ? { ...current, data: { ...current.data, ...updates } } : null);
+  }, [selectedNode, setNodes]);
 
   return {
     nodes,

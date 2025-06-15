@@ -1,4 +1,3 @@
-
 import React, { useCallback } from 'react';
 import { 
   ReactFlow, 
@@ -11,10 +10,12 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { EntityNode } from './EntityNode';
+import { ShareholderNode } from './ShareholderNode';
 import { useNavigate } from 'react-router-dom';
 
 const nodeTypes = {
   entity: EntityNode,
+  shareholder: ShareholderNode,
 };
 
 interface EntityCanvasCoreProps {

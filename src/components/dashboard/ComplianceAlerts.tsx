@@ -1,35 +1,11 @@
 
 import React from 'react';
 import { AlertTriangle, Clock, CheckCircle } from 'lucide-react';
-
-const alerts = [
-  {
-    id: 1,
-    title: 'Delaware Annual Report',
-    entity: 'Tech Holdings Inc',
-    dueDate: 'Due in 5 days',
-    priority: 'high',
-    status: 'pending',
-  },
-  {
-    id: 2,
-    title: 'California Statement of Information',
-    entity: 'West Coast LLC',
-    dueDate: 'Due in 2 weeks',
-    priority: 'medium',
-    status: 'pending',
-  },
-  {
-    id: 3,
-    title: 'Federal Tax Return',
-    entity: 'Parent Co',
-    dueDate: 'Completed',
-    priority: 'low',
-    status: 'completed',
-  },
-];
+import { useComplianceData } from '@/hooks/useComplianceData';
 
 export const ComplianceAlerts: React.FC = () => {
+  const { alerts } = useComplianceData();
+
   return (
     <div className="bg-white rounded-lg border border-gray-200">
       <div className="p-6 border-b border-gray-200">

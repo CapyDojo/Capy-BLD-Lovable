@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Building2, Shield, Users, Briefcase } from 'lucide-react';
@@ -7,7 +6,6 @@ interface EntityNodeData {
   name: string;
   type: string;
   jurisdiction: string;
-  ownership: number;
 }
 
 interface EntityNodeProps {
