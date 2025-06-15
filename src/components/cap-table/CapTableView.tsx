@@ -5,56 +5,68 @@ import { Building2, User, Users } from 'lucide-react';
 const capTableData = [
   {
     id: 1,
-    name: 'John Doe',
+    name: 'Founders',
     type: 'Individual',
-    sharesOwned: 500000,
-    shareClass: 'Common',
-    ownershipPercentage: 45.5,
-    fullyDiluted: 38.5,
+    sharesOwned: 7000000,
+    shareClass: 'Common Stock',
+    ownershipPercentage: 70.0,
+    fullyDiluted: 58.3,
+    pricePerShare: 0.001,
+    investmentAmount: 7000,
     icon: User,
   },
   {
     id: 2,
-    name: 'Venture Capital Fund',
+    name: 'Series A Investors',
     type: 'Entity',
-    sharesOwned: 300000,
+    sharesOwned: 2000000,
     shareClass: 'Preferred Series A',
-    ownershipPercentage: 27.3,
-    fullyDiluted: 23.1,
+    ownershipPercentage: 20.0,
+    fullyDiluted: 16.7,
+    pricePerShare: 1.00,
+    investmentAmount: 2000000,
     icon: Building2,
   },
   {
     id: 3,
-    name: 'Employee Option Pool',
+    name: 'Employee Stock Option Pool',
     type: 'Pool',
-    sharesOwned: 200000,
-    shareClass: 'Options',
-    ownershipPercentage: 18.2,
-    fullyDiluted: 15.4,
+    sharesOwned: 1000000,
+    shareClass: 'Stock Options',
+    ownershipPercentage: 10.0,
+    fullyDiluted: 8.3,
+    pricePerShare: 0.001,
+    investmentAmount: 1000,
     icon: Users,
   },
   {
     id: 4,
-    name: 'Angel Investor',
-    type: 'Individual',
-    sharesOwned: 100000,
-    shareClass: 'Convertible Note',
-    ownershipPercentage: 9.1,
-    fullyDiluted: 7.7,
-    icon: User,
+    name: 'Convertible Note Holders',
+    type: 'Entity',
+    sharesOwned: 0,
+    shareClass: 'Convertible Notes',
+    ownershipPercentage: 0.0,
+    fullyDiluted: 16.7,
+    pricePerShare: 0.80,
+    investmentAmount: 500000,
+    icon: Building2,
   },
 ];
 
 export const CapTableView: React.FC = () => {
   const totalShares = capTableData.reduce((sum, item) => sum + item.sharesOwned, 0);
+  const totalInvestment = capTableData.reduce((sum, item) => sum + item.investmentAmount, 0);
+  const authorizedShares = 12000000;
+  const availableShares = authorizedShares - totalShares;
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">Ownership Summary</h3>
-          <div className="text-sm text-gray-600">
-            Total Shares: <span className="font-medium">{totalShares.toLocaleString()}</span>
+          <h3 className="text-lg font-medium text-gray-900">Capitalization Table</h3>
+          <div className="text-sm text-gray-600 space-x-4">
+            <span>Total Investment: <span className="font-medium">${totalInvestment.toLocaleString()}</span></span>
+            <span>Outstanding Shares: <span className="font-medium">{totalShares.toLocaleString()}</span></span>
           </div>
         </div>
       </div>
@@ -67,13 +79,19 @@ export const CapTableView: React.FC = () => {
                 Stakeholder
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Share Class
+                Security Type
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Shares Owned
+                Shares
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Ownership %
+                Price/Share
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Investment
+              </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Basic %
               </th>
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Fully Diluted %
@@ -97,12 +115,23 @@ export const CapTableView: React.FC = () => {
                   </div>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className="inline-flex px-2 py-1 text-xs font-medium bg-gray-100 text-gray-800 rounded-full">
+                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                    item.shareClass.includes('Common') ? 'bg-green-100 text-green-800' :
+                    item.shareClass.includes('Preferred') ? 'bg-purple-100 text-purple-800' :
+                    item.shareClass.includes('Options') ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-blue-100 text-blue-800'
+                  }`}>
                     {item.shareClass}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
-                  {item.sharesOwned.toLocaleString()}
+                  {item.sharesOwned > 0 ? item.sharesOwned.toLocaleString() : '-'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
+                  ${item.pricePerShare.toFixed(3)}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
+                  ${item.investmentAmount.toLocaleString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
                   {item.ownershipPercentage}%
@@ -113,6 +142,39 @@ export const CapTableView: React.FC = () => {
               </tr>
             ))}
           </tbody>
+          <tfoot className="bg-gray-50">
+            <tr>
+              <td className="px-6 py-3 text-sm font-medium text-gray-900" colSpan={2}>
+                Total Outstanding
+              </td>
+              <td className="px-6 py-3 text-right text-sm font-medium text-gray-900">
+                {totalShares.toLocaleString()}
+              </td>
+              <td className="px-6 py-3 text-right text-sm text-gray-500">
+                -
+              </td>
+              <td className="px-6 py-3 text-right text-sm font-medium text-gray-900">
+                ${totalInvestment.toLocaleString()}
+              </td>
+              <td className="px-6 py-3 text-right text-sm font-medium text-gray-900">
+                100.0%
+              </td>
+              <td className="px-6 py-3 text-right text-sm font-medium text-gray-900">
+                100.0%
+              </td>
+            </tr>
+            <tr>
+              <td className="px-6 py-3 text-sm text-gray-600" colSpan={2}>
+                Available for Issuance
+              </td>
+              <td className="px-6 py-3 text-right text-sm text-gray-600">
+                {availableShares.toLocaleString()}
+              </td>
+              <td className="px-6 py-3 text-right text-sm text-gray-500" colSpan={4}>
+                Authorized: {authorizedShares.toLocaleString()} shares
+              </td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
