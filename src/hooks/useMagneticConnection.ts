@@ -116,7 +116,7 @@ export const useMagneticConnection = (
         const potentialConnections: Array<ConnectionPreview & { distance: number }> = [];
 
         // Possibility 1: dragged node is owner (bottom handle) -> target node is owned (top handle)
-        if (draggedPoints.bottom && targetPoints.top) {
+        if (draggedPoints.bottom && 'top' in targetPoints && targetPoints.top) {
           const distance = calculateDistance(draggedPoints.bottom, targetPoints.top);
           potentialConnections.push({
             sourceId: draggedNode.id,
@@ -128,7 +128,7 @@ export const useMagneticConnection = (
         }
         
         // Possibility 2: target node is owner (bottom handle) -> dragged node is owned (top handle)
-        if (targetPoints.bottom && draggedPoints.top) {
+        if (targetPoints.bottom && 'top' in draggedPoints && draggedPoints.top) {
           const distance = calculateDistance(targetPoints.bottom, draggedPoints.top);
           potentialConnections.push({
             sourceId: node.id,
