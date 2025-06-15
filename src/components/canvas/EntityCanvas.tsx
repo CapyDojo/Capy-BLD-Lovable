@@ -17,7 +17,7 @@ export const EntityCanvas: React.FC = () => {
     sidebarOpen,
     setSidebarOpen,
     reactFlowWrapper,
-    createEntity,
+    createNode,
     onDragOver,
     onDrop,
     updateSelectedNode,
@@ -26,7 +26,7 @@ export const EntityCanvas: React.FC = () => {
   return (
     <div className="h-full flex">
       <div className="w-64 bg-white border-r border-gray-200">
-        <EntitySidebar onCreateEntity={createEntity} />
+        <EntitySidebar onCreateNode={createNode} />
       </div>
       
       <EntityCanvasCore

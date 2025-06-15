@@ -40,6 +40,12 @@ export const ShareholderNode: React.FC<ShareholderNodeProps> = ({ data, selected
           </p>
         </div>
       </div>
+
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        className="w-3 h-3 !bg-purple-600 !border-2 !border-white"
+      />
     </div>
   );
 };

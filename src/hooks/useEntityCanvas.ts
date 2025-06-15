@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useMemo } from 'react';
 import { 
   Node, 
@@ -11,6 +10,8 @@ import {
 import { EntityTypes } from '@/types/entity';
 import { Shareholder } from '@/types/capTable';
 import { getAllEntities, getCapTableByEntityId } from '@/data/mockData';
+
+type DraggableNodeType = EntityTypes | 'Individual';
 
 const generateInitialState = () => {
   const allEntities = getAllEntities();
@@ -67,7 +68,7 @@ const generateInitialState = () => {
     const individualShareholders = Object.values(shareholdersById).filter(sh => sh.type === 'Individual' || sh.type === 'Pool');
     const totalIndividuals = individualShareholders.length;
 
-    Object.values(shareholdersById).forEach((shareholder, index) => {
+    Object.values(shareholdersById).forEach((shareholder) => {
       const ownershipPercentage = (shareholder.totalSharesOwned / totalShares) * 100;
 
       if (shareholder.type === 'Entity' && shareholder.entityId) {
@@ -83,13 +84,13 @@ const generateInitialState = () => {
         const shareholderNodeId = `shareholder-${shareholder.id}-of-${entity.id}`;
         if (nodeIds.has(shareholderNodeId)) return;
 
-        const parentPosition = parentNode.data.basePosition;
+        const parentPosition = parentNode.data.basePosition as { x: number; y: number };
         const individualIndex = individualShareholders.findIndex(sh => sh.id === shareholder.id);
         const offset = (individualIndex - (totalIndividuals - 1) / 2) * 220;
         
         const shareholderPosition = {
           x: parentPosition.x + offset,
-          y: parentPosition.y + 150,
+          y: parentPosition.y - 150, // Positioned above the parent entity
         };
         
         nodes.push({
@@ -101,9 +102,9 @@ const generateInitialState = () => {
         nodeIds.add(shareholderNodeId);
         
         edges.push({
-          id: `e-${entity.id}-${shareholderNodeId}`,
-          source: entity.id,
-          target: shareholderNodeId,
+          id: `e-${shareholderNodeId}-${entity.id}`,
+          source: shareholderNodeId, // from shareholder (bottom handle)
+          target: entity.id, // to entity (top handle)
           label: `${ownershipPercentage.toFixed(1)}%`,
           style: { stroke: '#8b5cf6', strokeWidth: 1.5 },
           labelStyle: { fill: '#8b5cf6', fontWeight: 500 },
@@ -144,18 +145,34 @@ export const useEntityCanvas = () => {
     }
   }, []);
 
-  const createEntity = useCallback((type: EntityTypes, position: { x: number; y: number }) => {
-    const newNode: Node = {
-      id: `new-${Date.now().toString()}`,
-      type: 'entity',
-      position,
-      data: {
-        name: `New ${type}`,
-        type,
-        jurisdiction: 'Delaware',
-      },
-    };
-    setNodes((nds) => [...nds, newNode]);
+  const createNode = useCallback((type: DraggableNodeType, position: { x: number; y: number }) => {
+    const id = `new-${Date.now().toString()}`;
+
+    if (type === 'Individual') {
+       const newNode: Node = {
+        id,
+        type: 'shareholder',
+        position,
+        data: {
+          name: `New Individual`,
+          ownershipPercentage: 0,
+        },
+      };
+      setNodes((nds) => [...nds, newNode]);
+    } else {
+      const newNode: Node = {
+        id,
+        type: 'entity',
+        position,
+        data: {
+          name: `New ${type}`,
+          type,
+          jurisdiction: 'Delaware',
+          basePosition: position,
+        },
+      };
+      setNodes((nds) => [...nds, newNode]);
+    }
   }, [setNodes]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -171,7 +188,7 @@ export const useEntityCanvas = () => {
       if (!reactFlowWrapperCurrent) return;
 
       const reactFlowBounds = reactFlowWrapperCurrent.getBoundingClientRect();
-      const type = event.dataTransfer.getData('application/reactflow') as EntityTypes;
+      const type = event.dataTransfer.getData('application/reactflow') as DraggableNodeType;
 
       if (typeof type === 'undefined' || !type) {
         return;
@@ -182,9 +199,9 @@ export const useEntityCanvas = () => {
         y: event.clientY - reactFlowBounds.top - 50,
       };
 
-      createEntity(type, position);
+      createNode(type, position);
     },
-    [createEntity],
+    [createNode],
   );
 
   const updateSelectedNode = useCallback((updates: Partial<Node['data']>) => {
@@ -211,7 +228,7 @@ export const useEntityCanvas = () => {
     sidebarOpen,
     setSidebarOpen,
     reactFlowWrapper,
-    createEntity,
+    createNode,
     onDragOver,
     onDrop,
     updateSelectedNode,
