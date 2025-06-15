@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
 
@@ -21,7 +20,7 @@ export const useMagneticConnection = (
   edges: Edge[],
   onConnect: (connection: { source: string; target: string; label: string }) => void
 ) => {
-  const { getViewport, project, getNode } = useReactFlow();
+  const { flowToScreenPosition, getNode } = useReactFlow();
   const [isDragging, setIsDragging] = useState(false);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
   const [magneticZones, setMagneticZones] = useState<MagneticZone[]>([]);
@@ -70,8 +69,8 @@ export const useMagneticConnection = (
     const height = 80; // Default node height
     
     // Convert flow coordinates to screen coordinates
-    const topPoint = project({ x: position.x + width / 2, y: position.y });
-    const bottomPoint = project({ x: position.x + width / 2, y: position.y + height });
+    const topPoint = flowToScreenPosition({ x: position.x + width / 2, y: position.y });
+    const bottomPoint = flowToScreenPosition({ x: position.x + width / 2, y: position.y + height });
 
     const points = {
       top: topPoint,
@@ -84,7 +83,7 @@ export const useMagneticConnection = (
     }
 
     return points;
-  }, [project]);
+  }, [flowToScreenPosition]);
 
   const updateMagneticZones = useCallback((draggedNode: Node, draggedNodePosition: { x: number; y: number }) => {
     console.log('🎯 Updating magnetic zones for:', draggedNode.id, 'at position:', draggedNodePosition);
