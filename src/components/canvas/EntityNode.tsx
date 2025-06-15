@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Handle, Position } from '@xyflow/react';
 import { Building2, Shield, Users, Briefcase } from 'lucide-react';
@@ -6,11 +7,16 @@ interface EntityNodeData {
   name: string;
   type: string;
   jurisdiction: string;
+  isInMagneticField?: boolean;
+  magneticZone?: 'detection' | 'strongPull' | 'snap';
 }
 
 interface EntityNodeProps {
   data: EntityNodeData;
   selected?: boolean;
+  id: string;
+  onDragStart?: (nodeId: string) => void;
+  onDragEnd?: () => void;
 }
 
 const getEntityIcon = (type: string) => {
@@ -43,21 +49,58 @@ const getEntityColor = (type: string) => {
   }
 };
 
-export const EntityNode: React.FC<EntityNodeProps> = ({ data, selected }) => {
+const getMagneticGlow = (zone?: 'detection' | 'strongPull' | 'snap') => {
+  switch (zone) {
+    case 'detection':
+      return 'ring-2 ring-white ring-opacity-50';
+    case 'strongPull':
+      return 'ring-4 ring-yellow-400 ring-opacity-75 animate-pulse';
+    case 'snap':
+      return 'ring-4 ring-green-500 ring-opacity-90 animate-pulse';
+    default:
+      return '';
+  }
+};
+
+export const EntityNode: React.FC<EntityNodeProps> = ({ 
+  data, 
+  selected, 
+  id, 
+  onDragStart, 
+  onDragEnd 
+}) => {
   const Icon = getEntityIcon(data.type);
   const colorClass = getEntityColor(data.type);
+  const magneticGlow = getMagneticGlow(data.magneticZone);
+
+  const handleMouseDown = () => {
+    if (onDragStart) {
+      onDragStart(id);
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (onDragEnd) {
+      onDragEnd();
+    }
+  };
 
   return (
-    <div className={`
-      relative min-w-[200px] px-4 py-3 rounded-lg border-2 shadow-sm transition-all duration-200
-      ${colorClass}
-      ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
-      hover:shadow-md cursor-pointer
-    `}>
+    <div 
+      className={`
+        relative min-w-[200px] px-4 py-3 rounded-lg border-2 shadow-sm transition-all duration-200
+        ${colorClass}
+        ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
+        ${magneticGlow}
+        hover:shadow-md cursor-pointer
+      `}
+      onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
+    >
       <Handle 
         type="target" 
         position={Position.Top} 
-        className="w-3 h-3 !bg-blue-600 !border-2 !border-white"
+        className="w-3 h-3 !bg-blue-600 !border-2 !border-white magnetic-handle"
       />
       
       <div className="flex items-start space-x-3">
@@ -77,7 +120,7 @@ export const EntityNode: React.FC<EntityNodeProps> = ({ data, selected }) => {
       <Handle 
         type="source" 
         position={Position.Bottom} 
-        className="w-3 h-3 !bg-blue-600 !border-2 !border-white"
+        className="w-3 h-3 !bg-blue-600 !border-2 !border-white magnetic-handle"
       />
     </div>
   );
