@@ -1,17 +1,16 @@
 
 import React from 'react';
 import { Building2, User, Users } from 'lucide-react';
-import { getCapTableByEntityId, getEntityById } from '@/data/mockData';
+import { useCapTable } from '@/hooks/useCapTable';
 
 interface CapTableViewProps {
   entityId: string;
 }
 
 export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
-  const entity = getEntityById(entityId);
-  const capTable = getCapTableByEntityId(entityId);
+  const capTableData = useCapTable(entityId);
 
-  if (!entity || !capTable) {
+  if (!capTableData) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="text-center text-gray-500">
@@ -21,30 +20,13 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
     );
   }
 
-  // Calculate totals
-  const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
-  const totalInvestment = capTable.investments.reduce((sum, inv) => sum + inv.investmentAmount, 0);
-  const availableShares = capTable.authorizedShares - totalShares;
+  const { entity, capTable, totalShares, totalInvestment, availableShares, tableData } = capTableData;
 
-  // Combine investment data with shareholder and share class info
-  const capTableData = capTable.investments.map((investment) => {
-    const shareholder = capTable.shareholders.find(s => s.id === investment.shareholderId);
-    const shareClass = capTable.shareClasses.find(sc => sc.id === investment.shareClassId);
-    const ownershipPercentage = totalShares > 0 ? (investment.sharesOwned / totalShares) * 100 : 0;
-    
-    return {
-      id: investment.id,
-      name: shareholder?.name || 'Unknown',
-      type: shareholder?.type || 'Unknown',
-      sharesOwned: investment.sharesOwned,
-      shareClass: shareClass?.name || 'Unknown',
-      ownershipPercentage,
-      fullyDiluted: totalShares > 0 ? (investment.sharesOwned / capTable.authorizedShares) * 100 : 0,
-      pricePerShare: investment.pricePerShare,
-      investmentAmount: investment.investmentAmount,
-      icon: shareholder?.type === 'Individual' ? User : shareholder?.type === 'Pool' ? Users : Building2,
-    };
-  });
+  // Add icons to table data
+  const enhancedTableData = tableData.map(item => ({
+    ...item,
+    icon: item.type === 'Individual' ? User : item.type === 'Pool' ? Users : Building2,
+  }));
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
@@ -88,7 +70,7 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {capTableData.map((item) => (
+            {enhancedTableData.map((item) => (
               <tr key={item.id} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">

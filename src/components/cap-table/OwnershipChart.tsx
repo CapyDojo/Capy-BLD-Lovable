@@ -1,13 +1,11 @@
 
 import React from 'react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
-import { getCapTableByEntityId, getEntityById } from '@/data/mockData';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
+import { useCapTable } from '@/hooks/useCapTable';
 
 interface OwnershipChartProps {
   entityId: string;
 }
-
-const COLORS = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316'];
 
 const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
@@ -30,10 +28,9 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export const OwnershipChart: React.FC<OwnershipChartProps> = ({ entityId }) => {
-  const entity = getEntityById(entityId);
-  const capTable = getCapTableByEntityId(entityId);
+  const capTableData = useCapTable(entityId);
 
-  if (!entity || !capTable) {
+  if (!capTableData) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="text-center text-gray-500">
@@ -43,40 +40,7 @@ export const OwnershipChart: React.FC<OwnershipChartProps> = ({ entityId }) => {
     );
   }
 
-  const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
-  const totalInvestment = capTable.investments.reduce((sum, inv) => sum + inv.investmentAmount, 0);
-
-  // Prepare chart data
-  const chartData = capTable.investments
-    .filter(inv => inv.sharesOwned > 0)
-    .map((investment, index) => {
-      const shareholder = capTable.shareholders.find(s => s.id === investment.shareholderId);
-      const shareClass = capTable.shareClasses.find(sc => sc.id === investment.shareClassId);
-      const percentage = (investment.sharesOwned / totalShares) * 100;
-      
-      return {
-        name: shareholder?.name || 'Unknown',
-        value: percentage,
-        shares: investment.sharesOwned,
-        investmentAmount: investment.investmentAmount,
-        shareClass: shareClass?.name || 'Unknown',
-        color: COLORS[index % COLORS.length],
-      };
-    });
-
-  // Add available shares if any
-  const availableShares = capTable.authorizedShares - totalShares;
-  if (availableShares > 0) {
-    const availablePercentage = (availableShares / capTable.authorizedShares) * 100;
-    chartData.push({
-      name: 'Available for Issuance',
-      value: availablePercentage,
-      shares: availableShares,
-      investmentAmount: 0,
-      shareClass: 'Unissued',
-      color: '#e5e7eb',
-    });
-  }
+  const { entity, capTable, totalShares, totalInvestment, availableShares, chartData } = capTableData;
 
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6">
