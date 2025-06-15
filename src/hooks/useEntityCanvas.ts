@@ -120,16 +120,18 @@ export const useEntityCanvas = () => {
   const { initialNodes, initialEdges } = useMemo(() => generateInitialState(), []);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [edges, setEdges, onEdgesState] = useEdgesState(initialEdges);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const onConnect = useCallback(
-    (params: Connection) => {
+    (params: Connection | { source: string; target: string; label: string }) => {
       const edge = {
-        ...params,
-        label: 'Connection',
+        id: `e-${params.source}-${params.target}`,
+        source: params.source,
+        target: params.target,
+        label: 'label' in params ? params.label : 'Connection',
         style: { stroke: '#3b82f6', strokeWidth: 2 },
         labelStyle: { fill: '#3b82f6', fontWeight: 600 },
       };
