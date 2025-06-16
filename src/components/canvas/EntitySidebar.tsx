@@ -52,33 +52,33 @@ export const EntitySidebar: React.FC<EntitySidebarProps> = ({ onCreateNode }) =>
   const handleResetData = () => {
     console.log('🔄 Resetting to original mock data...');
     
-    // Clear localStorage completely
-    localStorage.removeItem('entityStructureData');
+    // Clear localStorage completely using the correct key from StorageService
+    localStorage.removeItem('entity-data');
     
-    // Save the original mock data directly to localStorage
+    // Prepare the complete original mock data in the exact format expected by StorageService
     const originalData = {
       entities: mockEntities,
       capTables: mockCapTables,
       shareholders: mockShareholders,
       shareClasses: mockShareClasses,
+      lastSaved: Date.now(),
+      version: '1.0'
     };
     
-    console.log('💾 Saving original mock data:', {
+    console.log('💾 Saving complete original mock data:', {
       entities: originalData.entities.length,
       capTables: originalData.capTables.length,
       shareholders: originalData.shareholders.length,
       shareClasses: originalData.shareClasses.length
     });
     
-    localStorage.setItem('entityStructureData', JSON.stringify({
-      data: originalData,
-      timestamp: new Date().toISOString()
-    }));
+    // Save using the correct storage key that matches StorageService
+    localStorage.setItem('entity-data', JSON.stringify(originalData));
     
-    // Reload the page to reinitialize with the original data
+    // Reload the page to reinitialize with the complete original data
     location.reload();
     
-    console.log('✅ Data reset to original mock data');
+    console.log('✅ Data reset to complete original mock data');
   };
 
   return (
