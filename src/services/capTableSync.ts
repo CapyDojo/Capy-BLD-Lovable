@@ -1,3 +1,4 @@
+
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 import { Shareholder } from '@/types/capTable';
@@ -220,7 +221,7 @@ export const updateOwnershipFromChart = (sourceEntityId: string, targetEntityId:
           existingInvestment.sharesOwned = newShares;
           existingInvestment.investmentAmount = newShares * existingInvestment.pricePerShare;
           console.log('📊 Updated existing investment shares:', newShares);
-          dataStore.notifyChange();
+          // DataStore will automatically handle notifications and saving
           return;
         }
       }
