@@ -22,11 +22,18 @@ export const useEntityCanvas = () => {
   const [refreshKey, setRefreshKey] = useState(0);
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Subscribe to data store changes for auto-sync
   useEffect(() => {
     console.log('🔗 Setting up data store subscription in useEntityCanvas');
     const unsubscribe = dataStore.subscribe(() => {
+      // Skip refresh if we're in the middle of a deletion
+      if (isDeleting) {
+        console.log('⏳ Skipping refresh during deletion process');
+        return;
+      }
+      
       console.log('📡 useEntityCanvas: Data store changed, triggering refresh');
       
       // Check if selected node's entity still exists
@@ -46,7 +53,7 @@ export const useEntityCanvas = () => {
       });
     });
     return unsubscribe;
-  }, [selectedNode]);
+  }, [selectedNode, isDeleting]);
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     console.log('🔄 useEntityCanvas: Regenerating canvas structure due to refresh key:', refreshKey);
@@ -61,6 +68,12 @@ export const useEntityCanvas = () => {
 
   // Update nodes and edges when data changes - this is crucial for sync
   useEffect(() => {
+    // Skip updates if we're in the middle of a deletion
+    if (isDeleting) {
+      console.log('⏳ Skipping nodes/edges update during deletion');
+      return;
+    }
+    
     console.log('🔄 useEntityCanvas: Updating nodes and edges from data store changes');
     const { nodes: newNodes, edges: newEdges } = generateInitialState();
     console.log('📊 useEntityCanvas: Setting new nodes count:', newNodes.length, 'new edges count:', newEdges.length);
@@ -74,7 +87,7 @@ export const useEntityCanvas = () => {
     
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [refreshKey, setNodes, setEdges, selectedNode]);
+  }, [refreshKey, setNodes, setEdges, selectedNode, isDeleting]);
 
   const onConnect = useCallback(
     (params: Connection | { source: string; target: string; label: string }) => {
@@ -186,39 +199,49 @@ export const useEntityCanvas = () => {
     setSelectedNode((current) => current ? { ...current, data: { ...current.data, ...updates } } : null);
   }, [selectedNode]);
 
-  const deleteSelectedNode = useCallback(() => {
+  const deleteSelectedNode = useCallback(async () => {
     if (!selectedNode) return;
     
-    console.log('🗑️ useEntityCanvas: Deleting selected node:', selectedNode.id, 'type:', selectedNode.type);
+    console.log('🗑️ useEntityCanvas: Starting deletion process for:', selectedNode.id, 'type:', selectedNode.type);
+    
+    // Set deletion flag to prevent interference
+    setIsDeleting(true);
     
     // Close sidebar immediately to prevent UI issues
     setSidebarOpen(false);
     setSelectedNode(null);
     
-    // Handle different node types
-    if (selectedNode.type === 'entity') {
-      // Delete entity
-      console.log('🗑️ Deleting entity node:', selectedNode.id);
-      deleteEntityFromChart(selectedNode.id);
-    } else if (selectedNode.type === 'shareholder') {
-      // Delete stakeholder - extract entity ID and stakeholder ID from the node ID
-      console.log('🗑️ Deleting stakeholder node:', selectedNode.id);
-      
-      // Stakeholder node IDs are in format: stakeholder-{investmentId}-of-{entityId}
-      const match = selectedNode.id.match(/^stakeholder-(.+)-of-(.+)$/);
-      if (match) {
-        const [, stakeholderId, entityId] = match;
-        console.log('🗑️ Extracted stakeholder ID:', stakeholderId, 'entity ID:', entityId);
+    try {
+      // Handle different node types
+      if (selectedNode.type === 'entity') {
+        // Delete entity
+        console.log('🗑️ Deleting entity node:', selectedNode.id);
+        deleteEntityFromChart(selectedNode.id);
+      } else if (selectedNode.type === 'shareholder') {
+        // Delete stakeholder - extract entity ID and stakeholder ID from the node ID
+        console.log('🗑️ Deleting stakeholder node:', selectedNode.id);
         
-        // Use the data store's deleteStakeholder method
-        dataStore.deleteStakeholder(entityId, stakeholderId);
-      } else {
-        console.error('❌ Could not parse stakeholder node ID:', selectedNode.id);
+        // Stakeholder node IDs are in format: stakeholder-{investmentId}-of-{entityId}
+        const match = selectedNode.id.match(/^stakeholder-(.+)-of-(.+)$/);
+        if (match) {
+          const [, stakeholderId, entityId] = match;
+          console.log('🗑️ Extracted stakeholder ID:', stakeholderId, 'entity ID:', entityId);
+          
+          // Use the data store's deleteStakeholder method
+          dataStore.deleteStakeholder(entityId, stakeholderId);
+        } else {
+          console.error('❌ Could not parse stakeholder node ID:', selectedNode.id);
+        }
       }
+      
+      // Wait a short moment for the deletion to persist to localStorage
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('✅ useEntityCanvas: Deletion completed, allowing data store notifications');
+    } finally {
+      // Clear deletion flag to allow normal operations
+      setIsDeleting(false);
     }
-    
-    // No need to force refresh here - the data store subscription will handle it
-    console.log('✅ useEntityCanvas: Deletion completed, waiting for data store notification');
   }, [selectedNode]);
 
   return {
