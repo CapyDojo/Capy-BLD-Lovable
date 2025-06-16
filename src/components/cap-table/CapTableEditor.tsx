@@ -51,6 +51,31 @@ export const CapTableEditor: React.FC = () => {
     setSearchParams({ entityId });
   };
 
+  // Helper function to safely format date
+  const formatDate = (dateValue: any): string => {
+    if (!dateValue) return 'N/A';
+    
+    try {
+      // If it's already a Date object
+      if (dateValue instanceof Date) {
+        return dateValue.toLocaleDateString();
+      }
+      
+      // If it's a string, try to parse it
+      if (typeof dateValue === 'string') {
+        const parsedDate = new Date(dateValue);
+        if (!isNaN(parsedDate.getTime())) {
+          return parsedDate.toLocaleDateString();
+        }
+      }
+      
+      return 'Invalid Date';
+    } catch (error) {
+      console.warn('Error formatting date:', error);
+      return 'Invalid Date';
+    }
+  };
+
   if (entities.length === 0) {
     return (
       <div className="space-y-6">
@@ -126,8 +151,8 @@ export const CapTableEditor: React.FC = () => {
           </div>
           {selectedEntity && (
             <div className="text-sm text-gray-600">
-              <div>Registration: {selectedEntity.registrationNumber}</div>
-              <div>Incorporated: {selectedEntity.incorporationDate?.toLocaleDateString()}</div>
+              <div>Registration: {selectedEntity.registrationNumber || 'N/A'}</div>
+              <div>Incorporated: {formatDate(selectedEntity.incorporationDate)}</div>
             </div>
           )}
         </div>
