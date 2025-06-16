@@ -21,12 +21,25 @@ const generateInitialState = () => {
 
 export const useEntityCanvas = () => {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Subscribe to data store changes for auto-sync
   useEffect(() => {
     console.log('🔗 Setting up data store subscription in useEntityCanvas');
     const unsubscribe = dataStore.subscribe(() => {
       console.log('📡 useEntityCanvas: Data store changed, triggering refresh');
+      
+      // Check if selected node's entity still exists
+      if (selectedNode) {
+        const entity = dataStore.getEntityById(selectedNode.id);
+        if (!entity) {
+          console.log('🚪 Selected node entity deleted, closing sidebar');
+          setSelectedNode(null);
+          setSidebarOpen(false);
+        }
+      }
+      
       setRefreshKey(prev => {
         const newKey = prev + 1;
         console.log('🔄 useEntityCanvas: Refresh key updated from', prev, 'to', newKey);
@@ -34,7 +47,7 @@ export const useEntityCanvas = () => {
       });
     });
     return unsubscribe;
-  }, []);
+  }, [selectedNode]);
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     console.log('🔄 useEntityCanvas: Regenerating canvas structure due to refresh key:', refreshKey);
@@ -45,8 +58,6 @@ export const useEntityCanvas = () => {
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
-  const [selectedNode, setSelectedNode] = useState<Node | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   // Update nodes and edges when data changes - this is crucial for sync
@@ -55,7 +66,7 @@ export const useEntityCanvas = () => {
     const { nodes: newNodes, edges: newEdges } = generateInitialState();
     console.log('📊 useEntityCanvas: Setting new nodes count:', newNodes.length, 'new edges count:', newEdges.length);
     
-    // Check if selected node still exists
+    // Check if selected node still exists in new nodes
     if (selectedNode && !newNodes.find(node => node.id === selectedNode.id)) {
       console.log('🚪 useEntityCanvas: Selected node was deleted, closing sidebar');
       setSelectedNode(null);

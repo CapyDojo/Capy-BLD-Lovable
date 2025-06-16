@@ -25,7 +25,6 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
     console.log('🔗 EntityDetailsPanel subscribing to data store changes');
     const unsubscribe = dataStore.subscribe(() => {
       console.log('📡 EntityDetailsPanel received data store update');
-      setRefreshKey(prev => prev + 1);
       
       // Check if selected entity still exists
       if (selectedNode) {
@@ -33,6 +32,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
         if (!currentEntity) {
           console.log('🚪 Selected entity was deleted, closing panel');
           onClose();
+          return;
         } else {
           console.log('📝 Updating entity data in panel');
           setEntityData({
@@ -43,6 +43,8 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
           });
         }
       }
+      
+      setRefreshKey(prev => prev + 1);
     });
     return unsubscribe;
   }, [selectedNode, onClose]);
@@ -58,11 +60,22 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
           jurisdiction: entity.jurisdiction,
           ...selectedNode.data
         });
+      } else {
+        // Entity no longer exists, close panel
+        console.log('🚪 Entity no longer exists in panel effect, closing');
+        onClose();
       }
     }
-  }, [selectedNode, refreshKey]);
+  }, [selectedNode, refreshKey, onClose]);
 
+  // Don't render if entity doesn't exist
   if (!isOpen || !selectedNode) {
+    return null;
+  }
+
+  // Double-check entity exists before rendering
+  const entityExists = dataStore.getEntityById(selectedNode.id);
+  if (!entityExists) {
     return null;
   }
 
@@ -125,8 +138,8 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
           >
             <option value="Delaware">Delaware</option>
             <option value="California">California</option>
-            <option value="New York">New York</option>
             <option value="Nevada">Nevada</option>
+            <option value="New York">New York</option>
           </select>
         </div>
       </div>

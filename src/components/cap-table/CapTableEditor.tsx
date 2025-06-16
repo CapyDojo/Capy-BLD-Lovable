@@ -11,11 +11,26 @@ export const CapTableEditor: React.FC = () => {
   const entityIdFromUrl = searchParams.get('entityId');
   
   const [entities, setEntities] = useState(() => dataStore.getEntities());
-  const [selectedEntityId, setSelectedEntityId] = useState<string>(
-    entityIdFromUrl || entities[0]?.id || ''
-  );
+  const [selectedEntityId, setSelectedEntityId] = useState<string>('');
   const [view, setView] = useState<'table' | 'chart'>('table');
   const [refreshKey, setRefreshKey] = useState(0);
+
+  // Initialize selectedEntityId only with valid entities
+  useEffect(() => {
+    const validEntities = dataStore.getEntities();
+    const requestedEntity = entityIdFromUrl && validEntities.find(e => e.id === entityIdFromUrl);
+    
+    if (requestedEntity) {
+      setSelectedEntityId(entityIdFromUrl);
+    } else if (validEntities.length > 0) {
+      const firstEntityId = validEntities[0].id;
+      setSelectedEntityId(firstEntityId);
+      setSearchParams({ entityId: firstEntityId });
+    } else {
+      setSelectedEntityId('');
+      setSearchParams({});
+    }
+  }, [entityIdFromUrl, setSearchParams]);
 
   // Subscribe to data store changes to update entities list
   useEffect(() => {
@@ -25,16 +40,19 @@ export const CapTableEditor: React.FC = () => {
       const updatedEntities = dataStore.getEntities();
       setEntities(updatedEntities);
       
-      // Check if selected entity still exists
-      if (selectedEntityId && !updatedEntities.find(e => e.id === selectedEntityId)) {
-        console.log('⚠️ Selected entity was deleted, selecting first available');
-        const firstEntity = updatedEntities[0];
-        if (firstEntity) {
-          setSelectedEntityId(firstEntity.id);
-          setSearchParams({ entityId: firstEntity.id });
-        } else {
-          setSelectedEntityId('');
-          setSearchParams({});
+      // Always check if selected entity still exists after any data change
+      if (selectedEntityId) {
+        const entityStillExists = updatedEntities.find(e => e.id === selectedEntityId);
+        if (!entityStillExists) {
+          console.log('⚠️ Selected entity was deleted, selecting first available or clearing');
+          if (updatedEntities.length > 0) {
+            const firstEntity = updatedEntities[0];
+            setSelectedEntityId(firstEntity.id);
+            setSearchParams({ entityId: firstEntity.id });
+          } else {
+            setSelectedEntityId('');
+            setSearchParams({});
+          }
         }
       }
       
@@ -47,8 +65,12 @@ export const CapTableEditor: React.FC = () => {
 
   const handleEntityChange = (entityId: string) => {
     console.log('🔄 CapTableEditor changing entity to:', entityId);
-    setSelectedEntityId(entityId);
-    setSearchParams({ entityId });
+    // Verify the entity exists before setting it
+    const entityExists = entities.find(e => e.id === entityId);
+    if (entityExists) {
+      setSelectedEntityId(entityId);
+      setSearchParams({ entityId });
+    }
   };
 
   // Helper function to safely format date
@@ -83,6 +105,20 @@ export const CapTableEditor: React.FC = () => {
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Cap Table</h1>
             <p className="text-gray-600">No entities available. Please create entities first.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render if selected entity doesn't exist
+  if (selectedEntityId && !selectedEntity) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Cap Table</h1>
+            <p className="text-gray-600">Selected entity no longer exists. Loading...</p>
           </div>
         </div>
       </div>
@@ -158,7 +194,7 @@ export const CapTableEditor: React.FC = () => {
         </div>
       </div>
 
-      {selectedEntityId && (
+      {selectedEntityId && selectedEntity && (
         <div key={`${selectedEntityId}-${refreshKey}`}>
           {view === 'table' ? 
             <CapTableView entityId={selectedEntityId} /> : 
