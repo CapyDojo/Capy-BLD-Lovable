@@ -106,6 +106,10 @@ export const useEntityCanvas = () => {
       
       setSelectedNode(node);
       setSidebarOpen(true);
+    } else if (node.type === 'shareholder') {
+      console.log('🎯 Stakeholder node clicked:', node.id);
+      setSelectedNode(node);
+      setSidebarOpen(false); // Don't open sidebar for stakeholder nodes
     }
   }, []);
 
@@ -186,14 +190,33 @@ export const useEntityCanvas = () => {
   const deleteSelectedNode = useCallback(() => {
     if (!selectedNode) return;
     
-    console.log('🗑️ useEntityCanvas: Deleting selected node:', selectedNode.id);
+    console.log('🗑️ useEntityCanvas: Deleting selected node:', selectedNode.id, 'type:', selectedNode.type);
     
     // Close sidebar immediately to prevent UI issues
     setSidebarOpen(false);
     setSelectedNode(null);
     
-    // Delete from data store (this will auto-save and sync)
-    deleteEntityFromChart(selectedNode.id);
+    // Handle different node types
+    if (selectedNode.type === 'entity') {
+      // Delete entity
+      console.log('🗑️ Deleting entity node:', selectedNode.id);
+      deleteEntityFromChart(selectedNode.id);
+    } else if (selectedNode.type === 'shareholder') {
+      // Delete stakeholder - extract entity ID and stakeholder ID from the node ID
+      console.log('🗑️ Deleting stakeholder node:', selectedNode.id);
+      
+      // Stakeholder node IDs are in format: stakeholder-{investmentId}-of-{entityId}
+      const match = selectedNode.id.match(/^stakeholder-(.+)-of-(.+)$/);
+      if (match) {
+        const [, stakeholderId, entityId] = match;
+        console.log('🗑️ Extracted stakeholder ID:', stakeholderId, 'entity ID:', entityId);
+        
+        // Use the data store's deleteStakeholder method
+        dataStore.deleteStakeholder(entityId, stakeholderId);
+      } else {
+        console.error('❌ Could not parse stakeholder node ID:', selectedNode.id);
+      }
+    }
     
     // Force refresh to ensure UI updates immediately
     console.log('🔄 useEntityCanvas: Forcing refresh after deletion');
