@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCapTable } from '@/hooks/useCapTable';
@@ -149,7 +150,7 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
                         {item.shareClass}
                       </Badge>
                       <span className="text-xs text-gray-500">
-                        {item.sharesOwned > 0 ? `${item.sharesOwned.toLocaleString()} shares` : 'No shares'}
+                        {item.sharesOwned > 0 ? `${item.sharesOwned.toLocaleString()}` : 'No shares'}
                       </span>
                       <span className="text-xs text-gray-600 font-medium">
                         {item.ownershipPercentage ? `${item.ownershipPercentage.toFixed(1)}%` : '0%'}
