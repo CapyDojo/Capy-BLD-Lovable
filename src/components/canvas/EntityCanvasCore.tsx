@@ -1,27 +1,17 @@
+
 import React, { useCallback } from 'react';
 import { 
-  ReactFlow, 
+  ReactFlowProvider,
   Node, 
   Edge,
-  Background,
-  Controls,
-  MiniMap,
-  ReactFlowProvider,
   OnNodeDrag
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { EntityNode } from './EntityNode';
-import { ShareholderNode } from './ShareholderNode';
-import { MagneticField } from './MagneticField';
-import { ConnectionPreview } from './ConnectionPreview';
+import { ReactFlowCanvas } from './ReactFlowCanvas';
+import { CanvasTipDisplay } from './CanvasTipDisplay';
+import { MagneticOverlays } from './MagneticOverlays';
 import { OwnershipPercentageModal } from './OwnershipPercentageModal';
 import { useMagneticConnection } from '@/hooks/useMagneticConnection';
-import { useNavigate } from 'react-router-dom';
-
-const nodeTypes = {
-  entity: EntityNode,
-  shareholder: ShareholderNode,
-};
 
 interface EntityCanvasCoreProps {
   nodes: Node[];
@@ -36,7 +26,7 @@ interface EntityCanvasCoreProps {
 }
 
 // Inner component that uses the magnetic connection hook
-const ReactFlowCanvas: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: React.RefObject<HTMLDivElement> }> = ({
+const ReactFlowCanvasContainer: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: React.RefObject<HTMLDivElement> }> = ({
   nodes,
   edges,
   onNodesChange,
@@ -47,8 +37,6 @@ const ReactFlowCanvas: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: Reac
   onDragOver,
   reactFlowWrapper,
 }) => {
-  const navigate = useNavigate();
-
   // Initialize magnetic connection system (now inside ReactFlowProvider)
   const {
     isDragging,
@@ -96,10 +84,6 @@ const ReactFlowCanvas: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: Reac
     };
   });
 
-  const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
-    navigate(`/cap-table?entityId=${node.id}`);
-  }, [navigate]);
-
   // Convert viewport-relative coordinates to coordinates relative to the ReactFlow wrapper
   const getWrapperRelativePosition = useCallback((viewportPosition: { x: number; y: number }) => {
     if (!reactFlowWrapper.current) return viewportPosition;
@@ -113,65 +97,32 @@ const ReactFlowCanvas: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: Reac
 
   return (
     <>
-      <div className="absolute top-4 left-4 z-10 bg-white rounded-lg border border-gray-200 p-3 shadow-sm">
-        <p className="text-sm text-gray-600">
-          💡 <strong>Tip:</strong> Double-click an entity to view its cap table
-        </p>
-        {isDragging && (
-          <p className="text-xs text-blue-600 mt-1 font-medium">
-            🎯 Drag near another entity to create magnetic connection! Zones: {magneticZones.length}
-          </p>
-        )}
-      </div>
+      <CanvasTipDisplay 
+        isDragging={isDragging}
+        magneticZonesCount={magneticZones.length}
+      />
       
-      {/* Magnetic Field Overlays - positioned relative to the wrapper */}
-      {isDragging && magneticZones.map((zone, index) => {
-        const relativePosition = getWrapperRelativePosition(zone.screenPosition);
-        return (
-          <MagneticField
-            key={`${zone.nodeId}-${zone.zone}-${index}`}
-            zone={zone.zone!}
-            nodeId={zone.nodeId}
-            position={relativePosition}
-          />
-        );
-      })}
-
-      {/* Connection Preview */}
-      {connectionPreview && (
-        <ConnectionPreview
-          sourcePosition={getWrapperRelativePosition(connectionPreview.sourcePosition)}
-          targetPosition={getWrapperRelativePosition(connectionPreview.targetPosition)}
-        />
-      )}
+      <MagneticOverlays
+        isDragging={isDragging}
+        magneticZones={magneticZones}
+        connectionPreview={connectionPreview}
+        getWrapperRelativePosition={getWrapperRelativePosition}
+      />
       
-      <ReactFlow
+      <ReactFlowCanvas
         nodes={enhancedNodes}
         edges={edges}
         onNodesChange={handleNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
         onNodeClick={onNodeClick}
-        onNodeDoubleClick={onNodeDoubleClick}
+        onDrop={onDrop}
+        onDragOver={onDragOver}
         onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
-        onDrop={onDrop}
-        onDragOver={onDragOver}
-        nodeTypes={nodeTypes}
-        fitView
-        className="bg-gray-50"
-      >
-        <Controls />
-        <MiniMap 
-          nodeStrokeColor="#3b82f6"
-          nodeColor="#dbeafe"
-          nodeBorderRadius={8}
-        />
-        <Background color="#e5e7eb" gap={20} />
-      </ReactFlow>
+      />
 
-      {/* Ownership Percentage Modal */}
       <OwnershipPercentageModal
         isOpen={showOwnershipModal}
         onClose={setShowOwnershipModal}
@@ -206,7 +157,7 @@ export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = (props) => {
   return (
     <div className="flex-1 relative" ref={props.reactFlowWrapper}>
       <ReactFlowProvider>
-        <ReactFlowCanvas {...props} />
+        <ReactFlowCanvasContainer {...props} />
       </ReactFlowProvider>
     </div>
   );
