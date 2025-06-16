@@ -1,4 +1,3 @@
-
 import { EntityCapTable, Shareholder, ShareClass, Investment } from '@/types/capTable';
 
 export class CapTableManager {
@@ -166,11 +165,106 @@ export class CapTableManager {
   }
 
   deleteStakeholder(entityId: string, stakeholderId: string): void {
+    console.log('🗑️ CapTableManager: Starting deletion of stakeholder:', stakeholderId, 'from entity:', entityId);
+    
     const capTable = this.getCapTableByEntityId(entityId);
-    if (!capTable) return;
+    if (!capTable) {
+      console.warn('⚠️ No cap table found for entity:', entityId);
+      return;
+    }
 
-    capTable.investments = capTable.investments.filter(inv => inv.shareholderId !== stakeholderId);
-    capTable.shareholders = capTable.shareholders.filter(s => s.id !== stakeholderId);
+    // Log current state before deletion
+    console.log('📊 Before deletion - Global shareholders:', this.shareholders.length);
+    console.log('📊 Before deletion - Cap table shareholders:', capTable.shareholders.length);
+    console.log('📊 Before deletion - Cap table investments:', capTable.investments.length);
+
+    // Find the investment to get the actual shareholderId
+    const investment = capTable.investments.find(inv => inv.id === stakeholderId || inv.shareholderId === stakeholderId);
+    const actualShareholderId = investment?.shareholderId || stakeholderId;
+    
+    console.log('🔍 Found investment for deletion:', investment);
+    console.log('🔍 Actual shareholder ID to delete:', actualShareholderId);
+
+    // 1. Remove from the entity's cap table investments
+    const beforeInvestments = capTable.investments.length;
+    capTable.investments = capTable.investments.filter(inv => 
+      inv.id !== stakeholderId && 
+      inv.shareholderId !== stakeholderId && 
+      inv.shareholderId !== actualShareholderId
+    );
+    const afterInvestments = capTable.investments.length;
+    console.log('🗑️ Removed investments:', beforeInvestments - afterInvestments);
+
+    // 2. Remove from the entity's cap table shareholders
+    const beforeCapTableShareholders = capTable.shareholders.length;
+    capTable.shareholders = capTable.shareholders.filter(s => 
+      s.id !== stakeholderId && 
+      s.id !== actualShareholderId
+    );
+    const afterCapTableShareholders = capTable.shareholders.length;
+    console.log('🗑️ Removed cap table shareholders:', beforeCapTableShareholders - afterCapTableShareholders);
+
+    // 3. CRITICAL: Remove from the global shareholders array
+    const beforeGlobalShareholders = this.shareholders.length;
+    this.shareholders = this.shareholders.filter(s => 
+      s.id !== stakeholderId && 
+      s.id !== actualShareholderId
+    );
+    const afterGlobalShareholders = this.shareholders.length;
+    console.log('🗑️ Removed global shareholders:', beforeGlobalShareholders - afterGlobalShareholders);
+
+    // 4. Remove from ALL other cap tables where this shareholder might appear
+    let totalRemovedFromOtherTables = 0;
+    this.capTables.forEach(otherCapTable => {
+      if (otherCapTable.entityId !== entityId) {
+        const beforeOtherInvestments = otherCapTable.investments.length;
+        const beforeOtherShareholders = otherCapTable.shareholders.length;
+        
+        otherCapTable.investments = otherCapTable.investments.filter(inv => 
+          inv.shareholderId !== stakeholderId && 
+          inv.shareholderId !== actualShareholderId
+        );
+        
+        otherCapTable.shareholders = otherCapTable.shareholders.filter(s => 
+          s.id !== stakeholderId && 
+          s.id !== actualShareholderId
+        );
+        
+        const removedInvestments = beforeOtherInvestments - otherCapTable.investments.length;
+        const removedShareholders = beforeOtherShareholders - otherCapTable.shareholders.length;
+        totalRemovedFromOtherTables += removedInvestments + removedShareholders;
+        
+        if (removedInvestments > 0 || removedShareholders > 0) {
+          console.log(`🗑️ Removed from ${otherCapTable.entityId}:`, { investments: removedInvestments, shareholders: removedShareholders });
+        }
+      }
+    });
+
+    console.log('🗑️ Total items removed from other cap tables:', totalRemovedFromOtherTables);
+
+    // Final verification
+    const remainingInvestments = capTable.investments.filter(inv => 
+      inv.id === stakeholderId || 
+      inv.shareholderId === stakeholderId || 
+      inv.shareholderId === actualShareholderId
+    );
+    
+    const remainingGlobalShareholders = this.shareholders.filter(s => 
+      s.id === stakeholderId || 
+      s.id === actualShareholderId
+    );
+
+    if (remainingInvestments.length > 0) {
+      console.error('❌ CRITICAL: Investments still remain after deletion:', remainingInvestments);
+    }
+    
+    if (remainingGlobalShareholders.length > 0) {
+      console.error('❌ CRITICAL: Global shareholders still remain after deletion:', remainingGlobalShareholders);
+    }
+
+    if (remainingInvestments.length === 0 && remainingGlobalShareholders.length === 0) {
+      console.log('✅ Stakeholder completely removed from all data structures');
+    }
 
     this.notifyChange();
   }

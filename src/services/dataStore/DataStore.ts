@@ -224,26 +224,94 @@ export class DataStore {
   }
 
   deleteStakeholder(entityId: string, stakeholderId: string) {
-    console.log('🗑️ DataStore deleting stakeholder:', stakeholderId, 'from entity:', entityId);
+    console.log('🗑️ DataStore: Starting stakeholder deletion process');
+    console.log('🗑️ Entity ID:', entityId);
+    console.log('🗑️ Stakeholder ID:', stakeholderId);
     
-    // Delete from cap table manager
+    // Verify stakeholder exists before deletion
+    const capTable = this.capTableManager.getCapTableByEntityId(entityId);
+    if (!capTable) {
+      console.warn('⚠️ No cap table found for entity:', entityId);
+      return;
+    }
+
+    const existingInvestment = capTable.investments.find(inv => 
+      inv.id === stakeholderId || inv.shareholderId === stakeholderId
+    );
+    
+    if (!existingInvestment) {
+      console.warn('⚠️ Stakeholder not found in investments:', stakeholderId);
+      return;
+    }
+
+    console.log('🔍 Found stakeholder to delete:', existingInvestment);
+
+    // Perform the deletion
     this.capTableManager.deleteStakeholder(entityId, stakeholderId);
     
-    // Force immediate save and notification
-    console.log('💾 Force saving after stakeholder deletion');
+    // Force THREE immediate saves to ensure persistence
+    console.log('💾 Force saving #1 after stakeholder deletion');
     this.forceSave();
     
-    // Verify the deletion persisted
-    const capTable = this.capTableManager.getCapTableByEntityId(entityId);
-    if (capTable) {
-      const stillExists = capTable.investments.find(inv => inv.id === stakeholderId);
-      if (stillExists) {
-        console.error('❌ Stakeholder deletion failed - still exists:', stakeholderId);
-      } else {
-        console.log('✅ Stakeholder deletion confirmed:', stakeholderId);
-      }
-    }
+    setTimeout(() => {
+      console.log('💾 Force saving #2 after stakeholder deletion');
+      this.forceSave();
+    }, 50);
     
-    console.log('✅ Stakeholder deletion process completed');
+    setTimeout(() => {
+      console.log('💾 Force saving #3 after stakeholder deletion');
+      this.forceSave();
+    }, 100);
+    
+    // Verify the deletion persisted across multiple checks
+    setTimeout(() => {
+      console.log('🔍 Final verification of stakeholder deletion');
+      const verifyCapTable = this.capTableManager.getCapTableByEntityId(entityId);
+      const stillExists = verifyCapTable?.investments.find(inv => 
+        inv.id === stakeholderId || inv.shareholderId === stakeholderId
+      );
+      
+      const globalShareholders = this.capTableManager.getShareholders();
+      const stillInGlobal = globalShareholders.find(s => s.id === stakeholderId);
+      
+      if (stillExists) {
+        console.error('❌ CRITICAL: Stakeholder still exists in cap table after deletion!', stillExists);
+      }
+      
+      if (stillInGlobal) {
+        console.error('❌ CRITICAL: Stakeholder still exists in global array after deletion!', stillInGlobal);
+      }
+      
+      if (!stillExists && !stillInGlobal) {
+        console.log('✅ Final verification passed: Stakeholder completely deleted');
+      }
+      
+      // Verify localStorage persistence
+      const savedData = this.storageService.load();
+      const savedCapTable = savedData?.capTables?.find((ct: any) => ct.entityId === entityId);
+      const stillInStorage = savedCapTable?.investments?.find((inv: any) => 
+        inv.id === stakeholderId || inv.shareholderId === stakeholderId
+      );
+      
+      if (stillInStorage) {
+        console.error('❌ CRITICAL: Stakeholder still exists in localStorage!', stillInStorage);
+        // Force manual cleanup
+        if (savedCapTable) {
+          savedCapTable.investments = savedCapTable.investments.filter((inv: any) => 
+            inv.id !== stakeholderId && inv.shareholderId !== stakeholderId
+          );
+          savedCapTable.shareholders = savedCapTable.shareholders.filter((s: any) => s.id !== stakeholderId);
+        }
+        if (savedData?.shareholders) {
+          savedData.shareholders = savedData.shareholders.filter((s: any) => s.id !== stakeholderId);
+        }
+        this.storageService.save(savedData);
+        console.log('🔧 Manually cleaned up localStorage');
+      } else {
+        console.log('✅ Stakeholder deletion verified in localStorage');
+      }
+    }, 200);
+    
+    console.log('✅ DataStore: Stakeholder deletion process initiated');
   }
 }
