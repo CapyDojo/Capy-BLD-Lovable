@@ -5,7 +5,8 @@ import { ConnectionPreview } from './ConnectionPreview';
 
 interface MagneticZone {
   nodeId: string;
-  zone: 'attract' | 'snap' | null;
+  zone: 'detection' | 'strongPull' | 'snap' | null;
+  distance: number;
   screenPosition: { x: number; y: number };
 }
 
