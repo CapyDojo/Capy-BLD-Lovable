@@ -1,4 +1,3 @@
-
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { 
   Node, 
@@ -218,9 +217,8 @@ export const useEntityCanvas = () => {
       }
     }
     
-    // Force refresh to ensure UI updates immediately
-    console.log('🔄 useEntityCanvas: Forcing refresh after deletion');
-    setRefreshKey(prev => prev + 1);
+    // No need to force refresh here - the data store subscription will handle it
+    console.log('✅ useEntityCanvas: Deletion completed, waiting for data store notification');
   }, [selectedNode]);
 
   return {
