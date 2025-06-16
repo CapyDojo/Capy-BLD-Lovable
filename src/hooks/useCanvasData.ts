@@ -1,4 +1,3 @@
-
 import { useMemo, useEffect } from 'react';
 import { useNodesState, useEdgesState } from '@xyflow/react';
 import { generateSyncedCanvasStructure } from '@/services/capTableSync';
@@ -45,7 +44,7 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
 
-  // Update nodes and edges when data changes - this is crucial for sync
+  // Update nodes and edges when data changes - preserve positions
   useEffect(() => {
     // Skip updates if we're in the middle of a deletion
     if (isDeleting) {
@@ -57,16 +56,33 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
     const { nodes: newNodes, edges: newEdges } = generateInitialState();
     console.log('📊 useCanvasData: Setting new nodes count:', newNodes.length, 'new edges count:', newEdges.length);
     
+    // Preserve existing node positions
+    const updatedNodes = newNodes.map(newNode => {
+      const existingNode = nodes.find(n => n.id === newNode.id);
+      if (existingNode) {
+        // Keep the current position and any other state
+        return {
+          ...newNode,
+          position: existingNode.position,
+          data: {
+            ...newNode.data,
+            basePosition: existingNode.data.basePosition || newNode.data.basePosition
+          }
+        };
+      }
+      return newNode;
+    });
+    
     // Check if selected node still exists in new nodes
-    if (selectedNode && !newNodes.find(node => node.id === selectedNode.id)) {
+    if (selectedNode && !updatedNodes.find(node => node.id === selectedNode.id)) {
       console.log('🚪 useCanvasData: Selected node was deleted, closing sidebar');
       setSelectedNode(null);
       setSidebarOpen(false);
     }
     
-    setNodes(newNodes);
+    setNodes(updatedNodes);
     setEdges(newEdges);
-  }, [refreshKey, setNodes, setEdges, selectedNode, isDeleting, setSelectedNode, setSidebarOpen]);
+  }, [refreshKey, setNodes, setEdges, selectedNode, isDeleting, setSelectedNode, setSidebarOpen, nodes]);
 
   return {
     nodes,
