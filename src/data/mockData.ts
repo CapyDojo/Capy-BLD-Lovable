@@ -89,6 +89,7 @@ export const mockShareClasses: ShareClass[] = [
     id: 'parent-corp-common',
     entityId: 'parent-corp',
     name: 'Common Stock',
+    type: 'Common Stock',
     totalAuthorizedShares: 10000000,
     votingRights: true,
     createdAt: new Date('2020-01-15'),
@@ -98,6 +99,7 @@ export const mockShareClasses: ShareClass[] = [
     id: 'parent-corp-preferred-a',
     entityId: 'parent-corp',
     name: 'Preferred Series A',
+    type: 'Preferred Series A',
     totalAuthorizedShares: 2000000,
     votingRights: true,
     liquidationPreference: 1.0,
@@ -108,6 +110,7 @@ export const mockShareClasses: ShareClass[] = [
     id: 'subsidiary-llc-units',
     entityId: 'subsidiary-llc',
     name: 'LLC Membership Units',
+    type: 'Common Stock',
     totalAuthorizedShares: 1000000,
     votingRights: true,
     createdAt: new Date('2021-06-01'),
@@ -117,6 +120,7 @@ export const mockShareClasses: ShareClass[] = [
     id: 'tech-holdings-common',
     entityId: 'tech-holdings',
     name: 'Common Stock',
+    type: 'Common Stock',
     totalAuthorizedShares: 1000000,
     votingRights: true,
     createdAt: new Date('2022-03-10'),
@@ -207,7 +211,33 @@ export const mockCapTables: EntityCapTable[] = [
       mockShareholders[3], // Employee Pool
       mockShareholders[4], // Convertible Notes
     ],
-    shareClasses: mockShareClasses,
+    shareClasses: [
+      {
+        id: 'parent-corp-common',
+        name: 'Common Stock',
+        type: 'Common Stock',
+        votingRights: true,
+      },
+      {
+        id: 'parent-corp-preferred-a',
+        name: 'Preferred Series A',
+        type: 'Preferred Series A',
+        votingRights: true,
+        liquidationPreference: 1.0,
+      },
+      {
+        id: 'stock-options',
+        name: 'Stock Options',
+        type: 'Stock Options',
+        votingRights: false,
+      },
+      {
+        id: 'convertible-notes',
+        name: 'Convertible Notes',
+        type: 'Convertible Notes',
+        votingRights: false,
+      },
+    ],
     investments: [
       {
         id: 'inv-1',
@@ -284,7 +314,14 @@ export const mockCapTables: EntityCapTable[] = [
     entityId: 'tech-holdings',
     authorizedShares: 1000000,
     shareholders: [mockShareholders[5]], // Parent Corporation
-    shareClasses: [mockShareClasses[0]], // Common Stock
+    shareClasses: [
+      {
+        id: 'common-stock',
+        name: 'Common Stock',
+        type: 'Common Stock',
+        votingRights: true,
+      },
+    ],
     investments: [
       {
         id: 'inv-tech-1',

@@ -33,6 +33,7 @@ export interface ShareClass {
   id: string;
   entityId: string; // Which entity this share class belongs to
   name: string;
+  type: 'Common Stock' | 'Preferred Series A' | 'Preferred Series B' | 'Stock Options' | 'Convertible Notes';
   totalAuthorizedShares: number;
   votingRights: boolean;
   liquidationPreference?: number;
