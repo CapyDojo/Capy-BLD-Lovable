@@ -176,15 +176,37 @@ export class CapTableManager {
   }
 
   cleanupEntityData(entityId: string): void {
+    console.log('🧹 Cleaning up cap table data for deleted entity:', entityId);
+    
+    // Remove the cap table for this entity
+    const originalCapTablesCount = this.capTables.length;
     this.capTables = this.capTables.filter(ct => ct.entityId !== entityId);
-    // Remove any shareholdings by this entity
+    console.log('🗑️ Removed cap tables:', originalCapTablesCount - this.capTables.length);
+    
+    // Remove any shareholders that represent this entity
+    const originalShareholdersCount = this.shareholders.length;
     this.shareholders = this.shareholders.filter(s => s.entityId !== entityId);
+    console.log('🗑️ Removed entity shareholders:', originalShareholdersCount - this.shareholders.length);
+    
+    // Remove investments by this entity from all other cap tables
+    let removedInvestments = 0;
     this.capTables.forEach(capTable => {
+      const originalInvestmentsCount = capTable.investments.length;
+      
+      // Remove investments where the shareholder represents the deleted entity
       capTable.investments = capTable.investments.filter(inv => {
         const shareholder = this.shareholders.find(s => s.id === inv.shareholderId);
         return shareholder?.entityId !== entityId;
       });
+      
+      // Remove shareholders that represent the deleted entity
+      capTable.shareholders = capTable.shareholders.filter(s => s.entityId !== entityId);
+      
+      removedInvestments += originalInvestmentsCount - capTable.investments.length;
     });
+    
+    console.log('🗑️ Removed investments by deleted entity:', removedInvestments);
+    console.log('✅ Cap table cleanup complete');
   }
 
   updateData(newCapTables: EntityCapTable[], newShareholders: Shareholder[], newShareClasses: ShareClass[]): void {

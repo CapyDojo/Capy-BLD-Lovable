@@ -69,8 +69,27 @@ export const generateSyncedCanvasStructure = () => {
   const edges: Edge[] = [];
   const nodeIds = new Set<string>();
 
-  // Create entity nodes - filter out any null/undefined entities
-  allEntities.filter(entity => entity && entity.id).forEach((entity, index) => {
+  // Filter out any null/undefined entities and ensure they exist in the store
+  const validEntities = allEntities.filter(entity => {
+    if (!entity || !entity.id) {
+      console.warn('⚠️ Found invalid entity:', entity);
+      return false;
+    }
+    
+    // Double check entity still exists in store
+    const existsInStore = dataStore.getEntityById(entity.id);
+    if (!existsInStore) {
+      console.warn('⚠️ Entity not found in store:', entity.id);
+      return false;
+    }
+    
+    return true;
+  });
+
+  console.log('✅ Valid entities after filtering:', validEntities.length);
+
+  // Create entity nodes - only for entities that actually exist
+  validEntities.forEach((entity, index) => {
     const position = { 
       x: 250 + (index % 3) * 400, 
       y: 100 + Math.floor(index / 3) * 300
@@ -91,8 +110,8 @@ export const generateSyncedCanvasStructure = () => {
     nodeIds.add(entity.id);
   });
 
-  // Create stakeholder nodes and edges using synced data
-  allEntities.filter(entity => entity && entity.id).forEach((entity) => {
+  // Create stakeholder nodes and edges using synced data - only for valid entities
+  validEntities.forEach((entity) => {
     const syncedData = syncCapTableData(entity.id);
     if (!syncedData || syncedData.totalShares === 0) return;
 
@@ -106,26 +125,33 @@ export const generateSyncedCanvasStructure = () => {
       sh => sh.type === 'Entity'
     );
 
-    // Create edges for entity stakeholders (both those with entityId and without)
+    // Create edges for entity stakeholders - but only if the source entity still exists
     entityStakeholders.forEach((stakeholder) => {
       if (stakeholder.entityId && nodeIds.has(stakeholder.entityId)) {
-        // Entity stakeholder with a corresponding entity node
-        console.log('🔗 Creating entity ownership edge:', stakeholder.entityId, '->', entity.id);
-        edges.push({
-          id: `e-${stakeholder.entityId}-${entity.id}`,
-          source: stakeholder.entityId,
-          target: entity.id,
-          label: `${stakeholder.ownershipPercentage.toFixed(1)}%`,
-          style: { stroke: '#3b82f6', strokeWidth: 2 },
-          labelStyle: { fill: '#3b82f6', fontWeight: 600 },
-        });
+        // Verify the source entity still exists in the data store
+        const sourceEntity = dataStore.getEntityById(stakeholder.entityId);
+        if (sourceEntity) {
+          console.log('🔗 Creating entity ownership edge:', stakeholder.entityId, '->', entity.id);
+          edges.push({
+            id: `e-${stakeholder.entityId}-${entity.id}`,
+            source: stakeholder.entityId,
+            target: entity.id,
+            label: `${stakeholder.ownershipPercentage.toFixed(1)}%`,
+            style: { stroke: '#3b82f6', strokeWidth: 2 },
+            labelStyle: { fill: '#3b82f6', fontWeight: 600 },
+          });
+        } else {
+          console.warn('⚠️ Source entity no longer exists, skipping edge:', stakeholder.entityId);
+          // Treat as individual stakeholder instead
+          individualStakeholders.push(stakeholder);
+        }
       } else {
-        // Entity stakeholder without entityId - treat as individual stakeholder
+        // Entity stakeholder without valid entityId - treat as individual stakeholder
         individualStakeholders.push(stakeholder);
       }
     });
 
-    // Create nodes and edges for individual stakeholders (including entity stakeholders without entityId)
+    // Create nodes and edges for individual stakeholders
     const parentPosition = parentNode.data.basePosition as { x: number; y: number };
     
     individualStakeholders.forEach((stakeholder, individualIndex) => {

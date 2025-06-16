@@ -111,8 +111,14 @@ export class DataStore {
 
   deleteEntity(id: string) {
     console.log('🗑️ Deleting entity:', id);
-    this.entityManager.delete(id);
+    
+    // First clean up all cap table data for this entity
     this.capTableManager.cleanupEntityData(id);
+    
+    // Then delete the entity itself
+    this.entityManager.delete(id);
+    
+    console.log('✅ Entity deletion complete, remaining entities:', this.entityManager.getAll().length);
   }
 
   // Cap table operations
