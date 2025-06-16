@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCapTable } from '@/hooks/useCapTable';
@@ -30,9 +29,8 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
           <h4 className="text-sm font-medium text-gray-700">Stakeholders</h4>
           <Button
             size="sm"
-            variant="outline"
             onClick={() => navigate(`/cap-table?entityId=${entityId}`)}
-            className="h-6 px-2 text-xs"
+            className="h-6 px-2 text-xs bg-blue-600 text-white hover:bg-blue-700"
           >
             Full Cap Table
           </Button>
@@ -87,9 +85,8 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
         <h4 className="text-sm font-medium text-gray-700">Stakeholders</h4>
         <Button
           size="sm"
-          variant="outline"
           onClick={() => navigate(`/cap-table?entityId=${entityId}`)}
-          className="h-6 px-2 text-xs"
+          className="h-6 px-2 text-xs bg-blue-600 text-white hover:bg-blue-700"
         >
           Full Cap Table
         </Button>
@@ -153,6 +150,9 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
                       </Badge>
                       <span className="text-xs text-gray-500">
                         {item.sharesOwned > 0 ? `${item.sharesOwned.toLocaleString()} shares` : 'No shares'}
+                      </span>
+                      <span className="text-xs text-gray-600 font-medium">
+                        {item.ownershipPercentage ? `${item.ownershipPercentage.toFixed(1)}%` : '0%'}
                       </span>
                     </div>
                   </div>
