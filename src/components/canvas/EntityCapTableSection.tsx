@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useCapTable } from '@/hooks/useCapTable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -17,6 +18,7 @@ interface EditingRow {
 }
 
 export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ entityId }) => {
+  const navigate = useNavigate();
   const capTableData = useCapTable(entityId);
   const [editingRow, setEditingRow] = useState<EditingRow | null>(null);
   const [isAddingNew, setIsAddingNew] = useState(false);
@@ -24,8 +26,18 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
   if (!capTableData) {
     return (
       <div className="mt-6 pt-6 border-t border-gray-200">
-        <h4 className="text-sm font-medium text-gray-700 mb-3">Cap Table</h4>
-        <p className="text-sm text-gray-500">No cap table data available</p>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-sm font-medium text-gray-700">Stakeholders</h4>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/cap-table?entityId=${entityId}`)}
+            className="h-6 px-2 text-xs"
+          >
+            Full Cap Table
+          </Button>
+        </div>
+        <p className="text-sm text-gray-500">No stakeholder data available</p>
       </div>
     );
   }
@@ -72,15 +84,14 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
   return (
     <div className="mt-6 pt-6 border-t border-gray-200">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-medium text-gray-700">Cap Table</h4>
+        <h4 className="text-sm font-medium text-gray-700">Stakeholders</h4>
         <Button
           size="sm"
           variant="outline"
-          onClick={handleAddNew}
+          onClick={() => navigate(`/cap-table?entityId=${entityId}`)}
           className="h-6 px-2 text-xs"
         >
-          <Plus className="h-3 w-3 mr-1" />
-          Add
+          Full Cap Table
         </Button>
       </div>
       
@@ -197,11 +208,24 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
             </div>
           </div>
         )}
+        
+        {/* Add New Button as Card */}
+        {!isAddingNew && (
+          <button
+            onClick={handleAddNew}
+            className="w-full bg-gray-50 rounded-lg p-3 border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-100 transition-colors"
+          >
+            <div className="flex items-center justify-center gap-2 text-gray-500">
+              <Plus className="h-4 w-4" />
+              <span className="text-sm">Add Stakeholder</span>
+            </div>
+          </button>
+        )}
       </div>
       
       {tableData.length === 0 && !isAddingNew && (
         <div className="text-center py-4 text-sm text-gray-500">
-          No stakeholders found. Click "Add" to create one.
+          No stakeholders found. Click "Add Stakeholder" to create one.
         </div>
       )}
     </div>

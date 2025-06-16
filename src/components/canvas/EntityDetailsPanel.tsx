@@ -1,7 +1,6 @@
 
 import React from 'react';
 import { Node } from '@xyflow/react';
-import { useNavigate } from 'react-router-dom';
 import { EntityCapTableSection } from './EntityCapTableSection';
 
 interface EntityDetailsPanelProps {
@@ -17,8 +16,6 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
   onClose,
   onUpdateNode,
 }) => {
-  const navigate = useNavigate();
-
   if (!isOpen || !selectedNode) {
     return null;
   }
@@ -27,20 +24,12 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
     <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-medium text-gray-900">Entity Details</h3>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() => navigate(`/cap-table?entityId=${selectedNode.id}`)}
-            className="px-3 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-          >
-            View Cap Table
-          </button>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
-          >
-            ×
-          </button>
-        </div>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600"
+        >
+          ×
+        </button>
       </div>
       
       <div className="space-y-4">
