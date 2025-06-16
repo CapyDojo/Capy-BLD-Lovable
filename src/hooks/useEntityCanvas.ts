@@ -1,5 +1,4 @@
 
-import { useReactFlow } from '@xyflow/react';
 import { useCanvasState } from './useCanvasState';
 import { useCanvasData } from './useCanvasData';
 import { useCanvasDeletion } from './useCanvasDeletion';
@@ -7,8 +6,6 @@ import { useCanvasEvents } from './useCanvasEvents';
 import { useKeyboardHandler } from './useKeyboardHandler';
 
 export const useEntityCanvas = () => {
-  const { getNodes } = useReactFlow();
-  
   const {
     refreshKey,
     selectedNode,
