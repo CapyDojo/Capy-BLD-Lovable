@@ -57,6 +57,6 @@ export const useMagneticConnection = (
     handleNodeDrag,
     handleNodeDragStop: handleNodeDragStopWithConnection,
     handleOwnershipConfirm,
-    closeOwnershipModal
+    setShowOwnershipModal: closeOwnershipModal
   };
 };
