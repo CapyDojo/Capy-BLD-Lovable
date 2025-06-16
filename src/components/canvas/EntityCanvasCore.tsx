@@ -26,7 +26,7 @@ interface EntityCanvasCoreProps {
 }
 
 // Inner component that uses the magnetic connection hook
-const ReactFlowCanvasContainer: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: React.RefObject<HTMLDivElement> }> = ({
+const ReactFlowCanvasContainer: React.FC<EntityCanvasCoreProps> = ({
   nodes,
   edges,
   onNodesChange,
@@ -37,6 +37,8 @@ const ReactFlowCanvasContainer: React.FC<EntityCanvasCoreProps & { reactFlowWrap
   onDragOver,
   reactFlowWrapper,
 }) => {
+  console.log('🎯 ReactFlowCanvasContainer rendering with nodes:', nodes.length, 'edges:', edges.length);
+  
   // Initialize magnetic connection system (now inside ReactFlowProvider)
   const {
     isDragging,
@@ -58,7 +60,6 @@ const ReactFlowCanvasContainer: React.FC<EntityCanvasCoreProps & { reactFlowWrap
   }, [handleNodeDragStart]);
 
   const onNodeDrag: OnNodeDrag = useCallback((event, node) => {
-    console.log('🎯 React Flow drag:', node.id, node.position);
     handleNodeDrag(node.id, node.position);
   }, [handleNodeDrag]);
 
@@ -69,6 +70,7 @@ const ReactFlowCanvasContainer: React.FC<EntityCanvasCoreProps & { reactFlowWrap
 
   // Enhanced onNodesChange to work with magnetic system
   const handleNodesChange = useCallback((changes: any) => {
+    console.log('🎯 Nodes changing:', changes);
     onNodesChange(changes);
   }, [onNodesChange]);
 
@@ -154,6 +156,8 @@ const ReactFlowCanvasContainer: React.FC<EntityCanvasCoreProps & { reactFlowWrap
 };
 
 export const EntityCanvasCore: React.FC<EntityCanvasCoreProps> = (props) => {
+  console.log('🎯 EntityCanvasCore rendering with wrapper ref:', !!props.reactFlowWrapper.current);
+  
   return (
     <div className="flex-1 relative" ref={props.reactFlowWrapper}>
       <ReactFlowProvider>

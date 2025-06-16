@@ -1,6 +1,5 @@
 
 import { useState, useCallback } from 'react';
-import { updateOwnershipFromChart } from '@/services/capTableSync';
 
 interface PendingConnection {
   source: string;
@@ -12,18 +11,16 @@ export const useOwnershipModal = (onConnect: (connection: { source: string; targ
   const [pendingConnection, setPendingConnection] = useState<PendingConnection | null>(null);
 
   const openOwnershipModal = useCallback((connection: PendingConnection) => {
+    console.log('🎯 Opening ownership modal for connection:', connection);
     setPendingConnection(connection);
     setShowOwnershipModal(true);
   }, []);
 
   const handleOwnershipConfirm = useCallback((percentage: number) => {
     if (pendingConnection) {
-      console.log('🎯 Confirming ownership connection with auto-sync:', pendingConnection, percentage);
+      console.log('🎯 Confirming ownership connection:', pendingConnection, percentage + '%');
       
-      // Use the chart mutation function which auto-saves
-      updateOwnershipFromChart(pendingConnection.source, pendingConnection.target, percentage);
-      
-      // Also call the original onConnect for immediate UI feedback
+      // Call the onConnect directly with the percentage
       onConnect({
         source: pendingConnection.source,
         target: pendingConnection.target,
@@ -35,6 +32,7 @@ export const useOwnershipModal = (onConnect: (connection: { source: string; targ
   }, [pendingConnection, onConnect]);
 
   const closeOwnershipModal = useCallback(() => {
+    console.log('🎯 Closing ownership modal');
     setShowOwnershipModal(false);
     setPendingConnection(null);
   }, []);

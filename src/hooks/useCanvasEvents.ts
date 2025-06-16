@@ -22,6 +22,8 @@ export const useCanvasEvents = (
       const percentageMatch = 'label' in params ? params.label.match(/(\d+(?:\.\d+)?)%/) : null;
       const ownershipPercentage = percentageMatch ? parseFloat(percentageMatch[1]) : 10;
 
+      console.log('🔗 Extracted ownership percentage:', ownershipPercentage);
+
       // Update ownership in data store (this will auto-save and sync)
       updateOwnershipFromChart(params.source, params.target, ownershipPercentage);
 
@@ -31,6 +33,8 @@ export const useCanvasEvents = (
   );
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    console.log('🎯 Node clicked:', node.id, node.type);
+    
     if (node.type === 'entity') {
       console.log('🎯 Entity node clicked:', node.id);
       
@@ -52,6 +56,7 @@ export const useCanvasEvents = (
 
   const createNode = useCallback((type: DraggableNodeType, position: { x: number; y: number }) => {
     const id = `new-${Date.now().toString()}`;
+    console.log('➕ Creating new node:', type, 'at position:', position);
 
     if (type === 'Individual') {
       // For individuals, we don't create entities, just stakeholder nodes
@@ -76,21 +81,34 @@ export const useCanvasEvents = (
   }, []);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
+    console.log('🎯 Drag over event received');
     event.preventDefault();
     event.dataTransfer.dropEffect = 'move';
   }, []);
 
   const onDrop = useCallback(
     (event: React.DragEvent) => {
+      console.log('🎯 Drop event received');
       event.preventDefault();
 
       const reactFlowWrapperCurrent = reactFlowWrapper.current;
-      if (!reactFlowWrapperCurrent) return;
+      if (!reactFlowWrapperCurrent) {
+        console.warn('⚠️ ReactFlow wrapper not found');
+        return;
+      }
 
       const reactFlowBounds = reactFlowWrapperCurrent.getBoundingClientRect();
       const type = event.dataTransfer.getData('application/reactflow') as DraggableNodeType;
 
+      console.log('🎯 Drop data:', {
+        type,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        bounds: reactFlowBounds
+      });
+
       if (typeof type === 'undefined' || !type) {
+        console.warn('⚠️ No valid type found in drop data');
         return;
       }
 
@@ -99,6 +117,7 @@ export const useCanvasEvents = (
         y: event.clientY - reactFlowBounds.top - 50,
       };
 
+      console.log('🎯 Calculated position:', position);
       createNode(type, position);
     },
     [createNode],
