@@ -2,6 +2,7 @@
 import React from 'react';
 import { Node } from '@xyflow/react';
 import { useNavigate } from 'react-router-dom';
+import { EntityCapTableSection } from './EntityCapTableSection';
 
 interface EntityDetailsPanelProps {
   selectedNode: Node;
@@ -23,7 +24,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
   }
 
   return (
-    <div className="w-80 bg-white border-l border-gray-200 p-6">
+    <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
       <div className="flex items-center justify-between mb-6">
         <h3 className="text-lg font-medium text-gray-900">Entity Details</h3>
         <div className="flex items-center space-x-2">
@@ -87,6 +88,8 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
           </select>
         </div>
       </div>
+
+      <EntityCapTableSection entityId={selectedNode.id} />
     </div>
   );
 };
