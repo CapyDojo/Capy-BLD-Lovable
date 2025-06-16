@@ -71,13 +71,14 @@ export const useCanvasEvents = (
         ownership: 0,
         registrationNumber: `REG-${Date.now()}`,
         incorporationDate: new Date(),
-        address: 'TBD'
+        address: 'TBD',
+        position // Store the exact drop position
       };
       
       console.log('➕ Creating new entity in data store:', newEntity);
       // Add to data store (this will auto-save and sync)
       addEntityFromChart(newEntity);
-      console.log('✅ Entity added to data store, should trigger refresh');
+      console.log('✅ Entity added to data store with position:', position);
     }
   }, []);
 
@@ -118,10 +119,8 @@ export const useCanvasEvents = (
         y: event.clientY - reactFlowBounds.top - 50,
       };
 
-      console.log('🎯 Calculated position:', position);
-      console.log('🎯 About to call createNode...');
+      console.log('🎯 Calculated drop position:', position);
       createNode(type, position);
-      console.log('🎯 createNode called, waiting for data store update...');
     },
     [createNode],
   );

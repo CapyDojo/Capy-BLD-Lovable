@@ -1,4 +1,3 @@
-
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 import { Shareholder } from '@/types/capTable';
@@ -88,14 +87,15 @@ export const generateSyncedCanvasStructure = () => {
 
   console.log('✅ Valid entities after filtering:', validEntities.length);
 
-  // Create entity nodes - only for entities that actually exist
+  // Create entity nodes - use stored position if available, otherwise calculate default
   validEntities.forEach((entity, index) => {
-    const position = { 
+    // Use stored position if available, otherwise calculate a default position
+    const position = entity.position || { 
       x: 250 + (index % 3) * 400, 
       y: 100 + Math.floor(index / 3) * 300
     };
     
-    console.log('➕ Creating entity node:', entity.id, entity.name);
+    console.log('➕ Creating entity node:', entity.id, entity.name, 'at position:', position);
     nodes.push({
       id: entity.id,
       type: 'entity',
