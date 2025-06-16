@@ -43,21 +43,23 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
     const result = generateInitialState();
     console.log('📊 useCanvasData: Generated', result.nodes.length, 'nodes and', result.edges.length, 'edges');
     
-    // Apply saved positions to initial nodes
-    const nodesWithPositions = result.nodes.map(node => {
-      const savedPosition = positionsRef.current[node.id];
-      if (savedPosition) {
-        return {
-          ...node,
-          position: savedPosition,
-          data: {
-            ...node.data,
-            basePosition: node.data.basePosition || node.position
-          }
-        };
-      }
-      return node;
-    });
+    // Apply saved positions to initial nodes - filter out any undefined nodes
+    const nodesWithPositions = result.nodes
+      .filter(node => node && node.id) // Filter out undefined/invalid nodes
+      .map(node => {
+        const savedPosition = positionsRef.current[node.id];
+        if (savedPosition) {
+          return {
+            ...node,
+            position: savedPosition,
+            data: {
+              ...node.data,
+              basePosition: node.data.basePosition || node.position
+            }
+          };
+        }
+        return node;
+      });
     
     return { nodes: nodesWithPositions, edges: result.edges };
   }, [refreshKey]);
@@ -69,7 +71,7 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
   const enhancedOnNodesChange = (changes: any) => {
     // Update position tracking for any position changes
     changes.forEach((change: any) => {
-      if (change.type === 'position' && change.position) {
+      if (change.type === 'position' && change.position && change.id) {
         positionsRef.current[change.id] = change.position;
       }
     });
@@ -88,21 +90,23 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
     const { nodes: newNodes, edges: newEdges } = generateInitialState();
     console.log('📊 useCanvasData: Setting new nodes count:', newNodes.length, 'new edges count:', newEdges.length);
     
-    // Preserve existing node positions using the ref
-    const updatedNodes = newNodes.map(newNode => {
-      const savedPosition = positionsRef.current[newNode.id];
-      if (savedPosition) {
-        return {
-          ...newNode,
-          position: savedPosition,
-          data: {
-            ...newNode.data,
-            basePosition: newNode.data.basePosition || savedPosition
-          }
-        };
-      }
-      return newNode;
-    });
+    // Preserve existing node positions using the ref - filter out undefined nodes
+    const updatedNodes = newNodes
+      .filter(newNode => newNode && newNode.id) // Filter out undefined/invalid nodes
+      .map(newNode => {
+        const savedPosition = positionsRef.current[newNode.id];
+        if (savedPosition) {
+          return {
+            ...newNode,
+            position: savedPosition,
+            data: {
+              ...newNode.data,
+              basePosition: newNode.data.basePosition || savedPosition
+            }
+          };
+        }
+        return newNode;
+      });
     
     // Check if selected node still exists in new nodes
     if (selectedNode && !updatedNodes.find(node => node.id === selectedNode.id)) {
