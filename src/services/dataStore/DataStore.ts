@@ -1,4 +1,3 @@
-
 import { Entity } from '@/types/entity';
 import { EntityCapTable, Shareholder, ShareClass } from '@/types/capTable';
 import { EntityManager } from './EntityManager';
@@ -225,6 +224,26 @@ export class DataStore {
   }
 
   deleteStakeholder(entityId: string, stakeholderId: string) {
+    console.log('🗑️ DataStore deleting stakeholder:', stakeholderId, 'from entity:', entityId);
+    
+    // Delete from cap table manager
     this.capTableManager.deleteStakeholder(entityId, stakeholderId);
+    
+    // Force immediate save and notification
+    console.log('💾 Force saving after stakeholder deletion');
+    this.forceSave();
+    
+    // Verify the deletion persisted
+    const capTable = this.capTableManager.getCapTableByEntityId(entityId);
+    if (capTable) {
+      const stillExists = capTable.investments.find(inv => inv.id === stakeholderId);
+      if (stillExists) {
+        console.error('❌ Stakeholder deletion failed - still exists:', stakeholderId);
+      } else {
+        console.log('✅ Stakeholder deletion confirmed:', stakeholderId);
+      }
+    }
+    
+    console.log('✅ Stakeholder deletion process completed');
   }
 }

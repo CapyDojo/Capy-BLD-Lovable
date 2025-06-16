@@ -1,158 +1,115 @@
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useCapTable, addStakeholder, updateStakeholder, deleteStakeholder } from '@/hooks/useCapTable';
-import { Button } from '@/components/ui/button';
-import { StakeholderEditForm } from './StakeholderEditForm';
-import { StakeholderListItem } from './StakeholderListItem';
-import { AddStakeholderButton } from './AddStakeholderButton';
+import React, { useState, useEffect } from 'react';
+import { Plus, Edit, Trash2, User, Users, Building2 } from 'lucide-react';
+import { dataStore } from '@/services/dataStore';
+import { syncCapTableData } from '@/services/capTableSync';
 
 interface EntityCapTableSectionProps {
   entityId: string;
 }
 
-interface EditingRow {
-  id: string;
-  name: string;
-  shareClass: string;
-  sharesOwned: number;
-}
-
 export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ entityId }) => {
-  const navigate = useNavigate();
-  const capTableData = useCapTable(entityId);
-  const [editingRow, setEditingRow] = useState<EditingRow | null>(null);
-  const [isAddingNew, setIsAddingNew] = useState(false);
+  const [capTableData, setCapTableData] = useState(() => syncCapTableData(entityId));
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  if (!capTableData) {
+  // Subscribe to data store changes
+  useEffect(() => {
+    console.log('🔗 EntityCapTableSection subscribing to data store for entity:', entityId);
+    const unsubscribe = dataStore.subscribe(() => {
+      console.log('📡 EntityCapTableSection received data store update for entity:', entityId);
+      const updatedData = syncCapTableData(entityId);
+      setCapTableData(updatedData);
+      setRefreshKey(prev => prev + 1);
+    });
+    return unsubscribe;
+  }, [entityId]);
+
+  // Update data when entityId changes
+  useEffect(() => {
+    console.log('🔄 EntityCapTableSection updating data for entity:', entityId);
+    const updatedData = syncCapTableData(entityId);
+    setCapTableData(updatedData);
+  }, [entityId, refreshKey]);
+
+  const handleDeleteStakeholder = (stakeholderId: string, stakeholderName: string) => {
+    console.log('🗑️ EntityCapTableSection deleting stakeholder:', stakeholderId, 'from entity:', entityId);
+    
+    // Confirm deletion
+    if (!confirm(`Are you sure you want to delete ${stakeholderName}?`)) {
+      return;
+    }
+
+    // Delete from data store - this will trigger auto-save and notifications
+    dataStore.deleteStakeholder(entityId, stakeholderId);
+    
+    console.log('✅ Stakeholder deletion completed');
+  };
+
+  if (!capTableData || capTableData.totalShares === 0) {
     return (
       <div className="mt-6 pt-6 border-t border-gray-200">
-        <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-medium text-gray-700">Stakeholders</h4>
-          <Button
-            size="sm"
-            onClick={() => navigate(`/cap-table?entityId=${entityId}`)}
-            className="h-6 px-2 text-xs bg-blue-600 text-white hover:bg-blue-700"
-          >
-            Full Cap Table
-          </Button>
-        </div>
-        <p className="text-sm text-gray-500">No stakeholder data available</p>
+        <h4 className="text-sm font-medium text-gray-900 mb-3">Cap Table</h4>
+        <p className="text-sm text-gray-500">No cap table data available.</p>
       </div>
     );
   }
 
-  const { tableData } = capTableData;
-
-  const handleEdit = (item: any) => {
-    setEditingRow({
-      id: item.id,
-      name: item.name,
-      shareClass: item.shareClass,
-      sharesOwned: item.sharesOwned
-    });
-  };
-
-  const handleSave = () => {
-    if (!editingRow) return;
-
-    if (editingRow.id === 'new') {
-      addStakeholder(entityId, {
-        name: editingRow.name,
-        shareClass: editingRow.shareClass,
-        sharesOwned: editingRow.sharesOwned,
-        type: 'Individual'
-      });
-      setIsAddingNew(false);
-    } else {
-      updateStakeholder(entityId, editingRow.id, {
-        name: editingRow.name,
-        shareClass: editingRow.shareClass,
-        sharesOwned: editingRow.sharesOwned
-      });
-    }
-    setEditingRow(null);
-  };
-
-  const handleCancel = () => {
-    setEditingRow(null);
-    setIsAddingNew(false);
-  };
-
-  const handleAddNew = () => {
-    setIsAddingNew(true);
-    setEditingRow({
-      id: 'new',
-      name: '',
-      shareClass: 'Common Stock',
-      sharesOwned: 0
-    });
-  };
-
-  const handleDelete = (stakeholderId: string) => {
-    deleteStakeholder(entityId, stakeholderId);
-  };
-
-  const handleUpdateEditingRow = (updates: Partial<EditingRow>) => {
-    if (editingRow) {
-      setEditingRow({ ...editingRow, ...updates });
+  const getStakeholderIcon = (type: string) => {
+    switch (type) {
+      case 'Individual': return User;
+      case 'Pool': return Users;
+      case 'Entity': return Building2;
+      default: return User;
     }
   };
 
   return (
     <div className="mt-6 pt-6 border-t border-gray-200">
       <div className="flex items-center justify-between mb-3">
-        <h4 className="text-sm font-medium text-gray-700">Stakeholders</h4>
-        <Button
-          size="sm"
-          onClick={() => navigate(`/cap-table?entityId=${entityId}`)}
-          className="h-6 px-2 text-xs bg-blue-600 text-white hover:bg-blue-700"
-        >
-          Full Cap Table
-        </Button>
+        <h4 className="text-sm font-medium text-gray-900">Cap Table</h4>
+        <button className="text-xs text-blue-600 hover:text-blue-700 flex items-center space-x-1">
+          <Plus className="h-3 w-3" />
+          <span>Add</span>
+        </button>
       </div>
       
       <div className="space-y-2">
-        {tableData.map((item) => (
-          <div key={item.id}>
-            {editingRow?.id === item.id ? (
-              <StakeholderEditForm
-                editingRow={editingRow}
-                isAddingNew={false}
-                onSave={handleSave}
-                onCancel={handleCancel}
-                onUpdate={handleUpdateEditingRow}
-              />
-            ) : (
-              <StakeholderListItem
-                item={item}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-              />
-            )}
-          </div>
-        ))}
-        
-        {isAddingNew && editingRow?.id === 'new' && (
-          <StakeholderEditForm
-            editingRow={editingRow}
-            isAddingNew={true}
-            onSave={handleSave}
-            onCancel={handleCancel}
-            onUpdate={handleUpdateEditingRow}
-          />
-        )}
-        
-        {!isAddingNew && (
-          <AddStakeholderButton onAddNew={handleAddNew} />
-        )}
+        {capTableData.stakeholders.map((stakeholder) => {
+          const IconComponent = getStakeholderIcon(stakeholder.type);
+          
+          return (
+            <div key={stakeholder.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+              <div className="flex items-center space-x-2">
+                <IconComponent className="h-4 w-4 text-gray-400" />
+                <div>
+                  <div className="text-sm font-medium text-gray-900">{stakeholder.name}</div>
+                  <div className="text-xs text-gray-500">
+                    {stakeholder.ownershipPercentage.toFixed(1)}% • {stakeholder.sharesOwned.toLocaleString()} shares
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-1">
+                <button className="p-1 text-gray-400 hover:text-gray-600">
+                  <Edit className="h-3 w-3" />
+                </button>
+                <button 
+                  onClick={() => handleDeleteStakeholder(stakeholder.id, stakeholder.name)}
+                  className="p-1 text-gray-400 hover:text-red-600"
+                >
+                  <Trash2 className="h-3 w-3" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
       </div>
       
-      {tableData.length === 0 && !isAddingNew && (
-        <div className="text-center py-4 text-sm text-gray-500">
-          No stakeholders found. Click "Add Stakeholder" to create one.
+      <div className="mt-3 pt-3 border-t border-gray-100">
+        <div className="text-xs text-gray-500">
+          Total: {capTableData.totalShares.toLocaleString()} shares
         </div>
-      )}
+      </div>
     </div>
   );
 };
