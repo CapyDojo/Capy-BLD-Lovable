@@ -174,7 +174,7 @@ const ReactFlowCanvas: React.FC<EntityCanvasCoreProps & { reactFlowWrapper: Reac
       {/* Ownership Percentage Modal */}
       <OwnershipPercentageModal
         isOpen={showOwnershipModal}
-        onClose={() => setShowOwnershipModal(false)}
+        onClose={setShowOwnershipModal}
         onConfirm={handleOwnershipConfirm}
       />
 
