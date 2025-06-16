@@ -1,27 +1,68 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { CapTableView } from './CapTableView';
 import { OwnershipChart } from './OwnershipChart';
 import { Plus, Download, Upload, Building2 } from 'lucide-react';
-import { getAllEntities, getEntityById } from '@/data/mockData';
 import { useSearchParams } from 'react-router-dom';
+import { dataStore } from '@/services/dataStore';
 
 export const CapTableEditor: React.FC = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const entityIdFromUrl = searchParams.get('entityId');
   
-  const entities = getAllEntities();
+  const [entities, setEntities] = useState(() => dataStore.getEntities());
   const [selectedEntityId, setSelectedEntityId] = useState<string>(
     entityIdFromUrl || entities[0]?.id || ''
   );
   const [view, setView] = useState<'table' | 'chart'>('table');
+  const [refreshKey, setRefreshKey] = useState(0);
 
-  const selectedEntity = getEntityById(selectedEntityId);
+  // Subscribe to data store changes to update entities list
+  useEffect(() => {
+    console.log('🔗 CapTableEditor subscribing to data store changes');
+    const unsubscribe = dataStore.subscribe(() => {
+      console.log('📡 CapTableEditor received data store update');
+      const updatedEntities = dataStore.getEntities();
+      setEntities(updatedEntities);
+      
+      // Check if selected entity still exists
+      if (selectedEntityId && !updatedEntities.find(e => e.id === selectedEntityId)) {
+        console.log('⚠️ Selected entity was deleted, selecting first available');
+        const firstEntity = updatedEntities[0];
+        if (firstEntity) {
+          setSelectedEntityId(firstEntity.id);
+          setSearchParams({ entityId: firstEntity.id });
+        } else {
+          setSelectedEntityId('');
+          setSearchParams({});
+        }
+      }
+      
+      setRefreshKey(prev => prev + 1);
+    });
+    return unsubscribe;
+  }, [selectedEntityId, setSearchParams]);
+
+  const selectedEntity = entities.find(e => e.id === selectedEntityId);
 
   const handleEntityChange = (entityId: string) => {
+    console.log('🔄 CapTableEditor changing entity to:', entityId);
     setSelectedEntityId(entityId);
     setSearchParams({ entityId });
   };
+
+  if (entities.length === 0) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Cap Table</h1>
+            <p className="text-gray-600">No entities available. Please create entities first.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -93,9 +134,12 @@ export const CapTableEditor: React.FC = () => {
       </div>
 
       {selectedEntityId && (
-        view === 'table' ? 
-          <CapTableView entityId={selectedEntityId} /> : 
-          <OwnershipChart entityId={selectedEntityId} />
+        <div key={`${selectedEntityId}-${refreshKey}`}>
+          {view === 'table' ? 
+            <CapTableView entityId={selectedEntityId} /> : 
+            <OwnershipChart entityId={selectedEntityId} />
+          }
+        </div>
       )}
     </div>
   );

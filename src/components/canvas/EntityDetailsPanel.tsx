@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Node } from '@xyflow/react';
 import { EntityCapTableSection } from './EntityCapTableSection';
+import { dataStore } from '@/services/dataStore';
 
 interface EntityDetailsPanelProps {
   selectedNode: Node;
@@ -16,9 +17,61 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
   onClose,
   onUpdateNode,
 }) => {
+  const [entityData, setEntityData] = useState(selectedNode?.data || {});
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Subscribe to data store changes
+  useEffect(() => {
+    console.log('🔗 EntityDetailsPanel subscribing to data store changes');
+    const unsubscribe = dataStore.subscribe(() => {
+      console.log('📡 EntityDetailsPanel received data store update');
+      setRefreshKey(prev => prev + 1);
+      
+      // Check if selected entity still exists
+      if (selectedNode) {
+        const currentEntity = dataStore.getEntityById(selectedNode.id);
+        if (!currentEntity) {
+          console.log('🚪 Selected entity was deleted, closing panel');
+          onClose();
+        } else {
+          console.log('📝 Updating entity data in panel');
+          setEntityData({
+            name: currentEntity.name,
+            type: currentEntity.type,
+            jurisdiction: currentEntity.jurisdiction,
+            ...selectedNode.data
+          });
+        }
+      }
+    });
+    return unsubscribe;
+  }, [selectedNode, onClose]);
+
+  // Update local data when selectedNode changes
+  useEffect(() => {
+    if (selectedNode) {
+      const entity = dataStore.getEntityById(selectedNode.id);
+      if (entity) {
+        setEntityData({
+          name: entity.name,
+          type: entity.type,
+          jurisdiction: entity.jurisdiction,
+          ...selectedNode.data
+        });
+      }
+    }
+  }, [selectedNode, refreshKey]);
+
   if (!isOpen || !selectedNode) {
     return null;
   }
+
+  const handleUpdateField = (field: string, value: string) => {
+    console.log('📝 EntityDetailsPanel updating field:', field, value);
+    const updates = { [field]: value };
+    setEntityData(prev => ({ ...prev, ...updates }));
+    onUpdateNode(updates);
+  };
 
   return (
     <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
@@ -39,9 +92,9 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
           </label>
           <input
             type="text"
-            value={String(selectedNode.data.name || '')}
+            value={String(entityData.name || '')}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            onChange={(e) => onUpdateNode({ name: e.target.value })}
+            onChange={(e) => handleUpdateField('name', e.target.value)}
           />
         </div>
         
@@ -50,9 +103,9 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
             Entity Type
           </label>
           <select
-            value={String(selectedNode.data.type || '')}
+            value={String(entityData.type || '')}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            onChange={(e) => onUpdateNode({ type: e.target.value })}
+            onChange={(e) => handleUpdateField('type', e.target.value)}
           >
             <option value="Corporation">Corporation</option>
             <option value="LLC">LLC</option>
@@ -66,9 +119,9 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
             Jurisdiction
           </label>
           <select
-            value={String(selectedNode.data.jurisdiction || '')}
+            value={String(entityData.jurisdiction || '')}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            onChange={(e) => onUpdateNode({ jurisdiction: e.target.value })}
+            onChange={(e) => handleUpdateField('jurisdiction', e.target.value)}
           >
             <option value="Delaware">Delaware</option>
             <option value="California">California</option>
@@ -78,7 +131,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
         </div>
       </div>
 
-      <EntityCapTableSection entityId={selectedNode.id} />
+      <EntityCapTableSection entityId={selectedNode.id} key={`${selectedNode.id}-${refreshKey}`} />
     </div>
   );
 };

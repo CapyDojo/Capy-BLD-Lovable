@@ -15,21 +15,44 @@ export interface CapTableData {
 
 export const useCapTable = (entityId: string): CapTableData | null => {
   const [refreshKey, setRefreshKey] = useState(0);
+  const [entityExists, setEntityExists] = useState(true);
 
   useEffect(() => {
+    console.log('🔗 useCapTable subscribing to data store for entity:', entityId);
     const unsubscribe = dataStore.subscribe(() => {
-      setRefreshKey(prev => prev + 1);
+      console.log('📡 useCapTable received data store update for entity:', entityId);
+      
+      // Check if entity still exists
+      const entity = dataStore.getEntityById(entityId);
+      if (!entity) {
+        console.log('⚠️ Entity no longer exists:', entityId);
+        setEntityExists(false);
+      } else {
+        console.log('✅ Entity still exists, triggering refresh');
+        setEntityExists(true);
+        setRefreshKey(prev => prev + 1);
+      }
     });
     return unsubscribe;
-  }, []);
+  }, [entityId]);
 
   return useMemo(() => {
+    console.log('🔄 useCapTable computing data for entity:', entityId, 'refreshKey:', refreshKey);
+    
+    if (!entityExists) {
+      console.log('❌ Entity does not exist, returning null');
+      return null;
+    }
+
     const entity = dataStore.getEntityById(entityId);
     const syncedData = syncCapTableData(entityId);
 
     if (!entity || !syncedData) {
+      console.log('❌ No entity or synced data found for:', entityId);
       return null;
     }
+
+    console.log('✅ Computing cap table data for:', entity.name);
 
     const totalInvestment = syncedData.stakeholders.reduce((sum, stakeholder) => sum + stakeholder.investmentAmount, 0);
 
@@ -61,6 +84,12 @@ export const useCapTable = (entityId: string): CapTableData | null => {
         color: '#e5e7eb',
       });
     }
+
+    console.log('📊 Cap table data computed:', {
+      totalShares: syncedData.totalShares,
+      stakeholders: syncedData.stakeholders.length,
+      chartItems: chartData.length
+    });
 
     return {
       entity,
@@ -94,18 +123,21 @@ export const useCapTable = (entityId: string): CapTableData | null => {
       chartData,
       tableData: syncedData.stakeholders,
     };
-  }, [entityId, refreshKey]);
+  }, [entityId, refreshKey, entityExists]);
 };
 
 // Export functions for cap table mutations
 export const addStakeholder = (entityId: string, stakeholder: { name: string; shareClass: string; sharesOwned: number; type?: 'Individual' | 'Entity' | 'Pool' }) => {
+  console.log('➕ Adding stakeholder to entity:', entityId, stakeholder);
   dataStore.addStakeholder(entityId, stakeholder);
 };
 
 export const updateStakeholder = (entityId: string, stakeholderId: string, updates: { name?: string; shareClass?: string; sharesOwned?: number }) => {
+  console.log('📝 Updating stakeholder:', stakeholderId, 'in entity:', entityId, updates);
   dataStore.updateStakeholder(entityId, stakeholderId, updates);
 };
 
 export const deleteStakeholder = (entityId: string, stakeholderId: string) => {
+  console.log('🗑️ Deleting stakeholder:', stakeholderId, 'from entity:', entityId);
   dataStore.deleteStakeholder(entityId, stakeholderId);
 };
