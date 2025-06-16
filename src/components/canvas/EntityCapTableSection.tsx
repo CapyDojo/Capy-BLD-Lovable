@@ -1,9 +1,11 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCapTable, addStakeholder, updateStakeholder, deleteStakeholder } from '@/hooks/useCapTable';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Plus, Edit2, Save, X, Trash2 } from 'lucide-react';
+import { StakeholderEditForm } from './StakeholderEditForm';
+import { StakeholderListItem } from './StakeholderListItem';
+import { AddStakeholderButton } from './AddStakeholderButton';
 
 interface EntityCapTableSectionProps {
   entityId: string;
@@ -55,7 +57,6 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
     if (!editingRow) return;
 
     if (editingRow.id === 'new') {
-      // Add new stakeholder (auto-saves)
       addStakeholder(entityId, {
         name: editingRow.name,
         shareClass: editingRow.shareClass,
@@ -64,7 +65,6 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
       });
       setIsAddingNew(false);
     } else {
-      // Update existing stakeholder (auto-saves)
       updateStakeholder(entityId, editingRow.id, {
         name: editingRow.name,
         shareClass: editingRow.shareClass,
@@ -90,15 +90,13 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
   };
 
   const handleDelete = (stakeholderId: string) => {
-    // Delete stakeholder (auto-saves)
     deleteStakeholder(entityId, stakeholderId);
   };
 
-  const getSecurityTypeBadgeColor = (shareClass: string) => {
-    if (shareClass.includes('Common')) return 'bg-green-100 text-green-800';
-    if (shareClass.includes('Preferred')) return 'bg-purple-100 text-purple-800';
-    if (shareClass.includes('Options')) return 'bg-yellow-100 text-yellow-800';
-    return 'bg-blue-100 text-blue-800';
+  const handleUpdateEditingRow = (updates: Partial<EditingRow>) => {
+    if (editingRow) {
+      setEditingRow({ ...editingRow, ...updates });
+    }
   };
 
   return (
@@ -118,138 +116,35 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
         {tableData.map((item) => (
           <div key={item.id}>
             {editingRow?.id === item.id ? (
-              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-                <div className="space-y-2">
-                  <input
-                    type="text"
-                    value={editingRow.name}
-                    onChange={(e) => setEditingRow({ ...editingRow, name: e.target.value })}
-                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-                    placeholder="Stakeholder name"
-                  />
-                  <div className="flex gap-2">
-                    <select
-                      value={editingRow.shareClass}
-                      onChange={(e) => setEditingRow({ ...editingRow, shareClass: e.target.value })}
-                      className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
-                    >
-                      <option value="Common Stock">Common Stock</option>
-                      <option value="Preferred Series A">Preferred Series A</option>
-                      <option value="Stock Options">Stock Options</option>
-                      <option value="Convertible Notes">Convertible Notes</option>
-                    </select>
-                    <input
-                      type="number"
-                      value={editingRow.sharesOwned}
-                      onChange={(e) => setEditingRow({ ...editingRow, sharesOwned: parseInt(e.target.value) || 0 })}
-                      className="w-20 px-2 py-1 text-sm border border-gray-300 rounded text-right"
-                      placeholder="Shares"
-                    />
-                  </div>
-                  <div className="flex justify-end gap-1">
-                    <button onClick={handleSave} className="text-green-600 hover:text-green-800 p-1">
-                      <Save className="h-3 w-3" />
-                    </button>
-                    <button onClick={handleCancel} className="text-gray-400 hover:text-gray-600 p-1">
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <StakeholderEditForm
+                editingRow={editingRow}
+                isAddingNew={false}
+                onSave={handleSave}
+                onCancel={handleCancel}
+                onUpdate={handleUpdateEditingRow}
+              />
             ) : (
-              <div className="bg-gray-50 rounded-lg p-3 relative group hover:bg-gray-100">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1 min-w-0">
-                    <h5 className="text-sm font-medium text-gray-900 truncate">
-                      {item.name}
-                    </h5>
-                    <div className="flex items-center gap-2 mt-1">
-                      <Badge 
-                        variant="secondary" 
-                        className={`text-xs ${getSecurityTypeBadgeColor(item.shareClass)}`}
-                      >
-                        {item.shareClass}
-                      </Badge>
-                      <span className="text-xs text-gray-500">
-                        {item.sharesOwned > 0 ? `${item.sharesOwned.toLocaleString()}` : 'No shares'}
-                      </span>
-                      <span className="text-xs text-gray-600 font-medium">
-                        {item.ownershipPercentage ? `${item.ownershipPercentage.toFixed(1)}%` : '0%'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="flex gap-1 opacity-0 group-hover:opacity-100">
-                    <button 
-                      onClick={() => handleEdit(item)}
-                      className="text-gray-400 hover:text-gray-600 p-1"
-                    >
-                      <Edit2 className="h-3 w-3" />
-                    </button>
-                    <button 
-                      onClick={() => handleDelete(item.id)}
-                      className="text-gray-400 hover:text-red-600 p-1"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </button>
-                  </div>
-                </div>
-              </div>
+              <StakeholderListItem
+                item={item}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+              />
             )}
           </div>
         ))}
         
         {isAddingNew && editingRow?.id === 'new' && (
-          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
-            <div className="space-y-2">
-              <input
-                type="text"
-                placeholder="Stakeholder name"
-                value={editingRow.name}
-                onChange={(e) => setEditingRow({ ...editingRow, name: e.target.value })}
-                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
-              />
-              <div className="flex gap-2">
-                <select
-                  value={editingRow.shareClass}
-                  onChange={(e) => setEditingRow({ ...editingRow, shareClass: e.target.value })}
-                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
-                >
-                  <option value="Common Stock">Common Stock</option>
-                  <option value="Preferred Series A">Preferred Series A</option>
-                  <option value="Stock Options">Stock Options</option>
-                  <option value="Convertible Notes">Convertible Notes</option>
-                </select>
-                <input
-                  type="number"
-                  placeholder="0"
-                  value={editingRow.sharesOwned || ''}
-                  onChange={(e) => setEditingRow({ ...editingRow, sharesOwned: parseInt(e.target.value) || 0 })}
-                  className="w-20 px-2 py-1 text-sm border border-gray-300 rounded text-right"
-                />
-              </div>
-              <div className="flex justify-end gap-1">
-                <button onClick={handleSave} className="text-green-600 hover:text-green-800 p-1">
-                  <Save className="h-3 w-3" />
-                </button>
-                <button onClick={handleCancel} className="text-gray-400 hover:text-gray-600 p-1">
-                  <X className="h-3 w-3" />
-                </button>
-              </div>
-            </div>
-          </div>
+          <StakeholderEditForm
+            editingRow={editingRow}
+            isAddingNew={true}
+            onSave={handleSave}
+            onCancel={handleCancel}
+            onUpdate={handleUpdateEditingRow}
+          />
         )}
         
-        {/* Add New Button as Card */}
         {!isAddingNew && (
-          <button
-            onClick={handleAddNew}
-            className="w-full bg-gray-50 rounded-lg p-3 border-2 border-dashed border-gray-300 hover:border-gray-400 hover:bg-gray-100 transition-colors"
-          >
-            <div className="flex items-center justify-center gap-2 text-gray-500">
-              <Plus className="h-4 w-4" />
-              <span className="text-sm">Add Stakeholder</span>
-            </div>
-          </button>
+          <AddStakeholderButton onAddNew={handleAddNew} />
         )}
       </div>
       
