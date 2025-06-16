@@ -73,13 +73,13 @@ export const CapTableEditor: React.FC = () => {
     }
   };
 
-  // Helper function to safely format date
-  const formatDate = (dateValue: any): string => {
+  // Robust date formatting function
+  const formatIncorporationDate = (dateValue: any): string => {
     if (!dateValue) return 'N/A';
     
     try {
       // If it's already a Date object
-      if (dateValue instanceof Date) {
+      if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
         return dateValue.toLocaleDateString();
       }
       
@@ -91,9 +91,18 @@ export const CapTableEditor: React.FC = () => {
         }
       }
       
+      // If it's a number (timestamp), convert it
+      if (typeof dateValue === 'number') {
+        const parsedDate = new Date(dateValue);
+        if (!isNaN(parsedDate.getTime())) {
+          return parsedDate.toLocaleDateString();
+        }
+      }
+      
+      console.warn('Unable to format date:', dateValue, typeof dateValue);
       return 'Invalid Date';
     } catch (error) {
-      console.warn('Error formatting date:', error);
+      console.error('Error formatting incorporation date:', error, 'Value:', dateValue);
       return 'Invalid Date';
     }
   };
@@ -188,7 +197,7 @@ export const CapTableEditor: React.FC = () => {
           {selectedEntity && (
             <div className="text-sm text-gray-600">
               <div>Registration: {selectedEntity.registrationNumber || 'N/A'}</div>
-              <div>Incorporated: {formatDate(selectedEntity.incorporationDate)}</div>
+              <div>Incorporated: {formatIncorporationDate(selectedEntity.incorporationDate)}</div>
             </div>
           )}
         </div>
