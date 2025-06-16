@@ -1,49 +1,185 @@
-import { Entity } from '@/types/entity';
-import { EntityCapTable, Shareholder, ShareClass, Investment } from '@/types/capTable';
+import { Entity, OwnershipRelationship, ShareClass } from '@/types/entity';
+import { EntityCapTable, Shareholder, Investment } from '@/types/capTable';
 
-// Mock entities data
+// Mock entities data - clean Entity objects without ownership property
 export const mockEntities: Entity[] = [
   {
     id: 'parent-corp',
     name: 'Parent Corporation',
     type: 'Corporation',
     jurisdiction: 'Delaware',
-    ownership: 100,
     registrationNumber: 'DE-123456789',
     incorporationDate: new Date('2020-01-15'),
     address: '123 Main St, San Francisco, CA 94105',
+    position: { x: 100, y: 100 },
+    metadata: {},
+    createdAt: new Date('2020-01-15'),
+    updatedAt: new Date('2020-01-15'),
+    version: 1,
   },
   {
     id: 'subsidiary-llc',
     name: 'Subsidiary LLC',
     type: 'LLC',
     jurisdiction: 'California',
-    ownership: 85,
-    parentId: 'parent-corp',
     registrationNumber: 'CA-LLC-987654321',
     incorporationDate: new Date('2021-06-01'),
     address: '456 Tech Ave, Palo Alto, CA 94301',
+    position: { x: 300, y: 200 },
+    metadata: {},
+    createdAt: new Date('2021-06-01'),
+    updatedAt: new Date('2021-06-01'),
+    version: 1,
   },
   {
     id: 'tech-holdings',
     name: 'Tech Holdings Inc',
     type: 'Corporation',
     jurisdiction: 'Delaware',
-    ownership: 100,
-    parentId: 'parent-corp',
     registrationNumber: 'DE-987654321',
     incorporationDate: new Date('2022-03-10'),
     address: '789 Innovation Dr, Austin, TX 78701',
+    position: { x: 500, y: 100 },
+    metadata: {},
+    createdAt: new Date('2022-03-10'),
+    updatedAt: new Date('2022-03-10'),
+    version: 1,
   },
   {
     id: 'vc-fund-entity',
     name: 'Venture Capital Fund LP',
     type: 'Partnership',
     jurisdiction: 'Delaware',
-    ownership: 0,
     registrationNumber: 'DE-VC-123456',
     incorporationDate: new Date('2018-01-01'),
     address: '1 Sand Hill Rd, Menlo Park, CA 94025',
+    position: { x: 200, y: 300 },
+    metadata: {},
+    createdAt: new Date('2018-01-01'),
+    updatedAt: new Date('2018-01-01'),
+    version: 1,
+  },
+  {
+    id: 'founder-individual-1',
+    name: 'John Smith',
+    type: 'Individual',
+    address: '123 Personal Ave, San Francisco, CA',
+    position: { x: 50, y: 50 },
+    metadata: {},
+    createdAt: new Date('2020-01-15'),
+    updatedAt: new Date('2020-01-15'),
+    version: 1,
+  },
+  {
+    id: 'founder-individual-2',
+    name: 'Jane Doe',
+    type: 'Individual',
+    address: '456 Personal St, Palo Alto, CA',
+    position: { x: 150, y: 50 },
+    metadata: {},
+    createdAt: new Date('2020-01-15'),
+    updatedAt: new Date('2020-01-15'),
+    version: 1,
+  },
+];
+
+// Mock share classes
+export const mockShareClasses: ShareClass[] = [
+  {
+    id: 'parent-corp-common',
+    entityId: 'parent-corp',
+    name: 'Common Stock',
+    totalAuthorizedShares: 10000000,
+    votingRights: true,
+    createdAt: new Date('2020-01-15'),
+    updatedAt: new Date('2020-01-15'),
+  },
+  {
+    id: 'parent-corp-preferred-a',
+    entityId: 'parent-corp',
+    name: 'Preferred Series A',
+    totalAuthorizedShares: 2000000,
+    votingRights: true,
+    liquidationPreference: 1.0,
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-01'),
+  },
+  {
+    id: 'subsidiary-llc-units',
+    entityId: 'subsidiary-llc',
+    name: 'LLC Membership Units',
+    totalAuthorizedShares: 1000000,
+    votingRights: true,
+    createdAt: new Date('2021-06-01'),
+    updatedAt: new Date('2021-06-01'),
+  },
+  {
+    id: 'tech-holdings-common',
+    entityId: 'tech-holdings',
+    name: 'Common Stock',
+    totalAuthorizedShares: 1000000,
+    votingRights: true,
+    createdAt: new Date('2022-03-10'),
+    updatedAt: new Date('2022-03-10'),
+  },
+];
+
+// Mock ownership relationships
+export const mockOwnershipRelationships: OwnershipRelationship[] = [
+  {
+    id: 'ownership-1',
+    ownerEntityId: 'founder-individual-1',
+    ownedEntityId: 'parent-corp',
+    shares: 4000000,
+    shareClassId: 'parent-corp-common',
+    effectiveDate: new Date('2020-01-15'),
+    createdAt: new Date('2020-01-15'),
+    updatedAt: new Date('2020-01-15'),
+    version: 1,
+  },
+  {
+    id: 'ownership-2',
+    ownerEntityId: 'founder-individual-2',
+    ownedEntityId: 'parent-corp',
+    shares: 3000000,
+    shareClassId: 'parent-corp-common',
+    effectiveDate: new Date('2020-01-15'),
+    createdAt: new Date('2020-01-15'),
+    updatedAt: new Date('2020-01-15'),
+    version: 1,
+  },
+  {
+    id: 'ownership-3',
+    ownerEntityId: 'vc-fund-entity',
+    ownedEntityId: 'parent-corp',
+    shares: 2000000,
+    shareClassId: 'parent-corp-preferred-a',
+    effectiveDate: new Date('2023-01-01'),
+    createdAt: new Date('2023-01-01'),
+    updatedAt: new Date('2023-01-01'),
+    version: 1,
+  },
+  {
+    id: 'ownership-4',
+    ownerEntityId: 'parent-corp',
+    ownedEntityId: 'subsidiary-llc',
+    shares: 850000,
+    shareClassId: 'subsidiary-llc-units',
+    effectiveDate: new Date('2021-06-01'),
+    createdAt: new Date('2021-06-01'),
+    updatedAt: new Date('2021-06-01'),
+    version: 1,
+  },
+  {
+    id: 'ownership-5',
+    ownerEntityId: 'parent-corp',
+    ownedEntityId: 'tech-holdings',
+    shares: 1000000,
+    shareClassId: 'tech-holdings-common',
+    effectiveDate: new Date('2022-03-10'),
+    createdAt: new Date('2022-03-10'),
+    updatedAt: new Date('2022-03-10'),
+    version: 1,
   },
 ];
 
@@ -55,35 +191,6 @@ export const mockShareholders: Shareholder[] = [
   { id: 'employee-pool', name: 'Employee Stock Option Pool', type: 'Pool' },
   { id: 'convertible-holders', name: 'Convertible Note Holders', type: 'Entity' },
   { id: 'parent-corp-shareholder', name: 'Parent Corporation', type: 'Entity', entityId: 'parent-corp' },
-];
-
-// Mock share classes
-export const mockShareClasses: ShareClass[] = [
-  {
-    id: 'common-stock',
-    name: 'Common Stock',
-    type: 'Common Stock',
-    votingRights: true,
-  },
-  {
-    id: 'preferred-a',
-    name: 'Preferred Series A',
-    type: 'Preferred Series A',
-    votingRights: true,
-    liquidationPreference: 1.0,
-  },
-  {
-    id: 'stock-options',
-    name: 'Stock Options',
-    type: 'Stock Options',
-    votingRights: false,
-  },
-  {
-    id: 'convertible-notes',
-    name: 'Convertible Notes',
-    type: 'Convertible Notes',
-    votingRights: false,
-  },
 ];
 
 // Mock cap tables for each entity
@@ -105,7 +212,7 @@ export const mockCapTables: EntityCapTable[] = [
       {
         id: 'inv-1',
         shareholderId: 'founder-1',
-        shareClassId: 'common-stock',
+        shareClassId: 'parent-corp-common',
         sharesOwned: 4000000,
         pricePerShare: 0.001,
         investmentAmount: 4000,
@@ -114,7 +221,7 @@ export const mockCapTables: EntityCapTable[] = [
       {
         id: 'inv-2',
         shareholderId: 'founder-2',
-        shareClassId: 'common-stock',
+        shareClassId: 'parent-corp-common',
         sharesOwned: 3000000,
         pricePerShare: 0.001,
         investmentAmount: 3000,
@@ -123,7 +230,7 @@ export const mockCapTables: EntityCapTable[] = [
       {
         id: 'inv-3',
         shareholderId: 'series-a-fund',
-        shareClassId: 'preferred-a',
+        shareClassId: 'parent-corp-preferred-a',
         sharesOwned: 2000000,
         pricePerShare: 1.00,
         investmentAmount: 2000000,
@@ -203,4 +310,12 @@ export const getCapTableByEntityId = (entityId: string): EntityCapTable | undefi
 
 export const getAllEntities = (): Entity[] => {
   return mockEntities;
+};
+
+export const getAllOwnershipRelationships = (): OwnershipRelationship[] => {
+  return mockOwnershipRelationships;
+};
+
+export const getAllShareClasses = (): ShareClass[] => {
+  return mockShareClasses;
 };
