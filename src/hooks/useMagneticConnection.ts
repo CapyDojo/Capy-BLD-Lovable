@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
+import { updateOwnershipFromChart } from '@/services/capTableSync';
 
 interface MagneticZone {
   nodeId: string;
@@ -217,7 +218,12 @@ export const useMagneticConnection = (
 
   const handleOwnershipConfirm = useCallback((percentage: number) => {
     if (pendingConnection) {
-      console.log('🎯 Confirming ownership connection:', pendingConnection, percentage);
+      console.log('🎯 Confirming ownership connection with auto-sync:', pendingConnection, percentage);
+      
+      // Use the chart mutation function which auto-saves
+      updateOwnershipFromChart(pendingConnection.source, pendingConnection.target, percentage);
+      
+      // Also call the original onConnect for immediate UI feedback
       onConnect({
         source: pendingConnection.source,
         target: pendingConnection.target,

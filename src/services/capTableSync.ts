@@ -1,6 +1,6 @@
 
 import { Node, Edge } from '@xyflow/react';
-import { getCapTableByEntityId, getAllEntities } from '@/data/mockData';
+import { dataStore } from './dataStore';
 import { Shareholder } from '@/types/capTable';
 
 export interface SyncedStakeholderData {
@@ -25,7 +25,7 @@ export interface EntityStructureData {
 }
 
 export const syncCapTableData = (entityId: string): EntityStructureData | null => {
-  const capTable = getCapTableByEntityId(entityId);
+  const capTable = dataStore.getCapTableByEntityId(entityId);
   if (!capTable) return null;
 
   const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
@@ -33,7 +33,7 @@ export const syncCapTableData = (entityId: string): EntityStructureData | null =
 
   const stakeholders: SyncedStakeholderData[] = capTable.investments.map((investment) => {
     const shareholder = capTable.shareholders.find(s => s.id === investment.shareholderId);
-    const shareClass = capTable.shareClasses.find(sc => sc.id === investment.shareClassId);
+    const shareClass = dataStore.getShareClasses().find(sc => sc.id === investment.shareClassId);
     const ownershipPercentage = totalShares > 0 ? (investment.sharesOwned / totalShares) * 100 : 0;
     const fullyDiluted = capTable.authorizedShares > 0 ? (investment.sharesOwned / capTable.authorizedShares) * 100 : 0;
 
@@ -61,7 +61,7 @@ export const syncCapTableData = (entityId: string): EntityStructureData | null =
 };
 
 export const generateSyncedCanvasStructure = () => {
-  const allEntities = getAllEntities();
+  const allEntities = dataStore.getEntities();
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   const nodeIds = new Set<string>();
@@ -160,4 +160,25 @@ export const generateSyncedCanvasStructure = () => {
   });
 
   return { nodes, edges };
+};
+
+// Export mutation functions for chart updates
+export const updateOwnershipFromChart = (sourceEntityId: string, targetEntityId: string, ownershipPercentage: number) => {
+  dataStore.updateOwnership(sourceEntityId, targetEntityId, ownershipPercentage);
+};
+
+export const removeOwnershipFromChart = (sourceEntityId: string, targetEntityId: string) => {
+  dataStore.removeOwnership(sourceEntityId, targetEntityId);
+};
+
+export const addEntityFromChart = (entity: any) => {
+  dataStore.addEntity(entity);
+};
+
+export const updateEntityFromChart = (id: string, updates: any) => {
+  dataStore.updateEntity(id, updates);
+};
+
+export const deleteEntityFromChart = (id: string) => {
+  dataStore.deleteEntity(id);
 };

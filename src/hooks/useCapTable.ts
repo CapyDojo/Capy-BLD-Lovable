@@ -1,5 +1,6 @@
-import { useMemo } from 'react';
-import { getEntityById } from '@/data/mockData';
+
+import { useMemo, useState, useEffect } from 'react';
+import { dataStore } from '@/services/dataStore';
 import { syncCapTableData, SyncedStakeholderData } from '@/services/capTableSync';
 
 export interface CapTableData {
@@ -13,8 +14,17 @@ export interface CapTableData {
 }
 
 export const useCapTable = (entityId: string): CapTableData | null => {
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  useEffect(() => {
+    const unsubscribe = dataStore.subscribe(() => {
+      setRefreshKey(prev => prev + 1);
+    });
+    return unsubscribe;
+  }, []);
+
   return useMemo(() => {
-    const entity = getEntityById(entityId);
+    const entity = dataStore.getEntityById(entityId);
     const syncedData = syncCapTableData(entityId);
 
     if (!entity || !syncedData) {
@@ -84,5 +94,18 @@ export const useCapTable = (entityId: string): CapTableData | null => {
       chartData,
       tableData: syncedData.stakeholders,
     };
-  }, [entityId]);
+  }, [entityId, refreshKey]);
+};
+
+// Export functions for cap table mutations
+export const addStakeholder = (entityId: string, stakeholder: { name: string; shareClass: string; sharesOwned: number; type?: 'Individual' | 'Entity' | 'Pool' }) => {
+  dataStore.addStakeholder(entityId, stakeholder);
+};
+
+export const updateStakeholder = (entityId: string, stakeholderId: string, updates: { name?: string; shareClass?: string; sharesOwned?: number }) => {
+  dataStore.updateStakeholder(entityId, stakeholderId, updates);
+};
+
+export const deleteStakeholder = (entityId: string, stakeholderId: string) => {
+  dataStore.deleteStakeholder(entityId, stakeholderId);
 };

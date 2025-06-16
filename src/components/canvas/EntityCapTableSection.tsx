@@ -1,10 +1,9 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCapTable } from '@/hooks/useCapTable';
+import { useCapTable, addStakeholder, updateStakeholder, deleteStakeholder } from '@/hooks/useCapTable';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Plus, Edit2, Save, X } from 'lucide-react';
+import { Plus, Edit2, Save, X, Trash2 } from 'lucide-react';
 
 interface EntityCapTableSectionProps {
   entityId: string;
@@ -53,8 +52,25 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
   };
 
   const handleSave = () => {
-    // TODO: Implement save functionality with proper data synchronization
-    console.log('Saving:', editingRow);
+    if (!editingRow) return;
+
+    if (editingRow.id === 'new') {
+      // Add new stakeholder (auto-saves)
+      addStakeholder(entityId, {
+        name: editingRow.name,
+        shareClass: editingRow.shareClass,
+        sharesOwned: editingRow.sharesOwned,
+        type: 'Individual'
+      });
+      setIsAddingNew(false);
+    } else {
+      // Update existing stakeholder (auto-saves)
+      updateStakeholder(entityId, editingRow.id, {
+        name: editingRow.name,
+        shareClass: editingRow.shareClass,
+        sharesOwned: editingRow.sharesOwned
+      });
+    }
     setEditingRow(null);
   };
 
@@ -71,6 +87,11 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
       shareClass: 'Common Stock',
       sharesOwned: 0
     });
+  };
+
+  const handleDelete = (stakeholderId: string) => {
+    // Delete stakeholder (auto-saves)
+    deleteStakeholder(entityId, stakeholderId);
   };
 
   const getSecurityTypeBadgeColor = (shareClass: string) => {
@@ -157,12 +178,20 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
                       </span>
                     </div>
                   </div>
-                  <button 
-                    onClick={() => handleEdit(item)}
-                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 p-1"
-                  >
-                    <Edit2 className="h-3 w-3" />
-                  </button>
+                  <div className="flex gap-1 opacity-0 group-hover:opacity-100">
+                    <button 
+                      onClick={() => handleEdit(item)}
+                      className="text-gray-400 hover:text-gray-600 p-1"
+                    >
+                      <Edit2 className="h-3 w-3" />
+                    </button>
+                    <button 
+                      onClick={() => handleDelete(item.id)}
+                      className="text-gray-400 hover:text-red-600 p-1"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
