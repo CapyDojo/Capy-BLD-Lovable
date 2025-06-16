@@ -53,8 +53,22 @@ export const EntitySidebar: React.FC<EntitySidebarProps> = ({ onCreateNode }) =>
   const handleResetData = () => {
     console.log('🔄 Resetting to original mock data...');
     
-    // Force a complete reload of the original mock data
-    // This will trigger the data store to reload everything from scratch
+    // Clear localStorage to ensure fresh start
+    localStorage.removeItem('entityStructureData');
+    
+    // Create a new DataStore instance with original mock data
+    const tempStore = new (dataStore.constructor as any)(
+      mockEntities,
+      mockCapTables,
+      mockShareholders,
+      mockShareClasses
+    );
+    
+    // Force save the original data to localStorage
+    tempStore.loadSavedData = function() {}; // Prevent loading old data
+    tempStore.forceSave?.() || tempStore.autoSave?.();
+    
+    // Now reload the page to reinitialize everything with the original data
     location.reload();
     
     console.log('✅ Data reset to original mock data');
