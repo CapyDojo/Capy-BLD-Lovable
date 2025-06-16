@@ -15,6 +15,7 @@ import { dataStore } from '@/services/dataStore';
 type DraggableNodeType = EntityTypes | 'Individual';
 
 const generateInitialState = () => {
+  console.log('🔄 Generating initial canvas state');
   return generateSyncedCanvasStructure();
 };
 
@@ -23,13 +24,18 @@ export const useEntityCanvas = () => {
 
   // Subscribe to data store changes for auto-sync
   useEffect(() => {
+    console.log('🔗 Setting up data store subscription');
     const unsubscribe = dataStore.subscribe(() => {
+      console.log('📡 Data store changed, triggering refresh');
       setRefreshKey(prev => prev + 1);
     });
     return unsubscribe;
   }, []);
 
-  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => generateInitialState(), [refreshKey]);
+  const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
+    console.log('🔄 Regenerating canvas structure due to refresh key:', refreshKey);
+    return generateInitialState();
+  }, [refreshKey]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
@@ -37,12 +43,21 @@ export const useEntityCanvas = () => {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
-  // Update nodes and edges when data changes
+  // Update nodes and edges when data changes - this is crucial for sync
   useEffect(() => {
+    console.log('🔄 Updating nodes and edges from data store changes');
     const { nodes: newNodes, edges: newEdges } = generateInitialState();
+    console.log('📊 New nodes count:', newNodes.length, 'New edges count:', newEdges.length);
     setNodes(newNodes);
     setEdges(newEdges);
-  }, [refreshKey, setNodes, setEdges]);
+    
+    // If the selected node was deleted, close the sidebar
+    if (selectedNode && !newNodes.find(node => node.id === selectedNode.id)) {
+      console.log('🚪 Selected node was deleted, closing sidebar');
+      setSelectedNode(null);
+      setSidebarOpen(false);
+    }
+  }, [refreshKey, setNodes, setEdges, selectedNode]);
 
   const onConnect = useCallback(
     (params: Connection | { source: string; target: string; label: string }) => {
@@ -62,6 +77,7 @@ export const useEntityCanvas = () => {
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     if (node.type === 'entity') {
+      console.log('🎯 Entity node clicked:', node.id);
       setSelectedNode(node);
       setSidebarOpen(true);
     }
@@ -86,6 +102,7 @@ export const useEntityCanvas = () => {
         address: 'TBD'
       };
       
+      console.log('➕ Creating new entity:', newEntity);
       // Add to data store (this will auto-save and sync)
       addEntityFromChart(newEntity);
     }
@@ -123,6 +140,7 @@ export const useEntityCanvas = () => {
   const updateSelectedNode = useCallback((updates: Partial<Node['data']>) => {
     if (!selectedNode) return;
     
+    console.log('📝 Updating selected node:', selectedNode.id, updates);
     // Update in data store (this will auto-save and sync)
     updateEntityFromChart(selectedNode.id, updates);
     
@@ -133,10 +151,11 @@ export const useEntityCanvas = () => {
   const deleteSelectedNode = useCallback(() => {
     if (!selectedNode) return;
     
+    console.log('🗑️ Deleting selected node:', selectedNode.id);
     // Delete from data store (this will auto-save and sync)
     deleteEntityFromChart(selectedNode.id);
     
-    // Close sidebar
+    // Close sidebar immediately
     setSidebarOpen(false);
     setSelectedNode(null);
   }, [selectedNode]);

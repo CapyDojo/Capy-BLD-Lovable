@@ -61,18 +61,22 @@ export const syncCapTableData = (entityId: string): EntityStructureData | null =
 };
 
 export const generateSyncedCanvasStructure = () => {
+  console.log('🔄 Generating synced canvas structure');
   const allEntities = dataStore.getEntities();
+  console.log('📊 Total entities in store:', allEntities.length);
+  
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   const nodeIds = new Set<string>();
 
-  // Create entity nodes
-  allEntities.forEach((entity, index) => {
+  // Create entity nodes - filter out any null/undefined entities
+  allEntities.filter(entity => entity && entity.id).forEach((entity, index) => {
     const position = { 
       x: 250 + (index % 3) * 400, 
       y: 100 + Math.floor(index / 3) * 300
     };
     
+    console.log('➕ Creating entity node:', entity.id, entity.name);
     nodes.push({
       id: entity.id,
       type: 'entity',
@@ -88,7 +92,7 @@ export const generateSyncedCanvasStructure = () => {
   });
 
   // Create stakeholder nodes and edges using synced data
-  allEntities.forEach((entity) => {
+  allEntities.filter(entity => entity && entity.id).forEach((entity) => {
     const syncedData = syncCapTableData(entity.id);
     if (!syncedData || syncedData.totalShares === 0) return;
 
@@ -106,6 +110,7 @@ export const generateSyncedCanvasStructure = () => {
     entityStakeholders.forEach((stakeholder) => {
       if (stakeholder.entityId && nodeIds.has(stakeholder.entityId)) {
         // Entity stakeholder with a corresponding entity node
+        console.log('🔗 Creating entity ownership edge:', stakeholder.entityId, '->', entity.id);
         edges.push({
           id: `e-${stakeholder.entityId}-${entity.id}`,
           source: stakeholder.entityId,
@@ -133,6 +138,7 @@ export const generateSyncedCanvasStructure = () => {
         y: parentPosition.y - 150,
       };
       
+      console.log('👤 Creating stakeholder node:', shareholderNodeId, stakeholder.name);
       nodes.push({
         id: shareholderNodeId,
         type: 'shareholder',
@@ -159,26 +165,32 @@ export const generateSyncedCanvasStructure = () => {
     });
   });
 
+  console.log('✅ Canvas structure generated - Nodes:', nodes.length, 'Edges:', edges.length);
   return { nodes, edges };
 };
 
 // Export mutation functions for chart updates
 export const updateOwnershipFromChart = (sourceEntityId: string, targetEntityId: string, ownershipPercentage: number) => {
+  console.log('📊 Updating ownership from chart:', sourceEntityId, '->', targetEntityId, ownershipPercentage + '%');
   dataStore.updateOwnership(sourceEntityId, targetEntityId, ownershipPercentage);
 };
 
 export const removeOwnershipFromChart = (sourceEntityId: string, targetEntityId: string) => {
+  console.log('🗑️ Removing ownership from chart:', sourceEntityId, '->', targetEntityId);
   dataStore.removeOwnership(sourceEntityId, targetEntityId);
 };
 
 export const addEntityFromChart = (entity: any) => {
+  console.log('➕ Adding entity from chart:', entity.name);
   dataStore.addEntity(entity);
 };
 
 export const updateEntityFromChart = (id: string, updates: any) => {
+  console.log('📝 Updating entity from chart:', id, updates);
   dataStore.updateEntity(id, updates);
 };
 
 export const deleteEntityFromChart = (id: string) => {
+  console.log('🗑️ Deleting entity from chart:', id);
   dataStore.deleteEntity(id);
 };

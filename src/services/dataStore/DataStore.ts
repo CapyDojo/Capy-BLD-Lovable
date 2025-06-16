@@ -28,34 +28,53 @@ export class DataStore {
       initialShareClasses,
       notifyChange
     );
+
+    console.log('🏪 DataStore initialized with:', {
+      entities: initialEntities.length,
+      capTables: initialCapTables.length,
+      shareholders: initialShareholders.length,
+      shareClasses: initialShareClasses.length
+    });
   }
 
   // Subscribe to data changes
   subscribe(callback: () => void) {
     this.listeners.push(callback);
+    console.log('🔗 New subscriber added, total listeners:', this.listeners.length);
     return () => {
       this.listeners = this.listeners.filter(l => l !== callback);
+      console.log('🔗 Subscriber removed, total listeners:', this.listeners.length);
     };
   }
 
   // Notify all listeners of changes
   private notify() {
-    this.listeners.forEach(callback => callback());
+    console.log('📡 Notifying', this.listeners.length, 'listeners of data change');
+    this.listeners.forEach((callback, index) => {
+      try {
+        callback();
+      } catch (error) {
+        console.error(`❌ Error in listener ${index}:`, error);
+      }
+    });
     this.autoSave();
   }
 
   // Auto-save to localStorage
   private autoSave() {
-    this.storageService.save({
+    const dataToSave = {
       entities: this.entityManager.getAll(),
       capTables: this.capTableManager.getCapTables(),
       shareholders: this.capTableManager.getShareholders(),
       shareClasses: this.capTableManager.getShareClasses(),
-    });
+    };
+    
+    this.storageService.save(dataToSave);
   }
 
   // Load data from localStorage
   loadSavedData() {
+    console.log('📥 Loading saved data...');
     const data = this.storageService.load();
     if (data) {
       this.entityManager.updateData(data.entities || []);
@@ -64,7 +83,10 @@ export class DataStore {
         data.shareholders || [],
         data.shareClasses || []
       );
+      console.log('✅ Saved data loaded and applied');
       this.notify();
+    } else {
+      console.log('📥 No saved data to load, using initial data');
     }
   }
 
@@ -78,14 +100,17 @@ export class DataStore {
   }
 
   addEntity(entity: Entity) {
+    console.log('➕ Adding entity:', entity.name);
     this.entityManager.add(entity);
   }
 
   updateEntity(id: string, updates: Partial<Entity>) {
+    console.log('📝 Updating entity:', id, updates);
     this.entityManager.update(id, updates);
   }
 
   deleteEntity(id: string) {
+    console.log('🗑️ Deleting entity:', id);
     this.entityManager.delete(id);
     this.capTableManager.cleanupEntityData(id);
   }
