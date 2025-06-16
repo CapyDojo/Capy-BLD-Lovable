@@ -1,4 +1,3 @@
-
 import { Entity } from '@/types/entity';
 import { EntityCapTable, Shareholder, ShareClass, Investment } from '@/types/capTable';
 
@@ -36,13 +35,23 @@ export const mockEntities: Entity[] = [
     incorporationDate: new Date('2022-03-10'),
     address: '789 Innovation Dr, Austin, TX 78701',
   },
+  {
+    id: 'vc-fund-entity',
+    name: 'Venture Capital Fund LP',
+    type: 'Partnership',
+    jurisdiction: 'Delaware',
+    ownership: 0,
+    registrationNumber: 'DE-VC-123456',
+    incorporationDate: new Date('2018-01-01'),
+    address: '1 Sand Hill Rd, Menlo Park, CA 94025',
+  },
 ];
 
 // Mock shareholders
 export const mockShareholders: Shareholder[] = [
   { id: 'founder-1', name: 'John Smith (Founder)', type: 'Individual' },
   { id: 'founder-2', name: 'Jane Doe (Founder)', type: 'Individual' },
-  { id: 'series-a-fund', name: 'Venture Capital Fund LP', type: 'Entity' },
+  { id: 'series-a-fund', name: 'Venture Capital Fund LP', type: 'Entity', entityId: 'vc-fund-entity' },
   { id: 'employee-pool', name: 'Employee Stock Option Pool', type: 'Pool' },
   { id: 'convertible-holders', name: 'Convertible Note Holders', type: 'Entity' },
   { id: 'parent-corp-shareholder', name: 'Parent Corporation', type: 'Entity', entityId: 'parent-corp' },

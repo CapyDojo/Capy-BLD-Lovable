@@ -99,12 +99,13 @@ export const generateSyncedCanvasStructure = () => {
       sh => sh.type === 'Individual' || sh.type === 'Pool'
     );
     const entityStakeholders = syncedData.stakeholders.filter(
-      sh => sh.type === 'Entity' && sh.entityId
+      sh => sh.type === 'Entity'
     );
 
-    // Create edges for entity stakeholders
+    // Create edges for entity stakeholders (both those with entityId and without)
     entityStakeholders.forEach((stakeholder) => {
       if (stakeholder.entityId && nodeIds.has(stakeholder.entityId)) {
+        // Entity stakeholder with a corresponding entity node
         edges.push({
           id: `e-${stakeholder.entityId}-${entity.id}`,
           source: stakeholder.entityId,
@@ -113,10 +114,13 @@ export const generateSyncedCanvasStructure = () => {
           style: { stroke: '#3b82f6', strokeWidth: 2 },
           labelStyle: { fill: '#3b82f6', fontWeight: 600 },
         });
+      } else {
+        // Entity stakeholder without entityId - treat as individual stakeholder
+        individualStakeholders.push(stakeholder);
       }
     });
 
-    // Create nodes and edges for individual stakeholders
+    // Create nodes and edges for individual stakeholders (including entity stakeholders without entityId)
     const parentPosition = parentNode.data.basePosition as { x: number; y: number };
     
     individualStakeholders.forEach((stakeholder, individualIndex) => {
@@ -140,13 +144,17 @@ export const generateSyncedCanvasStructure = () => {
       });
       nodeIds.add(shareholderNodeId);
       
+      // Use different colors for entity vs individual stakeholders
+      const edgeColor = stakeholder.type === 'Entity' ? '#3b82f6' : '#8b5cf6';
+      const strokeWidth = stakeholder.type === 'Entity' ? 2 : 1.5;
+      
       edges.push({
         id: `e-${shareholderNodeId}-${entity.id}`,
         source: shareholderNodeId,
         target: entity.id,
         label: `${stakeholder.ownershipPercentage.toFixed(1)}%`,
-        style: { stroke: '#8b5cf6', strokeWidth: 1.5 },
-        labelStyle: { fill: '#8b5cf6', fontWeight: 500 },
+        style: { stroke: edgeColor, strokeWidth },
+        labelStyle: { fill: edgeColor, fontWeight: stakeholder.type === 'Entity' ? 600 : 500 },
       });
     });
   });
