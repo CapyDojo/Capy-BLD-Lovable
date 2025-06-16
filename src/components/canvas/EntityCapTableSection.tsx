@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { useCapTable } from '@/hooks/useCapTable';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { Plus, Edit2, Save, X } from 'lucide-react';
 
 interface EntityCapTableSectionProps {
@@ -61,6 +62,13 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
     });
   };
 
+  const getSecurityTypeBadgeColor = (shareClass: string) => {
+    if (shareClass.includes('Common')) return 'bg-green-100 text-green-800';
+    if (shareClass.includes('Preferred')) return 'bg-purple-100 text-purple-800';
+    if (shareClass.includes('Options')) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-blue-100 text-blue-800';
+  };
+
   return (
     <div className="mt-6 pt-6 border-t border-gray-200">
       <div className="flex items-center justify-between mb-3">
@@ -77,128 +85,122 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
       </div>
       
       <div className="space-y-2">
-        <div className="grid grid-cols-12 gap-2 text-xs font-medium text-gray-500 px-2">
-          <div className="col-span-5">Stakeholder</div>
-          <div className="col-span-4">Security Type</div>
-          <div className="col-span-3 text-right">Shares</div>
-        </div>
-        
         {tableData.map((item) => (
-          <div key={item.id} className="grid grid-cols-12 gap-2 items-center px-2 py-1 hover:bg-gray-50 rounded text-xs">
+          <div key={item.id}>
             {editingRow?.id === item.id ? (
-              <>
-                <div className="col-span-5">
+              <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+                <div className="space-y-2">
                   <input
                     type="text"
                     value={editingRow.name}
                     onChange={(e) => setEditingRow({ ...editingRow, name: e.target.value })}
-                    className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded"
+                    className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
+                    placeholder="Stakeholder name"
                   />
+                  <div className="flex gap-2">
+                    <select
+                      value={editingRow.shareClass}
+                      onChange={(e) => setEditingRow({ ...editingRow, shareClass: e.target.value })}
+                      className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                    >
+                      <option value="Common Stock">Common Stock</option>
+                      <option value="Preferred Series A">Preferred Series A</option>
+                      <option value="Stock Options">Stock Options</option>
+                      <option value="Convertible Notes">Convertible Notes</option>
+                    </select>
+                    <input
+                      type="number"
+                      value={editingRow.sharesOwned}
+                      onChange={(e) => setEditingRow({ ...editingRow, sharesOwned: parseInt(e.target.value) || 0 })}
+                      className="w-20 px-2 py-1 text-sm border border-gray-300 rounded text-right"
+                      placeholder="Shares"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-1">
+                    <button onClick={handleSave} className="text-green-600 hover:text-green-800 p-1">
+                      <Save className="h-3 w-3" />
+                    </button>
+                    <button onClick={handleCancel} className="text-gray-400 hover:text-gray-600 p-1">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
                 </div>
-                <div className="col-span-4">
-                  <select
-                    value={editingRow.shareClass}
-                    onChange={(e) => setEditingRow({ ...editingRow, shareClass: e.target.value })}
-                    className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded"
-                  >
-                    <option value="Common Stock">Common Stock</option>
-                    <option value="Preferred Series A">Preferred Series A</option>
-                    <option value="Stock Options">Stock Options</option>
-                    <option value="Convertible Notes">Convertible Notes</option>
-                  </select>
-                </div>
-                <div className="col-span-2">
-                  <input
-                    type="number"
-                    value={editingRow.sharesOwned}
-                    onChange={(e) => setEditingRow({ ...editingRow, sharesOwned: parseInt(e.target.value) || 0 })}
-                    className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded text-right"
-                  />
-                </div>
-                <div className="col-span-1 flex space-x-1">
-                  <button onClick={handleSave} className="text-green-600 hover:text-green-800">
-                    <Save className="h-3 w-3" />
-                  </button>
-                  <button onClick={handleCancel} className="text-gray-400 hover:text-gray-600">
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              </>
+              </div>
             ) : (
-              <>
-                <div className="col-span-5 text-gray-900 truncate">{item.name}</div>
-                <div className="col-span-4">
-                  <span className={`inline-flex px-1.5 py-0.5 text-xs rounded-full ${
-                    item.shareClass.includes('Common') ? 'bg-green-100 text-green-800' :
-                    item.shareClass.includes('Preferred') ? 'bg-purple-100 text-purple-800' :
-                    item.shareClass.includes('Options') ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-blue-100 text-blue-800'
-                  }`}>
-                    {item.shareClass}
-                  </span>
-                </div>
-                <div className="col-span-2 text-right text-gray-900">
-                  {item.sharesOwned > 0 ? item.sharesOwned.toLocaleString() : '-'}
-                </div>
-                <div className="col-span-1">
+              <div className="bg-gray-50 rounded-lg p-3 relative group hover:bg-gray-100">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1 min-w-0">
+                    <h5 className="text-sm font-medium text-gray-900 truncate">
+                      {item.name}
+                    </h5>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge 
+                        variant="secondary" 
+                        className={`text-xs ${getSecurityTypeBadgeColor(item.shareClass)}`}
+                      >
+                        {item.shareClass}
+                      </Badge>
+                      <span className="text-xs text-gray-500">
+                        {item.sharesOwned > 0 ? `${item.sharesOwned.toLocaleString()} shares` : 'No shares'}
+                      </span>
+                    </div>
+                  </div>
                   <button 
                     onClick={() => handleEdit(item)}
-                    className="text-gray-400 hover:text-gray-600"
+                    className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-gray-600 p-1"
                   >
                     <Edit2 className="h-3 w-3" />
                   </button>
                 </div>
-              </>
+              </div>
             )}
           </div>
         ))}
         
         {isAddingNew && editingRow?.id === 'new' && (
-          <div className="grid grid-cols-12 gap-2 items-center px-2 py-1 bg-blue-50 rounded text-xs">
-            <div className="col-span-5">
+          <div className="bg-blue-50 rounded-lg p-3 border border-blue-200">
+            <div className="space-y-2">
               <input
                 type="text"
                 placeholder="Stakeholder name"
                 value={editingRow.name}
                 onChange={(e) => setEditingRow({ ...editingRow, name: e.target.value })}
-                className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded"
+                className="w-full px-2 py-1 text-sm border border-gray-300 rounded"
               />
-            </div>
-            <div className="col-span-4">
-              <select
-                value={editingRow.shareClass}
-                onChange={(e) => setEditingRow({ ...editingRow, shareClass: e.target.value })}
-                className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded"
-              >
-                <option value="Common Stock">Common Stock</option>
-                <option value="Preferred Series A">Preferred Series A</option>
-                <option value="Stock Options">Stock Options</option>
-                <option value="Convertible Notes">Convertible Notes</option>
-              </select>
-            </div>
-            <div className="col-span-2">
-              <input
-                type="number"
-                placeholder="0"
-                value={editingRow.sharesOwned || ''}
-                onChange={(e) => setEditingRow({ ...editingRow, sharesOwned: parseInt(e.target.value) || 0 })}
-                className="w-full px-1 py-0.5 text-xs border border-gray-300 rounded text-right"
-              />
-            </div>
-            <div className="col-span-1 flex space-x-1">
-              <button onClick={handleSave} className="text-green-600 hover:text-green-800">
-                <Save className="h-3 w-3" />
-              </button>
-              <button onClick={handleCancel} className="text-gray-400 hover:text-gray-600">
-                <X className="h-3 w-3" />
-              </button>
+              <div className="flex gap-2">
+                <select
+                  value={editingRow.shareClass}
+                  onChange={(e) => setEditingRow({ ...editingRow, shareClass: e.target.value })}
+                  className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded"
+                >
+                  <option value="Common Stock">Common Stock</option>
+                  <option value="Preferred Series A">Preferred Series A</option>
+                  <option value="Stock Options">Stock Options</option>
+                  <option value="Convertible Notes">Convertible Notes</option>
+                </select>
+                <input
+                  type="number"
+                  placeholder="0"
+                  value={editingRow.sharesOwned || ''}
+                  onChange={(e) => setEditingRow({ ...editingRow, sharesOwned: parseInt(e.target.value) || 0 })}
+                  className="w-20 px-2 py-1 text-sm border border-gray-300 rounded text-right"
+                />
+              </div>
+              <div className="flex justify-end gap-1">
+                <button onClick={handleSave} className="text-green-600 hover:text-green-800 p-1">
+                  <Save className="h-3 w-3" />
+                </button>
+                <button onClick={handleCancel} className="text-gray-400 hover:text-gray-600 p-1">
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
             </div>
           </div>
         )}
       </div>
       
       {tableData.length === 0 && !isAddingNew && (
-        <div className="text-center py-4 text-xs text-gray-500">
+        <div className="text-center py-4 text-sm text-gray-500">
           No stakeholders found. Click "Add" to create one.
         </div>
       )}
