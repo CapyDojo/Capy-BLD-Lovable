@@ -1,4 +1,3 @@
-
 export type EntityTypes = 'Corporation' | 'LLC' | 'Partnership' | 'Trust';
 
 export interface Entity {
@@ -12,6 +11,7 @@ export interface Entity {
   address?: string;
   parentId?: string;
   children?: Entity[];
+  position?: { x: number; y: number };
 }
 
 export interface OwnershipRelationship {
