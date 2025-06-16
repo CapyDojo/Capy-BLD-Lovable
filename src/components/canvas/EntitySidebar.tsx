@@ -2,7 +2,6 @@
 import React from 'react';
 import { Building2, Users, Briefcase, Scale, RotateCcw } from 'lucide-react';
 import { EntityTypes } from '@/types/entity';
-import { dataStore } from '@/services/dataStore';
 import { mockEntities, mockCapTables, mockShareholders, mockShareClasses } from '@/data/mockData';
 
 type DraggableNodeType = EntityTypes | 'Individual';
@@ -53,22 +52,30 @@ export const EntitySidebar: React.FC<EntitySidebarProps> = ({ onCreateNode }) =>
   const handleResetData = () => {
     console.log('🔄 Resetting to original mock data...');
     
-    // Clear localStorage to ensure fresh start
+    // Clear localStorage completely
     localStorage.removeItem('entityStructureData');
     
-    // Create a new DataStore instance with original mock data
-    const tempStore = new (dataStore.constructor as any)(
-      mockEntities,
-      mockCapTables,
-      mockShareholders,
-      mockShareClasses
-    );
+    // Save the original mock data directly to localStorage
+    const originalData = {
+      entities: mockEntities,
+      capTables: mockCapTables,
+      shareholders: mockShareholders,
+      shareClasses: mockShareClasses,
+    };
     
-    // Force save the original data to localStorage
-    tempStore.loadSavedData = function() {}; // Prevent loading old data
-    tempStore.forceSave?.() || tempStore.autoSave?.();
+    console.log('💾 Saving original mock data:', {
+      entities: originalData.entities.length,
+      capTables: originalData.capTables.length,
+      shareholders: originalData.shareholders.length,
+      shareClasses: originalData.shareClasses.length
+    });
     
-    // Now reload the page to reinitialize everything with the original data
+    localStorage.setItem('entityStructureData', JSON.stringify({
+      data: originalData,
+      timestamp: new Date().toISOString()
+    }));
+    
+    // Reload the page to reinitialize with the original data
     location.reload();
     
     console.log('✅ Data reset to original mock data');
