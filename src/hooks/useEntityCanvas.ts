@@ -152,12 +152,13 @@ export const useEntityCanvas = () => {
     if (!selectedNode) return;
     
     console.log('🗑️ Deleting selected node:', selectedNode.id);
-    // Delete from data store (this will auto-save and sync)
-    deleteEntityFromChart(selectedNode.id);
     
-    // Close sidebar immediately
+    // Close sidebar immediately to prevent UI issues
     setSidebarOpen(false);
     setSelectedNode(null);
+    
+    // Delete from data store (this will auto-save and sync)
+    deleteEntityFromChart(selectedNode.id);
   }, [selectedNode]);
 
   return {

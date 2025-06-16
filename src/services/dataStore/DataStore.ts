@@ -69,6 +69,13 @@ export class DataStore {
       shareClasses: this.capTableManager.getShareClasses(),
     };
     
+    console.log('💾 Auto-saving data:', {
+      entities: dataToSave.entities.length,
+      capTables: dataToSave.capTables.length,
+      shareholders: dataToSave.shareholders.length,
+      shareClasses: dataToSave.shareClasses.length
+    });
+    
     this.storageService.save(dataToSave);
   }
 
@@ -77,6 +84,7 @@ export class DataStore {
     console.log('📥 Loading saved data...');
     const data = this.storageService.load();
     if (data) {
+      console.log('📥 Found saved data, applying...');
       this.entityManager.updateData(data.entities || []);
       this.capTableManager.updateData(
         data.capTables || [],
@@ -84,7 +92,7 @@ export class DataStore {
         data.shareClasses || []
       );
       console.log('✅ Saved data loaded and applied');
-      this.notify();
+      // Don't notify here to avoid infinite loops during initialization
     } else {
       console.log('📥 No saved data to load, using initial data');
     }
@@ -92,7 +100,9 @@ export class DataStore {
 
   // Entity operations
   getEntities(): Entity[] {
-    return this.entityManager.getAll();
+    const entities = this.entityManager.getAll();
+    console.log('📊 Getting entities, count:', entities.length);
+    return entities;
   }
 
   getEntityById(id: string): Entity | undefined {
@@ -100,7 +110,7 @@ export class DataStore {
   }
 
   addEntity(entity: Entity) {
-    console.log('➕ Adding entity:', entity.name);
+    console.log('➕ Adding entity:', entity.name, entity.id);
     this.entityManager.add(entity);
   }
 
@@ -110,7 +120,16 @@ export class DataStore {
   }
 
   deleteEntity(id: string) {
-    console.log('🗑️ Deleting entity:', id);
+    console.log('🗑️ Starting entity deletion process for:', id);
+    
+    // Verify entity exists before deletion
+    const entityExists = this.entityManager.getById(id);
+    if (!entityExists) {
+      console.warn('⚠️ Entity not found for deletion:', id);
+      return;
+    }
+    
+    console.log('🗑️ Entity found, proceeding with deletion');
     
     // First clean up all cap table data for this entity
     this.capTableManager.cleanupEntityData(id);
@@ -118,7 +137,15 @@ export class DataStore {
     // Then delete the entity itself
     this.entityManager.delete(id);
     
-    console.log('✅ Entity deletion complete, remaining entities:', this.entityManager.getAll().length);
+    // Verify deletion
+    const remainingEntities = this.entityManager.getAll();
+    const stillExists = remainingEntities.find(e => e.id === id);
+    
+    if (stillExists) {
+      console.error('❌ Entity deletion failed - entity still exists:', id);
+    } else {
+      console.log('✅ Entity deletion confirmed, remaining entities:', remainingEntities.length);
+    }
   }
 
   // Cap table operations
