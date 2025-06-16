@@ -18,8 +18,7 @@ export const useMagneticConnection = (
     showOwnershipModal, 
     openOwnershipModal, 
     handleOwnershipConfirm, 
-    closeOwnershipModal,
-    setShowOwnershipModal 
+    closeOwnershipModal
   } = useOwnershipModal(onConnect);
 
   const handleNodeDrag = useCallback((nodeId: string, newPosition: { x: number; y: number }) => {
@@ -58,6 +57,6 @@ export const useMagneticConnection = (
     handleNodeDrag,
     handleNodeDragStop: handleNodeDragStopWithConnection,
     handleOwnershipConfirm,
-    setShowOwnershipModal: closeOwnershipModal
+    closeOwnershipModal
   };
 };

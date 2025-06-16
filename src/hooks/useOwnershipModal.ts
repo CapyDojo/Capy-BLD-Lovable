@@ -43,7 +43,6 @@ export const useOwnershipModal = (onConnect: (connection: { source: string; targ
     showOwnershipModal,
     openOwnershipModal,
     handleOwnershipConfirm,
-    closeOwnershipModal,
-    setShowOwnershipModal
+    closeOwnershipModal
   };
 };
