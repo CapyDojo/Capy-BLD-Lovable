@@ -24,17 +24,23 @@ export const useEntityCanvas = () => {
 
   // Subscribe to data store changes for auto-sync
   useEffect(() => {
-    console.log('🔗 Setting up data store subscription');
+    console.log('🔗 Setting up data store subscription in useEntityCanvas');
     const unsubscribe = dataStore.subscribe(() => {
-      console.log('📡 Data store changed, triggering refresh');
-      setRefreshKey(prev => prev + 1);
+      console.log('📡 useEntityCanvas: Data store changed, triggering refresh');
+      setRefreshKey(prev => {
+        const newKey = prev + 1;
+        console.log('🔄 useEntityCanvas: Refresh key updated from', prev, 'to', newKey);
+        return newKey;
+      });
     });
     return unsubscribe;
   }, []);
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
-    console.log('🔄 Regenerating canvas structure due to refresh key:', refreshKey);
-    return generateInitialState();
+    console.log('🔄 useEntityCanvas: Regenerating canvas structure due to refresh key:', refreshKey);
+    const result = generateInitialState();
+    console.log('📊 useEntityCanvas: Generated', result.nodes.length, 'nodes and', result.edges.length, 'edges');
+    return result;
   }, [refreshKey]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
@@ -45,18 +51,19 @@ export const useEntityCanvas = () => {
 
   // Update nodes and edges when data changes - this is crucial for sync
   useEffect(() => {
-    console.log('🔄 Updating nodes and edges from data store changes');
+    console.log('🔄 useEntityCanvas: Updating nodes and edges from data store changes');
     const { nodes: newNodes, edges: newEdges } = generateInitialState();
-    console.log('📊 New nodes count:', newNodes.length, 'New edges count:', newEdges.length);
-    setNodes(newNodes);
-    setEdges(newEdges);
+    console.log('📊 useEntityCanvas: Setting new nodes count:', newNodes.length, 'new edges count:', newEdges.length);
     
-    // If the selected node was deleted, close the sidebar
+    // Check if selected node still exists
     if (selectedNode && !newNodes.find(node => node.id === selectedNode.id)) {
-      console.log('🚪 Selected node was deleted, closing sidebar');
+      console.log('🚪 useEntityCanvas: Selected node was deleted, closing sidebar');
       setSelectedNode(null);
       setSidebarOpen(false);
     }
+    
+    setNodes(newNodes);
+    setEdges(newEdges);
   }, [refreshKey, setNodes, setEdges, selectedNode]);
 
   const onConnect = useCallback(
@@ -78,6 +85,14 @@ export const useEntityCanvas = () => {
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     if (node.type === 'entity') {
       console.log('🎯 Entity node clicked:', node.id);
+      
+      // Verify the entity still exists in the data store
+      const entity = dataStore.getEntityById(node.id);
+      if (!entity) {
+        console.warn('⚠️ Clicked entity no longer exists in data store:', node.id);
+        return;
+      }
+      
       setSelectedNode(node);
       setSidebarOpen(true);
     }
@@ -140,6 +155,15 @@ export const useEntityCanvas = () => {
   const updateSelectedNode = useCallback((updates: Partial<Node['data']>) => {
     if (!selectedNode) return;
     
+    // Verify the entity still exists before updating
+    const entity = dataStore.getEntityById(selectedNode.id);
+    if (!entity) {
+      console.warn('⚠️ Cannot update node - entity no longer exists:', selectedNode.id);
+      setSelectedNode(null);
+      setSidebarOpen(false);
+      return;
+    }
+    
     console.log('📝 Updating selected node:', selectedNode.id, updates);
     // Update in data store (this will auto-save and sync)
     updateEntityFromChart(selectedNode.id, updates);
@@ -151,7 +175,7 @@ export const useEntityCanvas = () => {
   const deleteSelectedNode = useCallback(() => {
     if (!selectedNode) return;
     
-    console.log('🗑️ Deleting selected node:', selectedNode.id);
+    console.log('🗑️ useEntityCanvas: Deleting selected node:', selectedNode.id);
     
     // Close sidebar immediately to prevent UI issues
     setSidebarOpen(false);
@@ -159,6 +183,10 @@ export const useEntityCanvas = () => {
     
     // Delete from data store (this will auto-save and sync)
     deleteEntityFromChart(selectedNode.id);
+    
+    // Force refresh to ensure UI updates immediately
+    console.log('🔄 useEntityCanvas: Forcing refresh after deletion');
+    setRefreshKey(prev => prev + 1);
   }, [selectedNode]);
 
   return {

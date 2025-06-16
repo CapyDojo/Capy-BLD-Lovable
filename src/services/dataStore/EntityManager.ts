@@ -40,6 +40,13 @@ export class EntityManager {
   delete(id: string): void {
     console.log('🗑️ EntityManager deleting entity:', id);
     const beforeCount = this.entities.length;
+    const entityToDelete = this.entities.find(e => e.id === id);
+    
+    if (entityToDelete) {
+      console.log('🗑️ Found entity to delete:', entityToDelete.name);
+    }
+    
+    // Remove the entity
     this.entities = this.entities.filter(e => e.id !== id);
     const afterCount = this.entities.length;
     
@@ -52,7 +59,15 @@ export class EntityManager {
     if (beforeCount === afterCount) {
       console.warn('⚠️ EntityManager: No entity was deleted - entity may not have existed');
     } else {
-      console.log('✅ EntityManager: Entity successfully deleted');
+      console.log('✅ EntityManager: Entity successfully deleted from memory');
+      
+      // Verify the entity is really gone
+      const stillExists = this.entities.find(e => e.id === id);
+      if (stillExists) {
+        console.error('❌ CRITICAL: Entity still exists after deletion attempt!');
+      } else {
+        console.log('✅ Confirmed: Entity completely removed from memory');
+      }
     }
     
     this.notifyChange();

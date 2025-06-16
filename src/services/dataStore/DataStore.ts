@@ -10,6 +10,7 @@ export class DataStore {
   private capTableManager: CapTableManager;
   private storageService: StorageService;
   private listeners: (() => void)[] = [];
+  private isLoading = false;
 
   constructor(
     initialEntities: Entity[],
@@ -49,6 +50,11 @@ export class DataStore {
 
   // Notify all listeners of changes
   private notify() {
+    if (this.isLoading) {
+      console.log('🚫 Skipping notify during data loading');
+      return;
+    }
+    
     console.log('📡 Notifying', this.listeners.length, 'listeners of data change');
     this.listeners.forEach((callback, index) => {
       try {
@@ -57,11 +63,13 @@ export class DataStore {
         console.error(`❌ Error in listener ${index}:`, error);
       }
     });
-    this.autoSave();
+    
+    // Force immediate save after notification
+    this.forceSave();
   }
 
-  // Auto-save to localStorage
-  private autoSave() {
+  // Force immediate save to localStorage
+  private forceSave() {
     const dataToSave = {
       entities: this.entityManager.getAll(),
       capTables: this.capTableManager.getCapTables(),
@@ -69,7 +77,7 @@ export class DataStore {
       shareClasses: this.capTableManager.getShareClasses(),
     };
     
-    console.log('💾 Auto-saving data:', {
+    console.log('💾 Force saving data immediately:', {
       entities: dataToSave.entities.length,
       capTables: dataToSave.capTables.length,
       shareholders: dataToSave.shareholders.length,
@@ -77,14 +85,28 @@ export class DataStore {
     });
     
     this.storageService.save(dataToSave);
+    console.log('✅ Data force saved to localStorage');
+  }
+
+  // Auto-save to localStorage (legacy method, now calls forceSave)
+  private autoSave() {
+    this.forceSave();
   }
 
   // Load data from localStorage
   loadSavedData() {
     console.log('📥 Loading saved data...');
+    this.isLoading = true;
+    
     const data = this.storageService.load();
     if (data) {
-      console.log('📥 Found saved data, applying...');
+      console.log('📥 Found saved data, applying...', {
+        entities: data.entities?.length || 0,
+        capTables: data.capTables?.length || 0,
+        shareholders: data.shareholders?.length || 0,
+        shareClasses: data.shareClasses?.length || 0
+      });
+      
       this.entityManager.updateData(data.entities || []);
       this.capTableManager.updateData(
         data.capTables || [],
@@ -92,10 +114,11 @@ export class DataStore {
         data.shareClasses || []
       );
       console.log('✅ Saved data loaded and applied');
-      // Don't notify here to avoid infinite loops during initialization
     } else {
       console.log('📥 No saved data to load, using initial data');
     }
+    
+    this.isLoading = false;
   }
 
   // Entity operations
@@ -137,14 +160,34 @@ export class DataStore {
     // Then delete the entity itself
     this.entityManager.delete(id);
     
-    // Verify deletion
+    // Force immediate save after deletion
+    console.log('💾 Force saving after entity deletion');
+    this.forceSave();
+    
+    // Verify deletion was persisted
+    const savedData = this.storageService.load();
+    const stillInStorage = savedData?.entities?.find((e: Entity) => e.id === id);
+    
+    if (stillInStorage) {
+      console.error('❌ Entity deletion failed - still in localStorage:', id);
+      // Try to remove it manually from storage
+      if (savedData?.entities) {
+        savedData.entities = savedData.entities.filter((e: Entity) => e.id !== id);
+        this.storageService.save(savedData);
+        console.log('🔧 Manually removed entity from localStorage');
+      }
+    } else {
+      console.log('✅ Entity deletion confirmed in localStorage');
+    }
+    
+    // Verify deletion in memory
     const remainingEntities = this.entityManager.getAll();
     const stillExists = remainingEntities.find(e => e.id === id);
     
     if (stillExists) {
-      console.error('❌ Entity deletion failed - entity still exists:', id);
+      console.error('❌ Entity deletion failed - entity still exists in memory:', id);
     } else {
-      console.log('✅ Entity deletion confirmed, remaining entities:', remainingEntities.length);
+      console.log('✅ Entity deletion confirmed in memory, remaining entities:', remainingEntities.length);
     }
   }
 
