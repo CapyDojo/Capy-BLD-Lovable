@@ -1,3 +1,4 @@
+
 import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { 
   Node, 
@@ -5,7 +6,8 @@ import {
   Connection, 
   useNodesState, 
   useEdgesState,
-  addEdge
+  addEdge,
+  useReactFlow
 } from '@xyflow/react';
 import { EntityTypes } from '@/types/entity';
 import { generateSyncedCanvasStructure, updateOwnershipFromChart, addEntityFromChart, updateEntityFromChart, deleteEntityFromChart } from '@/services/capTableSync';
@@ -23,6 +25,7 @@ export const useEntityCanvas = () => {
   const [selectedNode, setSelectedNode] = useState<Node | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { getNodes } = useReactFlow();
 
   // Subscribe to data store changes for auto-sync
   useEffect(() => {
@@ -88,6 +91,79 @@ export const useEntityCanvas = () => {
     setNodes(newNodes);
     setEdges(newEdges);
   }, [refreshKey, setNodes, setEdges, selectedNode, isDeleting]);
+
+  // Centralized deletion function that both trash icon and backspace will use
+  const deleteSelectedNode = useCallback(async () => {
+    if (!selectedNode) return;
+    
+    console.log('🗑️ useEntityCanvas: Starting deletion process for:', selectedNode.id, 'type:', selectedNode.type);
+    
+    // Set deletion flag to prevent interference
+    setIsDeleting(true);
+    
+    // Close sidebar immediately to prevent UI issues
+    setSidebarOpen(false);
+    setSelectedNode(null);
+    
+    try {
+      // Handle different node types
+      if (selectedNode.type === 'entity') {
+        // Delete entity
+        console.log('🗑️ Deleting entity node:', selectedNode.id);
+        deleteEntityFromChart(selectedNode.id);
+      } else if (selectedNode.type === 'shareholder') {
+        // Delete stakeholder - extract entity ID and stakeholder ID from the node ID
+        console.log('🗑️ Deleting stakeholder node:', selectedNode.id);
+        
+        // Stakeholder node IDs are in format: stakeholder-{investmentId}-of-{entityId}
+        const match = selectedNode.id.match(/^stakeholder-(.+)-of-(.+)$/);
+        if (match) {
+          const [, stakeholderId, entityId] = match;
+          console.log('🗑️ Extracted stakeholder ID:', stakeholderId, 'entity ID:', entityId);
+          
+          // Use the data store's deleteStakeholder method
+          dataStore.deleteStakeholder(entityId, stakeholderId);
+        } else {
+          console.error('❌ Could not parse stakeholder node ID:', selectedNode.id);
+        }
+      }
+      
+      // Wait a short moment for the deletion to persist to localStorage
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      console.log('✅ useEntityCanvas: Deletion completed, allowing data store notifications');
+    } finally {
+      // Clear deletion flag to allow normal operations
+      setIsDeleting(false);
+    }
+  }, [selectedNode]);
+
+  // Handle keyboard events - make backspace use the same deletion workflow
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Only handle backspace/delete when we have a selected node and no input is focused
+      if ((event.key === 'Backspace' || event.key === 'Delete') && selectedNode) {
+        // Check if any input/textarea is focused
+        const activeElement = document.activeElement;
+        const isInputFocused = activeElement && (
+          activeElement.tagName === 'INPUT' || 
+          activeElement.tagName === 'TEXTAREA' ||
+          activeElement.contentEditable === 'true'
+        );
+        
+        if (!isInputFocused) {
+          event.preventDefault();
+          console.log('⌨️ Backspace/Delete pressed, triggering deletion workflow');
+          deleteSelectedNode();
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [selectedNode, deleteSelectedNode]);
 
   const onConnect = useCallback(
     (params: Connection | { source: string; target: string; label: string }) => {
@@ -197,51 +273,6 @@ export const useEntityCanvas = () => {
     
     // Update local selected node state
     setSelectedNode((current) => current ? { ...current, data: { ...current.data, ...updates } } : null);
-  }, [selectedNode]);
-
-  const deleteSelectedNode = useCallback(async () => {
-    if (!selectedNode) return;
-    
-    console.log('🗑️ useEntityCanvas: Starting deletion process for:', selectedNode.id, 'type:', selectedNode.type);
-    
-    // Set deletion flag to prevent interference
-    setIsDeleting(true);
-    
-    // Close sidebar immediately to prevent UI issues
-    setSidebarOpen(false);
-    setSelectedNode(null);
-    
-    try {
-      // Handle different node types
-      if (selectedNode.type === 'entity') {
-        // Delete entity
-        console.log('🗑️ Deleting entity node:', selectedNode.id);
-        deleteEntityFromChart(selectedNode.id);
-      } else if (selectedNode.type === 'shareholder') {
-        // Delete stakeholder - extract entity ID and stakeholder ID from the node ID
-        console.log('🗑️ Deleting stakeholder node:', selectedNode.id);
-        
-        // Stakeholder node IDs are in format: stakeholder-{investmentId}-of-{entityId}
-        const match = selectedNode.id.match(/^stakeholder-(.+)-of-(.+)$/);
-        if (match) {
-          const [, stakeholderId, entityId] = match;
-          console.log('🗑️ Extracted stakeholder ID:', stakeholderId, 'entity ID:', entityId);
-          
-          // Use the data store's deleteStakeholder method
-          dataStore.deleteStakeholder(entityId, stakeholderId);
-        } else {
-          console.error('❌ Could not parse stakeholder node ID:', selectedNode.id);
-        }
-      }
-      
-      // Wait a short moment for the deletion to persist to localStorage
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      console.log('✅ useEntityCanvas: Deletion completed, allowing data store notifications');
-    } finally {
-      // Clear deletion flag to allow normal operations
-      setIsDeleting(false);
-    }
   }, [selectedNode]);
 
   return {
