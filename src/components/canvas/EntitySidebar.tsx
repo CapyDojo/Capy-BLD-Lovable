@@ -53,21 +53,19 @@ export const EntitySidebar: React.FC<EntitySidebarProps> = ({ onCreateNode }) =>
   const handleResetData = () => {
     console.log('🔄 Resetting to original mock data...');
     
-    // Clear current data and load original mock data
-    const resetData = {
-      entities: mockEntities,
-      capTables: mockCapTables,
-      shareholders: mockShareholders,
-      shareClasses: mockShareClasses,
-    };
+    // Reset entities - delete all current entities and add mock entities
+    const currentEntities = dataStore.getEntities();
+    currentEntities.forEach(entity => {
+      dataStore.deleteEntity(entity.id);
+    });
     
-    // Update the data store with original mock data
-    dataStore.entityManager.updateData(resetData.entities);
-    dataStore.capTableManager.updateData(
-      resetData.capTables,
-      resetData.shareholders,
-      resetData.shareClasses
-    );
+    // Add all mock entities
+    mockEntities.forEach(entity => {
+      dataStore.addEntity(entity);
+    });
+    
+    // Note: The cap table data will be automatically recreated when entities are added
+    // since the cap table sync system will rebuild the relationships
     
     console.log('✅ Data reset to original mock data');
   };
