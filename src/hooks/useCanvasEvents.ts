@@ -56,7 +56,7 @@ export const useCanvasEvents = (
 
   const createNode = useCallback((type: DraggableNodeType, position: { x: number; y: number }) => {
     const id = `new-${Date.now().toString()}`;
-    console.log('➕ Creating new node:', type, 'at position:', position);
+    console.log('➕ Creating new node:', type, 'at position:', position, 'with id:', id);
 
     if (type === 'Individual') {
       // For individuals, we don't create entities, just stakeholder nodes
@@ -74,9 +74,10 @@ export const useCanvasEvents = (
         address: 'TBD'
       };
       
-      console.log('➕ Creating new entity:', newEntity);
+      console.log('➕ Creating new entity in data store:', newEntity);
       // Add to data store (this will auto-save and sync)
       addEntityFromChart(newEntity);
+      console.log('✅ Entity added to data store, should trigger refresh');
     }
   }, []);
 
@@ -118,7 +119,9 @@ export const useCanvasEvents = (
       };
 
       console.log('🎯 Calculated position:', position);
+      console.log('🎯 About to call createNode...');
       createNode(type, position);
+      console.log('🎯 createNode called, waiting for data store update...');
     },
     [createNode],
   );
