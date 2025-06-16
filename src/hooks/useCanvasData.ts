@@ -1,4 +1,5 @@
-import { useMemo, useEffect } from 'react';
+
+import { useMemo, useEffect, useRef } from 'react';
 import { useNodesState, useEdgesState } from '@xyflow/react';
 import { generateSyncedCanvasStructure } from '@/services/capTableSync';
 import { dataStore } from '@/services/dataStore';
@@ -9,6 +10,9 @@ const generateInitialState = () => {
 };
 
 export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedNode: any, setSelectedNode: any, setSidebarOpen: any) => {
+  // Store the latest positions in a ref to avoid dependency issues
+  const positionsRef = useRef<{ [nodeId: string]: { x: number; y: number } }>({});
+
   // Subscribe to data store changes for auto-sync
   useEffect(() => {
     console.log('🔗 Setting up data store subscription in useCanvasData');
@@ -38,11 +42,39 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
     console.log('🔄 useCanvasData: Regenerating canvas structure due to refresh key:', refreshKey);
     const result = generateInitialState();
     console.log('📊 useCanvasData: Generated', result.nodes.length, 'nodes and', result.edges.length, 'edges');
-    return result;
+    
+    // Apply saved positions to initial nodes
+    const nodesWithPositions = result.nodes.map(node => {
+      const savedPosition = positionsRef.current[node.id];
+      if (savedPosition) {
+        return {
+          ...node,
+          position: savedPosition,
+          data: {
+            ...node.data,
+            basePosition: node.data.basePosition || node.position
+          }
+        };
+      }
+      return node;
+    });
+    
+    return { nodes: nodesWithPositions, edges: result.edges };
   }, [refreshKey]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+
+  // Enhanced onNodesChange to track position changes
+  const enhancedOnNodesChange = (changes: any) => {
+    // Update position tracking for any position changes
+    changes.forEach((change: any) => {
+      if (change.type === 'position' && change.position) {
+        positionsRef.current[change.id] = change.position;
+      }
+    });
+    onNodesChange(changes);
+  };
 
   // Update nodes and edges when data changes - preserve positions
   useEffect(() => {
@@ -56,17 +88,16 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
     const { nodes: newNodes, edges: newEdges } = generateInitialState();
     console.log('📊 useCanvasData: Setting new nodes count:', newNodes.length, 'new edges count:', newEdges.length);
     
-    // Preserve existing node positions
+    // Preserve existing node positions using the ref
     const updatedNodes = newNodes.map(newNode => {
-      const existingNode = nodes.find(n => n.id === newNode.id);
-      if (existingNode) {
-        // Keep the current position and any other state
+      const savedPosition = positionsRef.current[newNode.id];
+      if (savedPosition) {
         return {
           ...newNode,
-          position: existingNode.position,
+          position: savedPosition,
           data: {
             ...newNode.data,
-            basePosition: existingNode.data.basePosition || newNode.data.basePosition
+            basePosition: newNode.data.basePosition || savedPosition
           }
         };
       }
@@ -82,14 +113,14 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
     
     setNodes(updatedNodes);
     setEdges(newEdges);
-  }, [refreshKey, setNodes, setEdges, selectedNode, isDeleting, setSelectedNode, setSidebarOpen, nodes]);
+  }, [refreshKey, setNodes, setEdges, selectedNode, isDeleting, setSelectedNode, setSidebarOpen]);
 
   return {
     nodes,
     edges,
     setNodes,
     setEdges,
-    onNodesChange,
+    onNodesChange: enhancedOnNodesChange,
     onEdgesChange
   };
 };
