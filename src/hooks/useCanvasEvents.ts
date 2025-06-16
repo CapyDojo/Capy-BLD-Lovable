@@ -120,11 +120,12 @@ export const useCanvasEvents = (
     // Update in data store (this will auto-save and sync)
     updateEntityFromChart(selectedNode.id, updates);
     
-    // Update local selected node state - fix the TypeScript error by using proper function signature
-    setSelectedNode((current) => {
-      if (!current) return null;
-      return { ...current, data: { ...current.data, ...updates } };
-    });
+    // Update local selected node state - create updated node directly
+    const updatedNode = { 
+      ...selectedNode, 
+      data: { ...selectedNode.data, ...updates } 
+    };
+    setSelectedNode(updatedNode);
   }, [selectedNode, setSelectedNode, setSidebarOpen]);
 
   return {
