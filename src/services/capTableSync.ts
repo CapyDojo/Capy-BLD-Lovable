@@ -198,6 +198,40 @@ export const generateSyncedCanvasStructure = () => {
 // Export mutation functions for chart updates
 export const updateOwnershipFromChart = (sourceEntityId: string, targetEntityId: string, ownershipPercentage: number) => {
   console.log('📊 Updating ownership from chart:', sourceEntityId, '->', targetEntityId, ownershipPercentage + '%');
+  
+  // Check if source is a shareholder node (starts with "stakeholder-")
+  if (sourceEntityId.startsWith('stakeholder-')) {
+    console.log('📊 Source is a shareholder node, extracting investment ID:', sourceEntityId);
+    
+    // Extract the investment ID from the shareholder node ID
+    // Format: "stakeholder-{investmentId}-of-{entityId}"
+    const match = sourceEntityId.match(/^stakeholder-(.+)-of-(.+)$/);
+    if (match) {
+      const [, investmentId, entityId] = match;
+      console.log('📊 Extracted investment ID:', investmentId, 'from entity:', entityId);
+      
+      // Find the existing investment and update its ownership percentage
+      const targetCapTable = dataStore.getCapTableByEntityId(targetEntityId);
+      if (targetCapTable) {
+        const existingInvestment = targetCapTable.investments.find(inv => inv.id === investmentId);
+        if (existingInvestment) {
+          // Calculate new shares based on percentage
+          const newShares = Math.round((ownershipPercentage / 100) * targetCapTable.authorizedShares);
+          existingInvestment.sharesOwned = newShares;
+          existingInvestment.investmentAmount = newShares * existingInvestment.pricePerShare;
+          console.log('📊 Updated existing investment shares:', newShares);
+          dataStore.notifyChange();
+          return;
+        }
+      }
+    }
+    
+    // If we can't extract the investment ID, treat as individual stakeholder
+    console.log('📊 Could not extract investment ID, treating as individual stakeholder');
+    return;
+  }
+  
+  // Original logic for entity-to-entity ownership
   dataStore.updateOwnership(sourceEntityId, targetEntityId, ownershipPercentage);
 };
 
