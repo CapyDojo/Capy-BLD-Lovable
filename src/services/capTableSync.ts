@@ -1,3 +1,4 @@
+
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 
@@ -106,61 +107,49 @@ const buildOwnershipHierarchy = () => {
     });
   });
   
-  // FIXED APPROACH: Calculate hierarchy levels with owners ABOVE owned entities
-  // Higher level number = higher on screen (owners), lower level number = lower on screen (owned)
-  const entityLevels = new Map<string, number>();
-  const inDegree = new Map<string, number>();
-  const queue: string[] = [];
-  
-  // Initialize in-degree count for all entities based on OWNED relationships
-  allEntities.forEach(entity => {
-    const ownedEntities = reverseOwnershipMap.get(entity.id) || [];
-    inDegree.set(entity.id, ownedEntities.length);
-    
-    // Entities that don't own anything (leaf nodes) start at level 0
-    if (ownedEntities.length === 0) {
-      queue.push(entity.id);
-      entityLevels.set(entity.id, 0);
-    }
+  console.log('🔍 Ownership relationships:', {
+    ownershipMap: Array.from(ownershipMap.entries()),
+    reverseOwnershipMap: Array.from(reverseOwnershipMap.entries())
   });
   
-  // Process entities level by level - leaf entities first, then their owners
-  let currentLevel = 0;
-  const processedAtLevel = new Set<string>();
+  // COMPLETELY REWRITTEN: Start from TOP level entities (entities that are NOT owned by anyone)
+  // and work our way DOWN the hierarchy
+  const entityLevels = new Map<string, number>();
+  const visited = new Set<string>();
   
-  while (queue.length > 0) {
-    const entitiesAtCurrentLevel = [...queue];
-    queue.length = 0; // Clear the queue
+  // Find root entities (entities that are not owned by any other entity)
+  const rootEntities = allEntities.filter(entity => {
+    const owners = ownershipMap.get(entity.id) || [];
+    return owners.length === 0; // No entity owners
+  });
+  
+  console.log('🌱 Root entities (not owned by anyone):', rootEntities.map(e => e.name));
+  
+  // Recursive function to assign levels starting from roots
+  const assignLevel = (entityId: string, level: number) => {
+    if (visited.has(entityId)) return;
     
-    // Process all entities at the current level
-    entitiesAtCurrentLevel.forEach(entityId => {
-      if (processedAtLevel.has(entityId)) return;
-      
-      processedAtLevel.add(entityId);
-      entityLevels.set(entityId, currentLevel);
-      
-      // Update owner entities (they go to the next level UP)
-      const ownerEntities = ownershipMap.get(entityId) || [];
-      ownerEntities.forEach(ownerId => {
-        const currentInDegree = inDegree.get(ownerId) || 0;
-        inDegree.set(ownerId, currentInDegree - 1);
-        
-        // If all owned entities of this owner have been processed, add it to next level
-        if (inDegree.get(ownerId) === 0 && !processedAtLevel.has(ownerId)) {
-          queue.push(ownerId);
-        }
-      });
+    visited.add(entityId);
+    entityLevels.set(entityId, level);
+    
+    console.log(`📍 Assigning level ${level} to entity: ${allEntities.find(e => e.id === entityId)?.name}`);
+    
+    // Assign next level to all entities owned by this entity
+    const ownedEntities = reverseOwnershipMap.get(entityId) || [];
+    ownedEntities.forEach(ownedId => {
+      assignLevel(ownedId, level + 1);
     });
-    
-    // Move to next level only if we have entities to process
-    if (queue.length > 0) {
-      currentLevel++;
-    }
-  }
+  };
+  
+  // Start assignment from root entities at level 0
+  rootEntities.forEach(entity => {
+    assignLevel(entity.id, 0);
+  });
   
   // Handle any remaining entities (shouldn't happen with proper data)
   allEntities.forEach(entity => {
     if (!entityLevels.has(entity.id)) {
+      console.log(`⚠️ Orphaned entity found: ${entity.name}, assigning to level 0`);
       entityLevels.set(entity.id, 0);
     }
   });
@@ -173,6 +162,11 @@ const buildOwnershipHierarchy = () => {
     }
     levelGroups.get(level)!.push(entityId);
   });
+  
+  console.log('📊 Final entity levels:', Array.from(levelGroups.entries()).map(([level, entities]) => [
+    level, 
+    entities.map(id => allEntities.find(e => e.id === id)?.name)
+  ]));
   
   return { entityLevels, levelGroups, ownershipMap, reverseOwnershipMap };
 };
@@ -196,13 +190,10 @@ export const generateSyncedCanvasStructure = () => {
   const NODE_SPACING = 80; // Increased spacing between nodes
   const START_Y = 50;
   
-  // Get the maximum level to invert the positioning (highest level entities go at top)
-  const maxLevel = Math.max(...Array.from(entityLevels.values()));
-  
-  // Position nodes by hierarchy level - INVERT so owners are at top
+  // Position nodes by hierarchy level - NO INVERSION NEEDED NOW
+  // Level 0 = top level entities (root), Level 1 = owned by level 0, etc.
   levelGroups.forEach((entityIds, level) => {
-    const invertedLevel = maxLevel - level; // Invert: highest level entities go to top
-    const y = START_Y + (invertedLevel * LEVEL_HEIGHT);
+    const y = START_Y + (level * LEVEL_HEIGHT); // Direct mapping: level 0 at top
     const totalWidth = entityIds.length * NODE_WIDTH + (entityIds.length - 1) * NODE_SPACING;
     const startX = Math.max(50, (Math.max(1200, window.innerWidth) - totalWidth) / 2); // Use minimum width for consistent layout
     
@@ -214,6 +205,8 @@ export const generateSyncedCanvasStructure = () => {
       
       // Use saved position if available, otherwise use calculated hierarchical position
       const finalPosition = entity.position || { x, y };
+      
+      console.log(`🎯 Positioning entity ${entity.name} at level ${level}, position:`, finalPosition);
       
       nodes.push({
         id: entity.id,
