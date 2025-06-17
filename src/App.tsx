@@ -11,6 +11,7 @@ import { EntityCanvas } from "@/components/canvas/EntityCanvas";
 import { DocumentRepository } from "@/components/documents/DocumentRepository";
 import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
 import DataStructure from "@/pages/DataStructure";
+import Database from "@/pages/Database";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
