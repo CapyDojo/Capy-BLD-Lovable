@@ -1,6 +1,12 @@
 
 import { EnterpriseDataStore } from './EnterpriseDataStore';
 import { IEnterpriseDataStore, EnterpriseDataStoreConfig } from '@/types/enterprise';
+import { 
+  unifiedMockEntities, 
+  unifiedMockShareClasses, 
+  unifiedMockOwnerships,
+  unifiedMockAuditEntries 
+} from '@/data/unifiedMockData';
 
 export class EnterpriseDataStoreFactory {
   static createEnterpriseStore(environment: 'development' | 'production' | 'test'): IEnterpriseDataStore {
@@ -17,6 +23,35 @@ export class EnterpriseDataStoreFactory {
     };
 
     console.log(`🏭 Creating EnterpriseDataStore for ${environment} environment`);
-    return new EnterpriseDataStore(config);
+    
+    const store = new EnterpriseDataStore(config);
+    
+    // Initialize with unified mock data for development
+    if (environment === 'development') {
+      console.log('🌱 Initializing enterprise store with unified mock data...');
+      
+      // Load entities
+      unifiedMockEntities.forEach(async (entity) => {
+        try {
+          await store.createEntity({
+            name: entity.name,
+            type: entity.type,
+            jurisdiction: entity.jurisdiction,
+            registrationNumber: entity.registrationNumber,
+            incorporationDate: entity.incorporationDate,
+            address: entity.address,
+            position: entity.position,
+            metadata: entity.metadata || {}
+          }, 'unified-mock-data', 'Initial mock data load');
+        } catch (error) {
+          // Entity might already exist, that's okay
+          console.log(`📝 Entity ${entity.id} already exists or failed to create:`, error);
+        }
+      });
+      
+      console.log('✅ Enterprise store initialized with unified mock data');
+    }
+    
+    return store;
   }
 }
