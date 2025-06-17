@@ -68,24 +68,40 @@ export const syncCapTableData = (entityId: string): EntityStructureData | null =
 // Helper function to build ownership hierarchy
 const buildOwnershipHierarchy = () => {
   const allEntities = dataStore.getEntities();
-  const allOwnershipRelationships = dataStore.getOwnershipRelationships();
+  const allCapTables = dataStore.getCapTables();
+  const allShareholders = dataStore.getShareholders();
   
-  // Create a map of entity ownership relationships
+  // Create a map of entity ownership relationships from cap table data
   const ownershipMap = new Map<string, string[]>(); // ownedEntityId -> ownerEntityIds[]
   const reverseOwnershipMap = new Map<string, string[]>(); // ownerEntityId -> ownedEntityIds[]
   
-  allOwnershipRelationships.forEach(rel => {
-    // Track what entities this entity owns
-    if (!reverseOwnershipMap.has(rel.ownerEntityId)) {
-      reverseOwnershipMap.set(rel.ownerEntityId, []);
-    }
-    reverseOwnershipMap.get(rel.ownerEntityId)!.push(rel.ownedEntityId);
-    
-    // Track who owns this entity
-    if (!ownershipMap.has(rel.ownedEntityId)) {
-      ownershipMap.set(rel.ownedEntityId, []);
-    }
-    ownershipMap.get(rel.ownedEntityId)!.push(rel.ownerEntityId);
+  // Build ownership relationships from cap table investments
+  allCapTables.forEach(capTable => {
+    capTable.investments.forEach(investment => {
+      const shareholder = allShareholders.find(s => s.id === investment.shareholderId);
+      
+      // Only process entity shareholders (not individuals or pools)
+      if (shareholder?.type === 'Entity' && shareholder.entityId) {
+        const ownerEntityId = shareholder.entityId;
+        const ownedEntityId = capTable.entityId;
+        
+        // Track what entities this entity owns
+        if (!reverseOwnershipMap.has(ownerEntityId)) {
+          reverseOwnershipMap.set(ownerEntityId, []);
+        }
+        if (!reverseOwnershipMap.get(ownerEntityId)!.includes(ownedEntityId)) {
+          reverseOwnershipMap.get(ownerEntityId)!.push(ownedEntityId);
+        }
+        
+        // Track who owns this entity
+        if (!ownershipMap.has(ownedEntityId)) {
+          ownershipMap.set(ownedEntityId, []);
+        }
+        if (!ownershipMap.get(ownedEntityId)!.includes(ownerEntityId)) {
+          ownershipMap.get(ownedEntityId)!.push(ownerEntityId);
+        }
+      }
+    });
   });
   
   // Find root entities (entities that are not owned by other entities)
