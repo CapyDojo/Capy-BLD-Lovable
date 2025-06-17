@@ -32,7 +32,7 @@ export const syncCapTableData = (entityId: string): EntityStructureData | null =
   const availableShares = capTable.authorizedShares - totalShares;
 
   const stakeholders: SyncedStakeholderData[] = capTable.investments.map((investment) => {
-    const shareholder = capTable.shareholders.find(s => s.id === investment.shareholderId);
+    const shareholder = dataStore.getShareholders().find(s => s.id === investment.shareholderId);
     const shareClass = dataStore.getShareClasses().find(sc => sc.id === investment.shareClassId);
     const ownershipPercentage = totalShares > 0 ? (investment.sharesOwned / totalShares) * 100 : 0;
     const fullyDiluted = capTable.authorizedShares > 0 ? (investment.sharesOwned / capTable.authorizedShares) * 100 : 0;
@@ -61,7 +61,7 @@ export const syncCapTableData = (entityId: string): EntityStructureData | null =
 };
 
 export const generateSyncedCanvasStructure = () => {
-  console.log('🔄 Generating synced canvas structure');
+  console.log('🔄 Generating synced canvas structure (simplified)');
   const allEntities = dataStore.getEntities();
   console.log('📊 Total entities in store:', allEntities.length);
   
@@ -76,7 +76,6 @@ export const generateSyncedCanvasStructure = () => {
       return false;
     }
     
-    // Double check entity still exists in store
     const existsInStore = dataStore.getEntityById(entity.id);
     if (!existsInStore) {
       console.warn('⚠️ Entity not found in store:', entity.id);
@@ -88,9 +87,8 @@ export const generateSyncedCanvasStructure = () => {
 
   console.log('✅ Valid entities after filtering:', validEntities.length);
 
-  // Create entity nodes - use stored position if available, otherwise calculate default
+  // Create entity nodes only - no individual stakeholder nodes
   validEntities.forEach((entity, index) => {
-    // Use stored position if available, otherwise calculate a default position
     const position = entity.position || { 
       x: 250 + (index % 3) * 400, 
       y: 100 + Math.floor(index / 3) * 300
@@ -111,25 +109,18 @@ export const generateSyncedCanvasStructure = () => {
     nodeIds.add(entity.id);
   });
 
-  // Create stakeholder nodes and edges using synced data - only for valid entities
+  // Create edges for entity-to-entity ownership only
   validEntities.forEach((entity) => {
     const syncedData = syncCapTableData(entity.id);
     if (!syncedData || syncedData.totalShares === 0) return;
 
-    const parentNode = nodes.find(n => n.id === entity.id);
-    if (!parentNode) return;
-
-    const individualStakeholders = syncedData.stakeholders.filter(
-      sh => sh.type === 'Individual' || sh.type === 'Pool'
-    );
+    // Only create edges for entity stakeholders (not individuals)
     const entityStakeholders = syncedData.stakeholders.filter(
-      sh => sh.type === 'Entity'
+      sh => sh.type === 'Entity' && sh.entityId
     );
 
-    // Create edges for entity stakeholders - but only if the source entity still exists
     entityStakeholders.forEach((stakeholder) => {
       if (stakeholder.entityId && nodeIds.has(stakeholder.entityId)) {
-        // Verify the source entity still exists in the data store
         const sourceEntity = dataStore.getEntityById(stakeholder.entityId);
         if (sourceEntity) {
           console.log('🔗 Creating entity ownership edge:', stakeholder.entityId, '->', entity.id);
@@ -141,98 +132,18 @@ export const generateSyncedCanvasStructure = () => {
             style: { stroke: '#3b82f6', strokeWidth: 2 },
             labelStyle: { fill: '#3b82f6', fontWeight: 600 },
           });
-        } else {
-          console.warn('⚠️ Source entity no longer exists, skipping edge:', stakeholder.entityId);
-          // Treat as individual stakeholder instead
-          individualStakeholders.push(stakeholder);
         }
-      } else {
-        // Entity stakeholder without valid entityId - treat as individual stakeholder
-        individualStakeholders.push(stakeholder);
       }
-    });
-
-    // Create nodes and edges for individual stakeholders
-    const parentPosition = parentNode.data.basePosition as { x: number; y: number };
-    
-    individualStakeholders.forEach((stakeholder, individualIndex) => {
-      const shareholderNodeId = `stakeholder-${stakeholder.id}-of-${entity.id}`;
-      if (nodeIds.has(shareholderNodeId)) return;
-
-      const offset = (individualIndex - (individualStakeholders.length - 1) / 2) * 220;
-      const shareholderPosition = {
-        x: parentPosition.x + offset,
-        y: parentPosition.y - 150,
-      };
-      
-      console.log('👤 Creating stakeholder node:', shareholderNodeId, stakeholder.name);
-      nodes.push({
-        id: shareholderNodeId,
-        type: 'shareholder',
-        position: shareholderPosition,
-        data: { 
-          name: stakeholder.name, 
-          ownershipPercentage: stakeholder.ownershipPercentage 
-        },
-      });
-      nodeIds.add(shareholderNodeId);
-      
-      // Use different colors for entity vs individual stakeholders
-      const edgeColor = stakeholder.type === 'Entity' ? '#3b82f6' : '#8b5cf6';
-      const strokeWidth = stakeholder.type === 'Entity' ? 2 : 1.5;
-      
-      edges.push({
-        id: `e-${shareholderNodeId}-${entity.id}`,
-        source: shareholderNodeId,
-        target: entity.id,
-        label: `${stakeholder.ownershipPercentage.toFixed(1)}%`,
-        style: { stroke: edgeColor, strokeWidth },
-        labelStyle: { fill: edgeColor, fontWeight: stakeholder.type === 'Entity' ? 600 : 500 },
-      });
     });
   });
 
-  console.log('✅ Canvas structure generated - Nodes:', nodes.length, 'Edges:', edges.length);
+  console.log('✅ Simplified canvas structure generated - Nodes:', nodes.length, 'Edges:', edges.length);
   return { nodes, edges };
 };
 
 // Export mutation functions for chart updates
 export const updateOwnershipFromChart = (sourceEntityId: string, targetEntityId: string, ownershipPercentage: number) => {
   console.log('📊 Updating ownership from chart:', sourceEntityId, '->', targetEntityId, ownershipPercentage + '%');
-  
-  // Check if source is a shareholder node (starts with "stakeholder-")
-  if (sourceEntityId.startsWith('stakeholder-')) {
-    console.log('📊 Source is a shareholder node, extracting investment ID:', sourceEntityId);
-    
-    // Extract the investment ID from the shareholder node ID
-    // Format: "stakeholder-{investmentId}-of-{entityId}"
-    const match = sourceEntityId.match(/^stakeholder-(.+)-of-(.+)$/);
-    if (match) {
-      const [, investmentId, entityId] = match;
-      console.log('📊 Extracted investment ID:', investmentId, 'from entity:', entityId);
-      
-      // Find the existing investment and update its ownership percentage
-      const targetCapTable = dataStore.getCapTableByEntityId(targetEntityId);
-      if (targetCapTable) {
-        const existingInvestment = targetCapTable.investments.find(inv => inv.id === investmentId);
-        if (existingInvestment) {
-          // Calculate new shares based on percentage
-          const newShares = Math.round((ownershipPercentage / 100) * targetCapTable.authorizedShares);
-          existingInvestment.sharesOwned = newShares;
-          existingInvestment.investmentAmount = newShares * existingInvestment.pricePerShare;
-          console.log('📊 Updated existing investment shares:', newShares);
-          // DataStore will automatically handle notifications and saving
-          return;
-        }
-      }
-    }
-    
-    // If we can't extract the investment ID, treat as individual stakeholder
-    console.log('📊 Could not extract investment ID, treating as individual stakeholder');
-    return;
-  }
-  
-  // Original logic for entity-to-entity ownership
   dataStore.updateOwnership(sourceEntityId, targetEntityId, ownershipPercentage);
 };
 

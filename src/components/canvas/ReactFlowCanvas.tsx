@@ -10,12 +10,10 @@ import {
   OnNodeDrag
 } from '@xyflow/react';
 import { EntityNode } from './EntityNode';
-import { ShareholderNode } from './ShareholderNode';
 import { useNavigate } from 'react-router-dom';
 
 const nodeTypes = {
   entity: EntityNode,
-  shareholder: ShareholderNode,
 };
 
 interface ReactFlowCanvasProps {

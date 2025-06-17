@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { dataStore } from '@/services/dataStore';
 import { Entity } from '@/types/entity';
-import { EntityCapTable, Shareholder, ShareClass } from '@/types/capTable';
+import { EntityCapTable, ShareClass } from '@/types/capTable';
 import { 
   Table, 
   TableBody, 
@@ -19,14 +19,12 @@ import { Separator } from '@/components/ui/separator';
 const Database: React.FC = () => {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [capTables, setCapTables] = useState<EntityCapTable[]>([]);
-  const [shareholders, setShareholders] = useState<Shareholder[]>([]);
   const [shareClasses, setShareClasses] = useState<ShareClass[]>([]);
 
   useEffect(() => {
     const loadData = () => {
       setEntities(dataStore.getEntities());
       setCapTables(dataStore.getCapTables());
-      setShareholders(dataStore.getShareholders());
       setShareClasses(dataStore.getShareClasses());
     };
 
@@ -63,10 +61,9 @@ const Database: React.FC = () => {
 
       <div className="flex-1 p-6 overflow-auto">
         <Tabs defaultValue="entities" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="entities">Entities ({entities.length})</TabsTrigger>
             <TabsTrigger value="captables">Cap Tables ({capTables.length})</TabsTrigger>
-            <TabsTrigger value="shareholders">Shareholders ({shareholders.length})</TabsTrigger>
             <TabsTrigger value="shareclasses">Share Classes ({shareClasses.length})</TabsTrigger>
           </TabsList>
 
@@ -119,7 +116,7 @@ const Database: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Cap Tables</CardTitle>
-                <CardDescription>Capitalization tables for each entity</CardDescription>
+                <CardDescription>Capitalization tables for each entity with individual investments</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -129,61 +126,25 @@ const Database: React.FC = () => {
                       <TableHead>Entity Name</TableHead>
                       <TableHead>Authorized Shares</TableHead>
                       <TableHead>Investments Count</TableHead>
+                      <TableHead>Total Invested Shares</TableHead>
+                      <TableHead>Available Shares</TableHead>
                       <TableHead>Total Valuation</TableHead>
-                      <TableHead>Last Round Valuation</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {capTables.map((capTable) => {
                       const entity = entities.find(e => e.id === capTable.entityId);
+                      const totalInvestedShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
+                      const availableShares = capTable.authorizedShares - totalInvestedShares;
                       return (
                         <TableRow key={capTable.entityId}>
                           <TableCell className="font-mono text-xs">{capTable.entityId}</TableCell>
                           <TableCell className="font-medium">{entity?.name || 'Unknown'}</TableCell>
                           <TableCell>{capTable.authorizedShares.toLocaleString()}</TableCell>
                           <TableCell>{capTable.investments.length}</TableCell>
+                          <TableCell>{totalInvestedShares.toLocaleString()}</TableCell>
+                          <TableCell>{availableShares.toLocaleString()}</TableCell>
                           <TableCell>{formatCurrency(capTable.totalValuation)}</TableCell>
-                          <TableCell>{formatCurrency(capTable.lastRoundValuation)}</TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="shareholders" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Shareholders</CardTitle>
-                <CardDescription>All shareholders across all entities</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Entity Reference</TableHead>
-                      <TableHead>Linked Entity Name</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {shareholders.map((shareholder) => {
-                      const linkedEntity = shareholder.entityId ? entities.find(e => e.id === shareholder.entityId) : null;
-                      return (
-                        <TableRow key={shareholder.id}>
-                          <TableCell className="font-mono text-xs">{shareholder.id}</TableCell>
-                          <TableCell className="font-medium">{shareholder.name}</TableCell>
-                          <TableCell>
-                            <Badge variant={shareholder.type === 'Individual' ? 'secondary' : 'default'}>
-                              {shareholder.type}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="font-mono text-xs">{shareholder.entityId || 'N/A'}</TableCell>
-                          <TableCell>{linkedEntity?.name || 'N/A'}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -243,7 +204,7 @@ const Database: React.FC = () => {
             <CardDescription>Summary of all data in the system</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
               <div className="text-center p-4 bg-blue-50 rounded-lg">
                 <div className="text-2xl font-bold text-blue-700">{entities.length}</div>
                 <div className="text-sm text-blue-600">Total Entities</div>
@@ -251,10 +212,6 @@ const Database: React.FC = () => {
               <div className="text-center p-4 bg-green-50 rounded-lg">
                 <div className="text-2xl font-bold text-green-700">{capTables.length}</div>
                 <div className="text-sm text-green-600">Cap Tables</div>
-              </div>
-              <div className="text-center p-4 bg-purple-50 rounded-lg">
-                <div className="text-2xl font-bold text-purple-700">{shareholders.length}</div>
-                <div className="text-sm text-purple-600">Shareholders</div>
               </div>
               <div className="text-center p-4 bg-orange-50 rounded-lg">
                 <div className="text-2xl font-bold text-orange-700">{shareClasses.length}</div>

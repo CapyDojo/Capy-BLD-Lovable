@@ -31,10 +31,10 @@ export interface Investment {
   };
 }
 
+// Simplified EntityCapTable - removed redundant shareholders array
 export interface EntityCapTable {
   entityId: string;
   authorizedShares: number;
-  shareholders: Shareholder[];
   shareClasses: ShareClass[];
   investments: Investment[];
   totalValuation?: number;

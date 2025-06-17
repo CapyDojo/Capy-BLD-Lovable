@@ -5,7 +5,7 @@ import { updateOwnershipFromChart, addEntityFromChart, updateEntityFromChart } f
 import { dataStore } from '@/services/dataStore';
 import { EntityTypes } from '@/types/entity';
 
-type DraggableNodeType = EntityTypes | 'Individual';
+type DraggableNodeType = EntityTypes;
 
 export const useCanvasEvents = (
   selectedNode: Node | null,
@@ -47,10 +47,6 @@ export const useCanvasEvents = (
       
       setSelectedNode(node);
       setSidebarOpen(true);
-    } else if (node.type === 'shareholder') {
-      console.log('🎯 Stakeholder node clicked:', node.id);
-      setSelectedNode(node);
-      setSidebarOpen(false); // Don't open sidebar for stakeholder nodes
     }
   }, [setSelectedNode, setSidebarOpen]);
 
@@ -58,28 +54,22 @@ export const useCanvasEvents = (
     const id = `new-${Date.now().toString()}`;
     console.log('➕ Creating new node:', type, 'at position:', position, 'with id:', id);
 
-    if (type === 'Individual') {
-      // For individuals, we don't create entities, just stakeholder nodes
-      // This would be handled differently - perhaps through the stakeholder panel
-      console.log('Individual stakeholder creation should be handled through the cap table panel');
-    } else {
-      const newEntity = {
-        id,
-        name: `New ${type}`,
-        type,
-        jurisdiction: 'Delaware',
-        ownership: 0,
-        registrationNumber: `REG-${Date.now()}`,
-        incorporationDate: new Date(),
-        address: 'TBD',
-        position // Store the exact drop position
-      };
-      
-      console.log('➕ Creating new entity in data store:', newEntity);
-      // Add to data store (this will auto-save and sync)
-      addEntityFromChart(newEntity);
-      console.log('✅ Entity added to data store with position:', position);
-    }
+    const newEntity = {
+      id,
+      name: `New ${type}`,
+      type,
+      jurisdiction: 'Delaware',
+      ownership: 0,
+      registrationNumber: `REG-${Date.now()}`,
+      incorporationDate: new Date(),
+      address: 'TBD',
+      position // Store the exact drop position
+    };
+    
+    console.log('➕ Creating new entity in data store:', newEntity);
+    // Add to data store (this will auto-save and sync)
+    addEntityFromChart(newEntity);
+    console.log('✅ Entity added to data store with position:', position);
   }, []);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
