@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { Node } from '@xyflow/react';
 import { EntityCapTableSection } from './EntityCapTableSection';
@@ -101,7 +100,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
     }
   };
 
-  const handleNameKeyPress = (e: React.KeyboardEvent) => {
+  const handleNameKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       if (localName !== entityData.name) {
         handleUpdateField('name', localName);
