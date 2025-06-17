@@ -11,6 +11,7 @@ import { CapTableEditor } from "@/components/cap-table/CapTableEditor";
 import { EntityCanvas } from "@/components/canvas/EntityCanvas";
 import { DocumentRepository } from "@/components/documents/DocumentRepository";
 import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
+import { MigrationAuditPage } from "@/pages/MigrationAudit";
 import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import NotFound from "./pages/NotFound";
@@ -65,6 +66,11 @@ const App = () => {
             <Route path="/compliance" element={
               <MainLayout>
                 <ComplianceTimeline />
+              </MainLayout>
+            } />
+            <Route path="/migration-audit" element={
+              <MainLayout>
+                <MigrationAuditPage />
               </MainLayout>
             } />
             <Route path="/data-structure" element={
