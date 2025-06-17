@@ -2,7 +2,7 @@
 // Simple validation tests for EnterpriseDataStore without Jest dependencies
 // This can be run manually to verify the system works correctly
 
-import { EnterpriseDataStore } from './EnterpriseDataStore';
+import { EnterpriseDataStore } from './enterprise/EnterpriseDataStore';
 import { EnterpriseDataStoreFactory } from './EnterpriseDataStoreFactory';
 
 export async function runBasicValidationTests(): Promise<boolean> {
