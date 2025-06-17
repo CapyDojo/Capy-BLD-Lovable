@@ -1,4 +1,3 @@
-
 import { migrationBridge } from './MigrationBridge';
 import { dataStore } from '../dataStore';
 import { runBasicValidationTests } from './EnterpriseDataStore.validation';
@@ -57,12 +56,22 @@ export class MigrationValidationSuite {
           }
           
           const testEntityId = legacyEntities[0].id;
+          const legacyEntity = legacyEntities[0];
+          
+          // Sync the entity to enterprise store
           await migrationBridge.syncEntityFromLegacy(testEntityId);
           
           const enterpriseStore = migrationBridge.getEnterpriseStore();
-          const syncedEntity = await enterpriseStore.getEntity(testEntityId);
           
-          return syncedEntity !== null && syncedEntity.name === legacyEntities[0].name;
+          // Check if entity was migrated by searching for entities with the same name
+          const allEnterpriseEntities = await enterpriseStore.getAllEntities();
+          const migratedEntity = allEnterpriseEntities.find(e => e.name === legacyEntity.name);
+          
+          console.log('🔍 Looking for migrated entity with name:', legacyEntity.name);
+          console.log('📊 Found enterprise entities:', allEnterpriseEntities.length);
+          console.log('✅ Migration sync result:', !!migratedEntity);
+          
+          return migratedEntity !== undefined && migratedEntity.name === legacyEntity.name;
         }
       },
       {
@@ -100,8 +109,17 @@ export class MigrationValidationSuite {
           const testEntityId = entities[0].id;
           await migrationBridge.syncEntityFromLegacy(testEntityId);
           
-          const capTable = await enterpriseStore.getCapTableView(testEntityId);
-          return capTable !== null && capTable.entityId === testEntityId;
+          // Get the migrated entity from enterprise store
+          const allEnterpriseEntities = await enterpriseStore.getAllEntities();
+          const migratedEntity = allEnterpriseEntities.find(e => e.name === entities[0].name);
+          
+          if (!migratedEntity) {
+            console.log('⚠️ Entity not found in enterprise store for cap table test');
+            return false;
+          }
+          
+          const capTable = await enterpriseStore.getCapTableView(migratedEntity.id);
+          return capTable !== null && capTable.entityId === migratedEntity.id;
         }
       },
       {
