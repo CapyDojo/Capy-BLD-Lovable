@@ -253,7 +253,7 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
       ownerEntityId: investment.shareholderId,
       ownedEntityId: entityId,
       shares: investment.sharesOwned,
-      shareClassId: investment.shareClass,
+      shareClassId: investment.shareClassId,
       effectiveDate: new Date(), // Default since not available
       expiryDate: undefined,
       createdAt: new Date(), // Default since not available
@@ -290,7 +290,7 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
         ownerEntityId: investment.shareholderId,
         ownerName: shareholder?.name || 'Unknown',
         shares: investment.sharesOwned,
-        shareClassName: investment.shareClass,
+        shareClassName: investment.shareClassId,
         effectiveDate: new Date(), // Default since not available
         percentage: 0 // Calculated below
       };
