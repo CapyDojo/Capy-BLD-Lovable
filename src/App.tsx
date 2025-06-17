@@ -15,53 +15,76 @@ import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import NotFound from "./pages/NotFound";
 
-// Import migration modules directly and expose functions immediately
+// Import migration modules
 import { migrationValidator } from '@/services/dataStore/MigrationValidation';
 import { migrationBridge } from '@/services/dataStore/MigrationBridge';
 
-// Expose functions to global window object immediately
-console.log('🔄 Exposing migration functions to window...');
-
-(window as any).runMigrationTests = () => {
-  console.log('🧪 Running migration tests...');
-  return migrationValidator.runAllTests();
+// Create a global testing object
+const setupGlobalFunctions = () => {
+  console.log('🔧 Setting up global test functions...');
+  
+  // Create a global testing namespace
+  (window as any).migrationTest = {
+    runAllTests: () => {
+      console.log('🧪 Running all migration tests...');
+      return migrationValidator.runAllTests();
+    },
+    
+    runSingleTest: (testName: string) => {
+      console.log(`🧪 Running single test: ${testName}`);
+      return migrationValidator.runSingleTest(testName);
+    },
+    
+    getTestNames: () => {
+      console.log('📋 Getting test names...');
+      return migrationValidator.getTestNames();
+    },
+    
+    getMigrationStatus: () => {
+      console.log('📊 Getting migration status...');
+      return migrationBridge.getMigrationStatus();
+    },
+    
+    test: () => {
+      console.log('✅ Test function works!');
+      return 'Hello from migration test!';
+    }
+  };
+  
+  // Also expose individual functions for backward compatibility
+  (window as any).runMigrationTests = (window as any).migrationTest.runAllTests;
+  (window as any).runMigrationTest = (window as any).migrationTest.runSingleTest;
+  (window as any).getMigrationTestNames = (window as any).migrationTest.getTestNames;
+  (window as any).getMigrationStatus = (window as any).migrationTest.getMigrationStatus;
+  (window as any).testFunction = (window as any).migrationTest.test;
+  
+  console.log('✅ Global functions setup complete!');
+  console.log('🎯 Try these commands:');
+  console.log('  - migrationTest.test()');
+  console.log('  - migrationTest.runAllTests()');
+  console.log('  - testFunction()');
+  console.log('  - runMigrationTests()');
+  
+  // Force verify they're accessible
+  console.log('🔍 Verification:');
+  console.log('  - migrationTest exists:', typeof (window as any).migrationTest);
+  console.log('  - testFunction exists:', typeof (window as any).testFunction);
+  console.log('  - runMigrationTests exists:', typeof (window as any).runMigrationTests);
 };
 
-(window as any).runMigrationTest = (testName: string) => {
-  console.log(`🧪 Running single test: ${testName}`);
-  return migrationValidator.runSingleTest(testName);
-};
-
-(window as any).getMigrationTestNames = () => {
-  console.log('📋 Getting migration test names...');
-  return migrationValidator.getTestNames();
-};
-
-(window as any).getMigrationStatus = () => {
-  console.log('📊 Getting migration status...');
-  return migrationBridge.getMigrationStatus();
-};
-
-(window as any).testFunction = () => {
-  console.log('✅ Test function called successfully!');
-  return 'Test function works!';
-};
-
-console.log('✅ Migration functions exposed to window:');
-console.log('  - runMigrationTests()');
-console.log('  - runMigrationTest(name)');
-console.log('  - getMigrationTestNames()');
-console.log('  - getMigrationStatus()');
-console.log('  - testFunction()');
-
-// Verify functions are attached
-console.log('🔍 Verification:');
-console.log('  - testFunction type:', typeof (window as any).testFunction);
-console.log('  - runMigrationTests type:', typeof (window as any).runMigrationTests);
+// Setup immediately
+setupGlobalFunctions();
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  // Also setup on mount as a fallback
+  React.useEffect(() => {
+    setTimeout(() => {
+      setupGlobalFunctions();
+    }, 100);
+  }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
