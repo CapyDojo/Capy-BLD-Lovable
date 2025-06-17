@@ -31,11 +31,22 @@ export const syncCapTableData = (entityId: string): EntityStructureData | null =
   const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
   const availableShares = capTable.authorizedShares - totalShares;
 
+  // Get fresh shareholder data from dataStore to ensure we have latest names
+  const allShareholders = dataStore.getShareholders();
+  console.log('🔄 syncCapTableData: Getting fresh shareholder data, total:', allShareholders.length);
+
   const stakeholders: SyncedStakeholderData[] = capTable.investments.map((investment) => {
-    const shareholder = dataStore.getShareholders().find(s => s.id === investment.shareholderId);
+    const shareholder = allShareholders.find(s => s.id === investment.shareholderId);
     const shareClass = dataStore.getShareClasses().find(sc => sc.id === investment.shareClassId);
     const ownershipPercentage = totalShares > 0 ? (investment.sharesOwned / totalShares) * 100 : 0;
     const fullyDiluted = capTable.authorizedShares > 0 ? (investment.sharesOwned / capTable.authorizedShares) * 100 : 0;
+
+    console.log('📋 syncCapTableData: Processing stakeholder:', {
+      investmentId: investment.id,
+      shareholderId: investment.shareholderId,
+      shareholderName: shareholder?.name || 'Unknown',
+      sharesOwned: investment.sharesOwned
+    });
 
     return {
       id: investment.id,
@@ -50,6 +61,8 @@ export const syncCapTableData = (entityId: string): EntityStructureData | null =
       investmentAmount: investment.investmentAmount,
     };
   });
+
+  console.log('✅ syncCapTableData: Synced', stakeholders.length, 'stakeholders with fresh names for entity:', entityId);
 
   return {
     entityId,

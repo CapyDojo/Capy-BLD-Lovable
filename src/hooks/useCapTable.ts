@@ -28,12 +28,19 @@ export const useCapTable = (entityId: string): CapTableData | null => {
         console.log('⚠️ Entity no longer exists:', entityId);
         setEntityExists(false);
       } else {
-        console.log('✅ Entity still exists, triggering enhanced refresh');
+        console.log('✅ Entity still exists, triggering enhanced refresh for stakeholder updates');
         setEntityExists(true);
+        // Force a complete refresh to pick up stakeholder name changes
         setRefreshKey(prev => prev + 1);
       }
     });
     return unsubscribe;
+  }, [entityId]);
+
+  // Also refresh when entityId changes
+  useEffect(() => {
+    console.log('🔄 useCapTable: Entity changed, forcing refresh:', entityId);
+    setRefreshKey(prev => prev + 1);
   }, [entityId]);
 
   return useMemo(() => {
@@ -52,7 +59,7 @@ export const useCapTable = (entityId: string): CapTableData | null => {
       return null;
     }
 
-    console.log('✅ Computing enhanced cap table data for:', entity.name);
+    console.log('✅ Computing enhanced cap table data for:', entity.name, 'with', syncedData.stakeholders.length, 'stakeholders');
 
     const totalInvestment = syncedData.stakeholders.reduce((sum, stakeholder) => sum + stakeholder.investmentAmount, 0);
 
@@ -85,9 +92,9 @@ export const useCapTable = (entityId: string): CapTableData | null => {
       });
     }
 
-    console.log('📊 Enhanced cap table data computed:', {
+    console.log('📊 Enhanced cap table data computed with updated stakeholder names:', {
       totalShares: syncedData.totalShares,
-      stakeholders: syncedData.stakeholders.length,
+      stakeholders: syncedData.stakeholders.map(s => s.name),
       chartItems: chartData.length,
       entityName: entity.name
     });
