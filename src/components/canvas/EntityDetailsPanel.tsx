@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Node } from '@xyflow/react';
 import { EntityCapTableSection } from './EntityCapTableSection';
@@ -109,10 +110,14 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
     }
   };
 
+  const isIndividual = entityData.type === 'Individual';
+
   return (
     <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-medium text-gray-900">Entity Details</h3>
+        <h3 className="text-lg font-medium text-gray-900">
+          {isIndividual ? 'Individual Details' : 'Entity Details'}
+        </h3>
         <button
           onClick={onClose}
           className="text-gray-400 hover:text-gray-600"
@@ -124,7 +129,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
       <div className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Entity Name
+            {isIndividual ? 'Full Name' : 'Entity Name'}
           </label>
           <input
             type="text"
@@ -138,13 +143,14 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
         
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Entity Type
+            {isIndividual ? 'Type' : 'Entity Type'}
           </label>
           <select
             value={String(entityData.type || '')}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             onChange={(e) => handleUpdateField('type', e.target.value)}
           >
+            <option value="Individual">Individual</option>
             <option value="Corporation">Corporation</option>
             <option value="LLC">LLC</option>
             <option value="Partnership">Partnership</option>
@@ -152,21 +158,62 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
           </select>
         </div>
         
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Jurisdiction
-          </label>
-          <select
-            value={String(entityData.jurisdiction || '')}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            onChange={(e) => handleUpdateField('jurisdiction', e.target.value)}
-          >
-            <option value="Delaware">Delaware</option>
-            <option value="California">California</option>
-            <option value="Nevada">Nevada</option>
-            <option value="New York">New York</option>
-          </select>
-        </div>
+        {isIndividual ? (
+          <>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Citizenship
+              </label>
+              <select
+                value={String(entityData.citizenship || '')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => handleUpdateField('citizenship', e.target.value)}
+              >
+                <option value="">Select Citizenship</option>
+                <option value="US Citizen">US Citizen</option>
+                <option value="Canadian Citizen">Canadian Citizen</option>
+                <option value="UK Citizen">UK Citizen</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Residence
+              </label>
+              <select
+                value={String(entityData.residence || '')}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onChange={(e) => handleUpdateField('residence', e.target.value)}
+              >
+                <option value="">Select Residence</option>
+                <option value="California">California</option>
+                <option value="New York">New York</option>
+                <option value="Delaware">Delaware</option>
+                <option value="Nevada">Nevada</option>
+                <option value="Texas">Texas</option>
+                <option value="Florida">Florida</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </>
+        ) : (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Jurisdiction
+            </label>
+            <select
+              value={String(entityData.jurisdiction || '')}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              onChange={(e) => handleUpdateField('jurisdiction', e.target.value)}
+            >
+              <option value="Delaware">Delaware</option>
+              <option value="California">California</option>
+              <option value="Nevada">Nevada</option>
+              <option value="New York">New York</option>
+            </select>
+          </div>
+        )}
       </div>
 
       <EntityCapTableSection entityId={selectedNode.id} key={`${selectedNode.id}-${refreshKey}`} />
