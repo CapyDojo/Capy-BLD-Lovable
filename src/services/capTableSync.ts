@@ -1,203 +1,124 @@
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 
-// Simplified sync service - mainly for canvas operations
-export interface SyncedStakeholderData {
-  id: string;
-  name: string;
-  type: 'Individual' | 'Entity' | 'Pool';
-  entityId?: string;
-  sharesOwned: number;
-  shareClass: string;
-  ownershipPercentage: number;
-  fullyDiluted: number;
-  pricePerShare: number;
-  investmentAmount: number;
-}
+// Cache for expensive calculations
+let canvasStructureCache: { nodes: Node[]; edges: Edge[]; timestamp: number } | null = null;
+let lastDataVersion = 0;
 
-export interface EntityStructureData {
-  entityId: string;
-  stakeholders: SyncedStakeholderData[];
-  totalShares: number;
-  authorizedShares: number;
-  availableShares: number;
-}
-
-// Simplified sync function - just gets fresh data from dataStore
-export const syncCapTableData = (entityId: string): EntityStructureData | null => {
-  const capTable = dataStore.getCapTableByEntityId(entityId);
-  if (!capTable) return null;
-
-  const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
-  const availableShares = capTable.authorizedShares - totalShares;
-
-  // Get fresh data directly from dataStore
-  const allShareholders = dataStore.getShareholders();
-  const allShareClasses = dataStore.getShareClasses();
-
-  const stakeholders: SyncedStakeholderData[] = capTable.investments.map((investment) => {
-    const shareholder = allShareholders.find(s => s.id === investment.shareholderId);
-    const shareClass = allShareClasses.find(sc => sc.id === investment.shareClassId);
-    const ownershipPercentage = totalShares > 0 ? (investment.sharesOwned / totalShares) * 100 : 0;
-    const fullyDiluted = capTable.authorizedShares > 0 ? (investment.sharesOwned / capTable.authorizedShares) * 100 : 0;
-
-    return {
-      id: investment.id,
-      name: shareholder?.name || 'Unknown',
-      type: shareholder?.type || 'Individual',
-      entityId: shareholder?.entityId,
-      sharesOwned: investment.sharesOwned,
-      shareClass: shareClass?.name || 'Unknown',
-      ownershipPercentage,
-      fullyDiluted,
-      pricePerShare: investment.pricePerShare,
-      investmentAmount: investment.investmentAmount,
-    };
-  });
-
-  return {
-    entityId,
-    stakeholders,
-    totalShares,
-    authorizedShares: capTable.authorizedShares,
-    availableShares,
-  };
-};
-
-// Helper function to build ownership hierarchy
-const buildOwnershipHierarchy = () => {
-  const allEntities = dataStore.getEntities();
-  const allCapTables = dataStore.getCapTables();
-  const allShareholders = dataStore.getShareholders();
+export const generateSyncedCanvasStructure = () => {
+  // Simple cache invalidation based on data changes
+  const currentTime = Date.now();
+  const dataVersion = dataStore.getEntities().length + dataStore.getCapTables().length;
   
-  console.log('🔍 DEBUG: Starting hierarchy build with:', {
-    entitiesCount: allEntities.length,
-    capTablesCount: allCapTables.length,
-    shareholdersCount: allShareholders.length
-  });
+  // Return cached result if data hasn't changed and cache is fresh (< 1 second)
+  if (canvasStructureCache && 
+      dataVersion === lastDataVersion && 
+      (currentTime - canvasStructureCache.timestamp) < 1000) {
+    console.log('🚀 Using cached canvas structure');
+    return canvasStructureCache;
+  }
 
-  // Log all entities
-  console.log('🔍 DEBUG: All entities:', allEntities.map(e => ({ id: e.id, name: e.name, type: e.type })));
+  console.log('🔄 Generating fresh canvas structure');
+  const startTime = performance.now();
   
-  // Log all cap tables and their investments
-  console.log('🔍 DEBUG: All cap tables:');
-  allCapTables.forEach(ct => {
-    console.log(`  - Entity ${ct.entityId}:`, ct.investments.map(inv => ({
-      shareholderId: inv.shareholderId,
-      sharesOwned: inv.sharesOwned,
-      shareholderName: allShareholders.find(s => s.id === inv.shareholderId)?.name
-    })));
-  });
+  const entities = dataStore.getEntities();
+  const capTables = dataStore.getCapTables();
 
-  // Create a map of entity ownership relationships from cap table data
-  const ownershipMap = new Map<string, string[]>(); // ownedEntityId -> ownerEntityIds[]
-  const reverseOwnershipMap = new Map<string, string[]>(); // ownerEntityId -> ownedEntityIds[]
-  
-  // Build ownership relationships from cap table investments
-  allCapTables.forEach(capTable => {
+  // Build nodes for each entity
+  // Build nodes for each entity
+  const entityNodes: Node[] = entities.map(entity => ({
+    id: entity.id,
+    type: 'entity',
+    position: { x: 0, y: 0 }, // Initial position, will be updated
+    data: {
+      entity,
+      capTable: capTables.find(ct => ct.entityId === entity.id),
+      basePosition: { x: 0, y: 0 }
+    }
+  }));
+
+  // Map ownership relationships
+  const ownershipEdges: Edge[] = [];
+  entities.forEach(entity => {
+    const capTable = capTables.find(ct => ct.entityId === entity.id);
+    if (!capTable) return;
+
     capTable.investments.forEach(investment => {
-      const shareholder = allShareholders.find(s => s.id === investment.shareholderId);
-      
-      console.log(`🔍 DEBUG: Processing investment in ${capTable.entityId}:`, {
-        shareholderId: investment.shareholderId,
-        shareholderName: shareholder?.name,
-        shareholderType: shareholder?.type,
-        shareholderEntityId: shareholder?.entityId,
-        sharesOwned: investment.sharesOwned
-      });
-      
-      // Only process entity shareholders for hierarchy (not individuals or pools)
-      if (shareholder?.type === 'Entity' && shareholder.entityId && investment.sharesOwned > 0) {
-        const ownerEntityId = shareholder.entityId;
-        const ownedEntityId = capTable.entityId;
-        
-        console.log(`🔍 DEBUG: Found ownership relationship: ${shareholder.name} (${ownerEntityId}) owns shares in entity ${ownedEntityId}`);
-        
-        // Create ownership relationship for ANY ownership amount (not just majority)
-        if (ownerEntityId !== ownedEntityId) { // Prevent self-ownership
-          // Track what entities this entity owns (subsidiaries/investments)
-          if (!reverseOwnershipMap.has(ownerEntityId)) {
-            reverseOwnershipMap.set(ownerEntityId, []);
-          }
-          if (!reverseOwnershipMap.get(ownerEntityId)!.includes(ownedEntityId)) {
-            reverseOwnershipMap.get(ownerEntityId)!.push(ownedEntityId);
-          }
-          
-          // Track who owns this entity (parent/investor)
-          if (!ownershipMap.has(ownedEntityId)) {
-            ownershipMap.set(ownedEntityId, []);
-          }
-          if (!ownershipMap.get(ownedEntityId)!.includes(ownerEntityId)) {
-            ownershipMap.get(ownedEntityId)!.push(ownerEntityId);
-          }
+      const shareholder = dataStore.getShareholders().find(s => s.id === investment.shareholderId);
+      if (shareholder?.type === 'Entity' && shareholder.entityId) {
+        const ownerEntity = entities.find(e => e.id === shareholder.entityId);
+        if (ownerEntity) {
+          ownershipEdges.push({
+            id: `${ownerEntity.id}-${entity.id}`,
+            source: ownerEntity.id,
+            target: entity.id,
+            type: 'ownership',
+            animated: true,
+            style: { stroke: '#10b981', strokeWidth: 2 }
+          });
         }
       }
     });
   });
   
-  console.log('🔍 DEBUG: Final ownership relationships:', {
-    ownershipMap: Array.from(ownershipMap.entries()).map(([owned, owners]) => [
-      `${allEntities.find(e => e.id === owned)?.name} (${owned})`,
-      owners.map(o => `${allEntities.find(e => e.id === o)?.name} (${o})`)
-    ]),
-    reverseOwnershipMap: Array.from(reverseOwnershipMap.entries()).map(([owner, owned]) => [
-      `${allEntities.find(e => e.id === owner)?.name} (${owner})`,
-      owned.map(o => `${allEntities.find(e => e.id === o)?.name} (${o})`)
-    ])
+  // Build ownership relationships map for efficient lookups
+  const ownershipMap = new Map<string, string[]>();
+  const reverseOwnershipMap = new Map<string, string[]>();
+
+  entities.forEach(entity => {
+    const capTable = capTables.find(ct => ct.entityId === entity.id);
+    if (!capTable) return;
+
+    capTable.investments.forEach(investment => {
+      const shareholder = dataStore.getShareholders().find(s => s.id === investment.shareholderId);
+      if (shareholder?.type === 'Entity' && shareholder.entityId) {
+        const ownerEntity = entities.find(e => e.id === shareholder.entityId);
+        if (ownerEntity) {
+          // Map ownership relationships
+          if (!ownershipMap.has(ownerEntity.id)) {
+            ownershipMap.set(ownerEntity.id, []);
+          }
+          ownershipMap.get(ownerEntity.id)!.push(entity.id);
+          
+          if (!reverseOwnershipMap.has(entity.id)) {
+            reverseOwnershipMap.set(entity.id, []);
+          }
+          reverseOwnershipMap.get(entity.id)!.push(ownerEntity.id);
+        }
+      }
+    });
   });
-  
-  // Start from TOP level entities (entities that are NOT owned by anyone)
-  // and work our way DOWN the hierarchy
-  const entityLevels = new Map<string, number>();
+
+  // Determine hierarchy levels efficiently
   const visited = new Set<string>();
+  const entityLevels = new Map<string, number>();
   
-  // Find root entities (entities that are not owned by any other entity)
-  const rootEntities = allEntities.filter(entity => {
-    const owners = ownershipMap.get(entity.id) || [];
-    const isRoot = owners.length === 0;
-    console.log(`🔍 DEBUG: Entity ${entity.name} (${entity.id}) has ${owners.length} owners, isRoot: ${isRoot}`);
-    return isRoot;
+  // Find root entities (not owned by anyone)
+  const rootEntities = entities.filter(entity => !reverseOwnershipMap.has(entity.id));
+  
+  // Assign levels using BFS
+  const queue: { entityId: string; level: number }[] = [];
+  rootEntities.forEach(entity => {
+    queue.push({ entityId: entity.id, level: 0 });
   });
   
-  console.log('🌱 DEBUG: Root entities (not owned by anyone):', rootEntities.map(e => ({ name: e.name, id: e.id })));
-  
-  // Recursive function to assign levels starting from roots
-  const assignLevel = (entityId: string, level: number) => {
-    if (visited.has(entityId)) {
-      console.log(`🔍 DEBUG: Already visited ${entityId}, skipping`);
-      return;
-    }
+  while (queue.length > 0) {
+    const { entityId, level } = queue.shift()!;
     
+    if (visited.has(entityId)) continue;
     visited.add(entityId);
     entityLevels.set(entityId, level);
     
-    const entityName = allEntities.find(e => e.id === entityId)?.name;
-    console.log(`📍 DEBUG: Assigning level ${level} to entity: ${entityName} (${entityId})`);
-    
-    // Assign next level to all entities owned by this entity
-    const ownedEntities = reverseOwnershipMap.get(entityId) || [];
-    console.log(`🔍 DEBUG: Entity ${entityName} owns:`, ownedEntities.map(id => allEntities.find(e => e.id === id)?.name));
-    
+    // Add owned entities to queue with next level
+    const ownedEntities = ownershipMap.get(entityId) || [];
     ownedEntities.forEach(ownedId => {
-      assignLevel(ownedId, level + 1);
+      if (!visited.has(ownedId)) {
+        queue.push({ entityId: ownedId, level: level + 1 });
+      }
     });
-  };
-  
-  // Start assignment from root entities at level 0
-  rootEntities.forEach(entity => {
-    console.log(`🌱 DEBUG: Starting level assignment from root: ${entity.name} (${entity.id})`);
-    assignLevel(entity.id, 0);
-  });
-  
-  // Handle any remaining entities (shouldn't happen with proper data)
-  allEntities.forEach(entity => {
-    if (!entityLevels.has(entity.id)) {
-      console.log(`⚠️ DEBUG: Orphaned entity found: ${entity.name} (${entity.id}), assigning to level 0`);
-      entityLevels.set(entity.id, 0);
-    }
-  });
-  
-  // Group entities by level
+  }
+
+  // Generate nodes with optimized positioning
   const levelGroups = new Map<number, string[]>();
   entityLevels.forEach((level, entityId) => {
     if (!levelGroups.has(level)) {
@@ -205,153 +126,59 @@ const buildOwnershipHierarchy = () => {
     }
     levelGroups.get(level)!.push(entityId);
   });
-  
-  console.log('📊 DEBUG: Final entity levels:', Array.from(levelGroups.entries()).map(([level, entities]) => [
-    level, 
-    entities.map(id => {
-      const entity = allEntities.find(e => e.id === id);
-      return `${entity?.name} (${id})`;
-    })
-  ]));
-  
-  return { entityLevels, levelGroups, ownershipMap, reverseOwnershipMap };
-};
 
-// Canvas structure generation with simplified stakeholder matching
-export const generateSyncedCanvasStructure = () => {
-  console.log('🔄 Generating hierarchical canvas structure');
-  const allEntities = dataStore.getEntities();
-  const allShareholders = dataStore.getShareholders();
-  
   const nodes: Node[] = [];
-  const edges: Edge[] = [];
-  const nodeIds = new Set<string>();
-  
-  // Build hierarchy
-  const { entityLevels, levelGroups } = buildOwnershipHierarchy();
-  
-  // Layout constants - increased spacing to prevent overlap
-  const LEVEL_HEIGHT = 250;
-  const NODE_WIDTH = 250; // Increased from 200 to account for actual node size
-  const NODE_SPACING = 80; // Increased spacing between nodes
-  const START_Y = 50;
-  
-  console.log('🎯 DEBUG: Starting node positioning with layout constants:', {
-    LEVEL_HEIGHT,
-    NODE_WIDTH,
-    NODE_SPACING,
-    START_Y
-  });
-  
-  // Position nodes by hierarchy level - Level 0 = top level entities (root), Level 1 = owned by level 0, etc.
+  const VERTICAL_SPACING = 150;
+  const HORIZONTAL_SPACING = 300;
+
   levelGroups.forEach((entityIds, level) => {
-    const y = START_Y + (level * LEVEL_HEIGHT); // Direct mapping: level 0 at top
-    const totalWidth = entityIds.length * NODE_WIDTH + (entityIds.length - 1) * NODE_SPACING;
-    const startX = Math.max(50, (Math.max(1200, window.innerWidth) - totalWidth) / 2); // Use minimum width for consistent layout
-    
-    console.log(`🎯 DEBUG: Positioning level ${level} entities at y=${y}:`, entityIds.map(id => allEntities.find(e => e.id === id)?.name));
-    
+    const yPosition = level * VERTICAL_SPACING;
     entityIds.forEach((entityId, index) => {
-      const entity = allEntities.find(e => e.id === entityId);
-      if (!entity) return;
-      
-      const x = startX + (index * (NODE_WIDTH + NODE_SPACING));
-      
-      // ALWAYS use calculated hierarchical position to ensure proper hierarchy display
-      const finalPosition = { x, y };
-      
-      console.log(`🎯 DEBUG: Entity ${entity.name} positioned at:`, {
-        level,
-        calculatedPosition: { x, y },
-        savedPosition: entity.position,
-        finalPosition,
-        note: 'Using calculated position for proper hierarchy'
-      });
+      const entity = entities.find(e => e.id === entityId)!;
+      const xPosition = (index - (entityIds.length - 1) / 2) * HORIZONTAL_SPACING;
       
       nodes.push({
         id: entity.id,
         type: 'entity',
-        position: finalPosition,
+        position: { x: xPosition, y: yPosition },
         data: {
-          name: entity.name,
-          type: entity.type,
-          jurisdiction: entity.jurisdiction,
-          basePosition: { x, y }, // Store the calculated hierarchical position
-          hierarchyLevel: level,
-        },
-      });
-      nodeIds.add(entity.id);
-    });
-  });
-  
-  // Create ownership edges with simplified entityId-based matching
-  allEntities.forEach((entity) => {
-    const syncedData = syncCapTableData(entity.id);
-    if (!syncedData || syncedData.totalShares === 0) return;
-
-    // Create edges for stakeholders with ownership > 0
-    syncedData.stakeholders.forEach((stakeholder) => {
-      if (stakeholder.sharesOwned <= 0) return;
-      
-      let sourceNodeId: string | null = null;
-      
-      // Use entityId as primary matching strategy for all stakeholder types
-      if (stakeholder.entityId) {
-        sourceNodeId = stakeholder.entityId;
-        console.log(`🔗 DEBUG: Stakeholder matched via entityId: ${stakeholder.name} (${stakeholder.entityId}) -> ${entity.name} (${entity.id})`);
-      } else if (stakeholder.type === 'Individual') {
-        // For individuals without entityId, try exact name match as fallback
-        const individualEntity = allEntities.find(e => e.name === stakeholder.name && e.type === 'Individual');
-        if (individualEntity) {
-          sourceNodeId = individualEntity.id;
-          console.log(`🔗 DEBUG: Individual stakeholder matched by name: ${stakeholder.name} -> ${entity.name}`);
-        } else {
-          console.log(`⚠️ DEBUG: No matching entity found for individual stakeholder: ${stakeholder.name}`);
+          entity,
+          capTable: capTables.find(ct => ct.entityId === entity.id),
+          basePosition: { x: xPosition, y: yPosition }
         }
-      }
-      // Skip Pool type stakeholders for edges as they don't represent entities
-      
-      if (sourceNodeId && nodeIds.has(sourceNodeId) && sourceNodeId !== entity.id) {
-        const edgeId = `e-${sourceNodeId}-${entity.id}`;
-        console.log(`✅ DEBUG: Creating edge: ${edgeId} with ${stakeholder.ownershipPercentage.toFixed(1)}% ownership`);
-        
-        edges.push({
-          id: edgeId,
-          source: sourceNodeId,
-          target: entity.id,
-          label: `${stakeholder.ownershipPercentage.toFixed(1)}%`,
-          style: { stroke: '#3b82f6', strokeWidth: 2 },
-          labelStyle: { fill: '#3b82f6', fontWeight: 600 },
-        });
-      } else if (sourceNodeId) {
-        console.log(`⚠️ DEBUG: Edge not created - source not in nodes or self-reference: ${sourceNodeId} -> ${entity.id}`);
-      }
+      });
     });
   });
 
-  console.log('✅ Hierarchical canvas structure generated - Nodes:', nodes.length, 'Edges:', edges.length);
-  console.log('📊 Entity levels:', Array.from(levelGroups.entries()));
+  // Generate edges efficiently
+  const edges: Edge[] = [];
+  ownershipMap.forEach((ownedEntityIds, ownerEntityId) => {
+    ownedEntityIds.forEach(ownedEntityId => {
+      edges.push({
+        id: `${ownerEntityId}-${ownedEntityId}`,
+        source: ownerEntityId,
+        target: ownedEntityId,
+        type: 'ownership',
+        animated: true,
+        style: { stroke: '#10b981', strokeWidth: 2 }
+      });
+    });
+  });
+
+  const result = { nodes, edges, timestamp: currentTime };
   
-  return { nodes, edges };
+  // Cache the result
+  canvasStructureCache = result;
+  lastDataVersion = dataVersion;
+  
+  const endTime = performance.now();
+  console.log(`✅ Canvas structure generated in ${(endTime - startTime).toFixed(2)}ms`);
+  
+  return result;
 };
 
-// Mutation functions that just delegate to dataStore
-export const updateOwnershipFromChart = (sourceEntityId: string, targetEntityId: string, ownershipPercentage: number) => {
-  dataStore.updateOwnership(sourceEntityId, targetEntityId, ownershipPercentage);
-};
-
-export const removeOwnershipFromChart = (sourceEntityId: string, targetEntityId: string) => {
-  dataStore.removeOwnership(sourceEntityId, targetEntityId);
-};
-
-export const addEntityFromChart = (entity: any) => {
-  dataStore.addEntity(entity);
-};
-
-export const updateEntityFromChart = (id: string, updates: any) => {
-  dataStore.updateEntity(id, updates);
-};
-
-export const deleteEntityFromChart = (id: string) => {
-  dataStore.deleteEntity(id);
+// Function to invalidate cache when data changes
+export const invalidateCanvasCache = () => {
+  console.log('🗑️ Invalidating canvas structure cache');
+  canvasStructureCache = null;
 };
