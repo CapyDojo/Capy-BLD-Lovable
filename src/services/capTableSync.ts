@@ -1,4 +1,3 @@
-
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 
@@ -107,25 +106,25 @@ const buildOwnershipHierarchy = () => {
     });
   });
   
-  // NEW APPROACH: Calculate hierarchy levels using topological sorting
-  // Ensure owners are ALWAYS positioned above owned entities
+  // FIXED APPROACH: Calculate hierarchy levels with owners ABOVE owned entities
+  // Higher level number = higher on screen (owners), lower level number = lower on screen (owned)
   const entityLevels = new Map<string, number>();
   const inDegree = new Map<string, number>();
   const queue: string[] = [];
   
-  // Initialize in-degree count for all entities
+  // Initialize in-degree count for all entities based on OWNED relationships
   allEntities.forEach(entity => {
-    const owners = ownershipMap.get(entity.id) || [];
-    inDegree.set(entity.id, owners.length);
+    const ownedEntities = reverseOwnershipMap.get(entity.id) || [];
+    inDegree.set(entity.id, ownedEntities.length);
     
-    // Entities with no owners start at level 0
-    if (owners.length === 0) {
+    // Entities that don't own anything (leaf nodes) start at level 0
+    if (ownedEntities.length === 0) {
       queue.push(entity.id);
       entityLevels.set(entity.id, 0);
     }
   });
   
-  // Process entities level by level using topological sort
+  // Process entities level by level - leaf entities first, then their owners
   let currentLevel = 0;
   const processedAtLevel = new Set<string>();
   
@@ -140,15 +139,15 @@ const buildOwnershipHierarchy = () => {
       processedAtLevel.add(entityId);
       entityLevels.set(entityId, currentLevel);
       
-      // Update owned entities (they go to the next level)
-      const ownedEntities = reverseOwnershipMap.get(entityId) || [];
-      ownedEntities.forEach(ownedId => {
-        const currentInDegree = inDegree.get(ownedId) || 0;
-        inDegree.set(ownedId, currentInDegree - 1);
+      // Update owner entities (they go to the next level UP)
+      const ownerEntities = ownershipMap.get(entityId) || [];
+      ownerEntities.forEach(ownerId => {
+        const currentInDegree = inDegree.get(ownerId) || 0;
+        inDegree.set(ownerId, currentInDegree - 1);
         
-        // If all owners of this entity have been processed, add it to next level
-        if (inDegree.get(ownedId) === 0 && !processedAtLevel.has(ownedId)) {
-          queue.push(ownedId);
+        // If all owned entities of this owner have been processed, add it to next level
+        if (inDegree.get(ownerId) === 0 && !processedAtLevel.has(ownerId)) {
+          queue.push(ownerId);
         }
       });
     });
@@ -197,9 +196,13 @@ export const generateSyncedCanvasStructure = () => {
   const NODE_SPACING = 80; // Increased spacing between nodes
   const START_Y = 50;
   
-  // Position nodes by hierarchy level
+  // Get the maximum level to invert the positioning (highest level entities go at top)
+  const maxLevel = Math.max(...Array.from(entityLevels.values()));
+  
+  // Position nodes by hierarchy level - INVERT so owners are at top
   levelGroups.forEach((entityIds, level) => {
-    const y = START_Y + (level * LEVEL_HEIGHT);
+    const invertedLevel = maxLevel - level; // Invert: highest level entities go to top
+    const y = START_Y + (invertedLevel * LEVEL_HEIGHT);
     const totalWidth = entityIds.length * NODE_WIDTH + (entityIds.length - 1) * NODE_SPACING;
     const startX = Math.max(50, (Math.max(1200, window.innerWidth) - totalWidth) / 2); // Use minimum width for consistent layout
     
