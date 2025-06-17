@@ -204,13 +204,6 @@ export const mockCapTables: EntityCapTable[] = [
     authorizedShares: 12000000,
     totalValuation: 10000000,
     lastRoundValuation: 10000000,
-    shareholders: [
-      mockShareholders[0], // John Smith
-      mockShareholders[1], // Jane Doe
-      mockShareholders[2], // VC Fund
-      mockShareholders[3], // Employee Pool
-      mockShareholders[4], // Convertible Notes
-    ],
     shareClasses: [
       {
         id: 'parent-corp-common',
@@ -289,7 +282,6 @@ export const mockCapTables: EntityCapTable[] = [
   {
     entityId: 'subsidiary-llc',
     authorizedShares: 1000000,
-    shareholders: [mockShareholders[5]], // Parent Corporation
     shareClasses: [
       {
         id: 'llc-units',
@@ -313,7 +305,6 @@ export const mockCapTables: EntityCapTable[] = [
   {
     entityId: 'tech-holdings',
     authorizedShares: 1000000,
-    shareholders: [mockShareholders[5]], // Parent Corporation
     shareClasses: [
       {
         id: 'common-stock',
