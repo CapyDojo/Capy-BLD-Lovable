@@ -1,8 +1,9 @@
 
-import { useMemo, useEffect, useRef } from 'react';
+import { useMemo, useEffect, useRef, useState } from 'react';
 import { useNodesState, useEdgesState } from '@xyflow/react';
 import { generateSyncedCanvasStructure } from '@/services/capTableSync';
-import { dataStore } from '@/services/dataStore';
+import { getUnifiedRepository } from '@/services/repositories/unified';
+import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
 
 const generateInitialState = () => {
   console.log('🔄 Generating initial canvas state');
@@ -12,6 +13,26 @@ const generateInitialState = () => {
 export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedNode: any, setSelectedNode: any, setSidebarOpen: any) => {
   // Store the latest positions in a ref to avoid dependency issues
   const positionsRef = useRef<{ [nodeId: string]: { x: number; y: number } }>({});
+  const [repository, setRepository] = useState<IUnifiedEntityRepository | null>(null);
+
+  // Initialize unified repository
+  useEffect(() => {
+    const initRepository = async () => {
+      try {
+        console.log('🔄 useCanvasData: Initializing unified repository...');
+        const repo = await getUnifiedRepository('ENTERPRISE'); // Use enterprise by default
+        setRepository(repo);
+        console.log('✅ useCanvasData: Unified repository initialized');
+      } catch (error) {
+        console.error('❌ useCanvasData: Failed to initialize repository:', error);
+        // Fallback to legacy if needed
+        const fallbackRepo = await getUnifiedRepository('LEGACY');
+        setRepository(fallbackRepo);
+      }
+    };
+
+    initRepository();
+  }, []);
 
   const { nodes: initialNodes, edges: initialEdges } = useMemo(() => {
     console.log('🔄 useCanvasData: Regenerating canvas structure due to refresh key:', refreshKey);
@@ -53,17 +74,19 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
     onNodesChange(changes);
   };
 
-  // Subscribe to data store changes for auto-sync
+  // Subscribe to unified repository changes for auto-sync
   useEffect(() => {
-    console.log('🔗 Setting up data store subscription in useCanvasData');
-    const unsubscribe = dataStore.subscribe(() => {
+    if (!repository) return;
+
+    console.log('🔗 useCanvasData: Setting up unified repository subscription');
+    const unsubscribe = repository.subscribe((event) => {
       // Skip refresh if we're in the middle of a deletion
       if (isDeleting) {
         console.log('⏳ Skipping refresh during deletion process');
         return;
       }
       
-      console.log('📡 useCanvasData: Data store changed, triggering immediate refresh');
+      console.log('📡 useCanvasData: Unified repository event received:', event.type, event.entityId);
       
       // Generate new canvas structure immediately
       const { nodes: newNodes, edges: newEdges } = generateInitialState();
@@ -98,8 +121,9 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
       setNodes(updatedNodes);
       setEdges(newEdges);
     });
+
     return unsubscribe;
-  }, [selectedNode, isDeleting, setSelectedNode, setSidebarOpen, setNodes, setEdges]);
+  }, [repository, selectedNode, isDeleting, setSelectedNode, setSidebarOpen, setNodes, setEdges]);
 
   return {
     nodes,
