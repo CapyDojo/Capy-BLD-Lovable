@@ -4,12 +4,11 @@ import { IEnterpriseDataStore, EnterpriseDataStoreConfig } from '@/types/enterpr
 import { 
   unifiedMockEntities, 
   unifiedMockShareClasses, 
-  unifiedMockOwnerships,
-  unifiedMockAuditEntries 
+  unifiedMockOwnerships 
 } from '@/data/unifiedMockData';
 
 export class EnterpriseDataStoreFactory {
-  static createEnterpriseStore(environment: 'development' | 'production' | 'test'): IEnterpriseDataStore {
+  static async createEnterpriseStore(environment: 'development' | 'production' | 'test'): Promise<IEnterpriseDataStore> {
     const config: EnterpriseDataStoreConfig = {
       enableAuditLogging: true,
       enableTransactions: true,
@@ -30,8 +29,8 @@ export class EnterpriseDataStoreFactory {
     if (environment === 'development') {
       console.log('🌱 Initializing enterprise store with unified mock data...');
       
-      // Load entities
-      unifiedMockEntities.forEach(async (entity) => {
+      // Load entities first
+      for (const entity of unifiedMockEntities) {
         try {
           await store.createEntity({
             name: entity.name,
@@ -44,10 +43,41 @@ export class EnterpriseDataStoreFactory {
             metadata: entity.metadata || {}
           }, 'unified-mock-data', 'Initial mock data load');
         } catch (error) {
-          // Entity might already exist, that's okay
-          console.log(`📝 Entity ${entity.id} already exists or failed to create:`, error);
+          console.log(`📝 Entity ${entity.name} creation issue:`, error);
         }
-      });
+      }
+      
+      // Load share classes second
+      for (const shareClass of unifiedMockShareClasses) {
+        try {
+          await store.createShareClass({
+            entityId: shareClass.entityId,
+            name: shareClass.name,
+            type: shareClass.type,
+            totalAuthorizedShares: shareClass.totalAuthorizedShares,
+            votingRights: shareClass.votingRights,
+            liquidationPreference: shareClass.liquidationPreference
+          }, 'unified-mock-data');
+        } catch (error) {
+          console.log(`📝 Share class ${shareClass.name} creation issue:`, error);
+        }
+      }
+      
+      // Load ownerships last (requires entities and share classes to exist)
+      for (const ownership of unifiedMockOwnerships) {
+        try {
+          await store.createOwnership({
+            ownerEntityId: ownership.ownerEntityId,
+            ownedEntityId: ownership.ownedEntityId,
+            shares: ownership.shares,
+            shareClassId: ownership.shareClassId,
+            effectiveDate: ownership.effectiveDate,
+            changeReason: ownership.changeReason
+          }, ownership.createdBy);
+        } catch (error) {
+          console.log(`📝 Ownership ${ownership.id} creation issue:`, error);
+        }
+      }
       
       console.log('✅ Enterprise store initialized with unified mock data');
     }
