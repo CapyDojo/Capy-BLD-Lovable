@@ -76,6 +76,20 @@ class MigrationBridge {
         }
         return legacyEntity;
       },
+
+      getEntity: async (id: string) => {
+        // Try enterprise store first
+        try {
+          return await this.enterpriseStore.getEntity(id);
+        } catch (error) {
+          // Fallback to legacy store and sync
+          const legacyEntity = legacyDataStore.getEntityById(id);
+          if (legacyEntity) {
+            await this.syncEntityFromLegacy(id);
+          }
+          return legacyEntity;
+        }
+      },
       
       updateEntity: async (id: string, updates: any, updatedBy?: string, reason?: string) => {
         // Update in legacy store first (for immediate UI updates)
@@ -85,6 +99,9 @@ class MigrationBridge {
           // Then update in enterprise store if migration is enabled
           if (updatedBy && reason) {
             await this.enterpriseStore.updateEntity(id, updates, updatedBy, reason);
+          } else {
+            // Provide default values for enterprise store
+            await this.enterpriseStore.updateEntity(id, updates, 'user', 'Entity updated');
           }
         } catch (error) {
           console.warn('⚠️ Enterprise store update failed:', error);
