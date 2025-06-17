@@ -1,7 +1,10 @@
-
 import React, { useEffect, useState } from 'react';
 import { Node } from '@xyflow/react';
 import { EntityCapTableSection } from './EntityCapTableSection';
+import { NameField } from './forms/NameField';
+import { TypeField } from './forms/TypeField';
+import { IndividualFieldsForm } from './forms/IndividualFieldsForm';
+import { EntityFieldsForm } from './forms/EntityFieldsForm';
 import { dataStore } from '@/services/dataStore';
 
 interface EntityDetailsPanelProps {
@@ -106,7 +109,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
       if (localName !== entityData.name) {
         handleUpdateField('name', localName);
       }
-      e.currentTarget.blur();
+      (e.currentTarget as HTMLInputElement).blur();
     }
   };
 
@@ -127,92 +130,30 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
       </div>
       
       <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {isIndividual ? 'Full Name' : 'Entity Name'}
-          </label>
-          <input
-            type="text"
-            value={localName}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            onChange={(e) => handleNameChange(e.target.value)}
-            onBlur={handleNameBlur}
-            onKeyPress={handleNameKeyPress}
-          />
-        </div>
+        <NameField
+          localName={localName}
+          isIndividual={isIndividual}
+          onNameChange={handleNameChange}
+          onNameBlur={handleNameBlur}
+          onNameKeyPress={handleNameKeyPress}
+        />
         
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            {isIndividual ? 'Type' : 'Entity Type'}
-          </label>
-          <select
-            value={String(entityData.type || '')}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            onChange={(e) => handleUpdateField('type', e.target.value)}
-          >
-            <option value="Individual">Individual</option>
-            <option value="Corporation">Corporation</option>
-            <option value="LLC">LLC</option>
-            <option value="Partnership">Partnership</option>
-            <option value="Trust">Trust</option>
-          </select>
-        </div>
+        <TypeField
+          entityData={entityData}
+          isIndividual={isIndividual}
+          onUpdateField={handleUpdateField}
+        />
         
         {isIndividual ? (
-          <>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Citizenship
-              </label>
-              <select
-                value={String(entityData.citizenship || '')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                onChange={(e) => handleUpdateField('citizenship', e.target.value)}
-              >
-                <option value="">Select Citizenship</option>
-                <option value="US Citizen">US Citizen</option>
-                <option value="Canadian Citizen">Canadian Citizen</option>
-                <option value="UK Citizen">UK Citizen</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Residence
-              </label>
-              <select
-                value={String(entityData.residence || '')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                onChange={(e) => handleUpdateField('residence', e.target.value)}
-              >
-                <option value="">Select Residence</option>
-                <option value="California">California</option>
-                <option value="New York">New York</option>
-                <option value="Delaware">Delaware</option>
-                <option value="Nevada">Nevada</option>
-                <option value="Texas">Texas</option>
-                <option value="Florida">Florida</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-          </>
+          <IndividualFieldsForm
+            entityData={entityData}
+            onUpdateField={handleUpdateField}
+          />
         ) : (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Jurisdiction
-            </label>
-            <select
-              value={String(entityData.jurisdiction || '')}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              onChange={(e) => handleUpdateField('jurisdiction', e.target.value)}
-            >
-              <option value="Delaware">Delaware</option>
-              <option value="California">California</option>
-              <option value="Nevada">Nevada</option>
-              <option value="New York">New York</option>
-            </select>
-          </div>
+          <EntityFieldsForm
+            entityData={entityData}
+            onUpdateField={handleUpdateField}
+          />
         )}
       </div>
 
