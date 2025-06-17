@@ -1,4 +1,3 @@
-
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 
@@ -71,6 +70,25 @@ const buildOwnershipHierarchy = () => {
   const allCapTables = dataStore.getCapTables();
   const allShareholders = dataStore.getShareholders();
   
+  console.log('🔍 DEBUG: Starting hierarchy build with:', {
+    entitiesCount: allEntities.length,
+    capTablesCount: allCapTables.length,
+    shareholdersCount: allShareholders.length
+  });
+
+  // Log all entities
+  console.log('🔍 DEBUG: All entities:', allEntities.map(e => ({ id: e.id, name: e.name, type: e.type })));
+  
+  // Log all cap tables and their investments
+  console.log('🔍 DEBUG: All cap tables:');
+  allCapTables.forEach(ct => {
+    console.log(`  - Entity ${ct.entityId}:`, ct.investments.map(inv => ({
+      shareholderId: inv.shareholderId,
+      sharesOwned: inv.sharesOwned,
+      shareholderName: allShareholders.find(s => s.id === inv.shareholderId)?.name
+    })));
+  });
+
   // Create a map of entity ownership relationships from cap table data
   const ownershipMap = new Map<string, string[]>(); // ownedEntityId -> ownerEntityIds[]
   const reverseOwnershipMap = new Map<string, string[]>(); // ownerEntityId -> ownedEntityIds[]
@@ -80,10 +98,20 @@ const buildOwnershipHierarchy = () => {
     capTable.investments.forEach(investment => {
       const shareholder = allShareholders.find(s => s.id === investment.shareholderId);
       
+      console.log(`🔍 DEBUG: Processing investment in ${capTable.entityId}:`, {
+        shareholderId: investment.shareholderId,
+        shareholderName: shareholder?.name,
+        shareholderType: shareholder?.type,
+        shareholderEntityId: shareholder?.entityId,
+        sharesOwned: investment.sharesOwned
+      });
+      
       // Only process entity shareholders for hierarchy (not individuals or pools)
       if (shareholder?.type === 'Entity' && shareholder.entityId && investment.sharesOwned > 0) {
         const ownerEntityId = shareholder.entityId;
         const ownedEntityId = capTable.entityId;
+        
+        console.log(`🔍 DEBUG: Found ownership relationship: ${shareholder.name} (${ownerEntityId}) owns shares in entity ${ownedEntityId}`);
         
         // Create ownership relationship for ANY ownership amount (not just majority)
         if (ownerEntityId !== ownedEntityId) { // Prevent self-ownership
@@ -107,12 +135,18 @@ const buildOwnershipHierarchy = () => {
     });
   });
   
-  console.log('🔍 Ownership relationships:', {
-    ownershipMap: Array.from(ownershipMap.entries()),
-    reverseOwnershipMap: Array.from(reverseOwnershipMap.entries())
+  console.log('🔍 DEBUG: Final ownership relationships:', {
+    ownershipMap: Array.from(ownershipMap.entries()).map(([owned, owners]) => [
+      `${allEntities.find(e => e.id === owned)?.name} (${owned})`,
+      owners.map(o => `${allEntities.find(e => e.id === o)?.name} (${o})`)
+    ]),
+    reverseOwnershipMap: Array.from(reverseOwnershipMap.entries()).map(([owner, owned]) => [
+      `${allEntities.find(e => e.id === owner)?.name} (${owner})`,
+      owned.map(o => `${allEntities.find(e => e.id === o)?.name} (${o})`)
+    ])
   });
   
-  // COMPLETELY REWRITTEN: Start from TOP level entities (entities that are NOT owned by anyone)
+  // Start from TOP level entities (entities that are NOT owned by anyone)
   // and work our way DOWN the hierarchy
   const entityLevels = new Map<string, number>();
   const visited = new Set<string>();
@@ -120,22 +154,30 @@ const buildOwnershipHierarchy = () => {
   // Find root entities (entities that are not owned by any other entity)
   const rootEntities = allEntities.filter(entity => {
     const owners = ownershipMap.get(entity.id) || [];
-    return owners.length === 0; // No entity owners
+    const isRoot = owners.length === 0;
+    console.log(`🔍 DEBUG: Entity ${entity.name} (${entity.id}) has ${owners.length} owners, isRoot: ${isRoot}`);
+    return isRoot;
   });
   
-  console.log('🌱 Root entities (not owned by anyone):', rootEntities.map(e => e.name));
+  console.log('🌱 DEBUG: Root entities (not owned by anyone):', rootEntities.map(e => ({ name: e.name, id: e.id })));
   
   // Recursive function to assign levels starting from roots
   const assignLevel = (entityId: string, level: number) => {
-    if (visited.has(entityId)) return;
+    if (visited.has(entityId)) {
+      console.log(`🔍 DEBUG: Already visited ${entityId}, skipping`);
+      return;
+    }
     
     visited.add(entityId);
     entityLevels.set(entityId, level);
     
-    console.log(`📍 Assigning level ${level} to entity: ${allEntities.find(e => e.id === entityId)?.name}`);
+    const entityName = allEntities.find(e => e.id === entityId)?.name;
+    console.log(`📍 DEBUG: Assigning level ${level} to entity: ${entityName} (${entityId})`);
     
     // Assign next level to all entities owned by this entity
     const ownedEntities = reverseOwnershipMap.get(entityId) || [];
+    console.log(`🔍 DEBUG: Entity ${entityName} owns:`, ownedEntities.map(id => allEntities.find(e => e.id === id)?.name));
+    
     ownedEntities.forEach(ownedId => {
       assignLevel(ownedId, level + 1);
     });
@@ -143,13 +185,14 @@ const buildOwnershipHierarchy = () => {
   
   // Start assignment from root entities at level 0
   rootEntities.forEach(entity => {
+    console.log(`🌱 DEBUG: Starting level assignment from root: ${entity.name} (${entity.id})`);
     assignLevel(entity.id, 0);
   });
   
   // Handle any remaining entities (shouldn't happen with proper data)
   allEntities.forEach(entity => {
     if (!entityLevels.has(entity.id)) {
-      console.log(`⚠️ Orphaned entity found: ${entity.name}, assigning to level 0`);
+      console.log(`⚠️ DEBUG: Orphaned entity found: ${entity.name} (${entity.id}), assigning to level 0`);
       entityLevels.set(entity.id, 0);
     }
   });
@@ -163,9 +206,12 @@ const buildOwnershipHierarchy = () => {
     levelGroups.get(level)!.push(entityId);
   });
   
-  console.log('📊 Final entity levels:', Array.from(levelGroups.entries()).map(([level, entities]) => [
+  console.log('📊 DEBUG: Final entity levels:', Array.from(levelGroups.entries()).map(([level, entities]) => [
     level, 
-    entities.map(id => allEntities.find(e => e.id === id)?.name)
+    entities.map(id => {
+      const entity = allEntities.find(e => e.id === id);
+      return `${entity?.name} (${id})`;
+    })
   ]));
   
   return { entityLevels, levelGroups, ownershipMap, reverseOwnershipMap };
@@ -190,12 +236,20 @@ export const generateSyncedCanvasStructure = () => {
   const NODE_SPACING = 80; // Increased spacing between nodes
   const START_Y = 50;
   
-  // Position nodes by hierarchy level - NO INVERSION NEEDED NOW
-  // Level 0 = top level entities (root), Level 1 = owned by level 0, etc.
+  console.log('🎯 DEBUG: Starting node positioning with layout constants:', {
+    LEVEL_HEIGHT,
+    NODE_WIDTH,
+    NODE_SPACING,
+    START_Y
+  });
+  
+  // Position nodes by hierarchy level - Level 0 = top level entities (root), Level 1 = owned by level 0, etc.
   levelGroups.forEach((entityIds, level) => {
     const y = START_Y + (level * LEVEL_HEIGHT); // Direct mapping: level 0 at top
     const totalWidth = entityIds.length * NODE_WIDTH + (entityIds.length - 1) * NODE_SPACING;
     const startX = Math.max(50, (Math.max(1200, window.innerWidth) - totalWidth) / 2); // Use minimum width for consistent layout
+    
+    console.log(`🎯 DEBUG: Positioning level ${level} entities at y=${y}:`, entityIds.map(id => allEntities.find(e => e.id === id)?.name));
     
     entityIds.forEach((entityId, index) => {
       const entity = allEntities.find(e => e.id === entityId);
@@ -206,7 +260,12 @@ export const generateSyncedCanvasStructure = () => {
       // Use saved position if available, otherwise use calculated hierarchical position
       const finalPosition = entity.position || { x, y };
       
-      console.log(`🎯 Positioning entity ${entity.name} at level ${level}, position:`, finalPosition);
+      console.log(`🎯 DEBUG: Entity ${entity.name} positioned at:`, {
+        level,
+        calculatedPosition: { x, y },
+        savedPosition: entity.position,
+        finalPosition
+      });
       
       nodes.push({
         id: entity.id,
