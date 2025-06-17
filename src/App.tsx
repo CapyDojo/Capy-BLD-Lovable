@@ -18,60 +18,58 @@ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Expose migration functions after component mounts
+  // Expose migration functions immediately when component mounts
   React.useEffect(() => {
     const exposeMigrationFunctions = async () => {
       try {
         console.log('🔄 Loading migration validation functions...');
         
-        const migrationValidationModule = await import('@/services/dataStore/MigrationValidation');
-        const migrationBridgeModule = await import('@/services/dataStore/MigrationBridge');
+        // Import the modules
+        const { migrationValidator } = await import('@/services/dataStore/MigrationValidation');
+        const { migrationBridge } = await import('@/services/dataStore/MigrationBridge');
         
         console.log('✅ Migration modules loaded successfully');
+        console.log('📦 migrationValidator:', migrationValidator);
+        console.log('📦 migrationBridge:', migrationBridge);
         
-        // Create wrapper functions to avoid binding issues
-        const runMigrationTests = async () => {
-          return await migrationValidationModule.migrationValidator.runAllTests();
+        // Expose functions directly to window - no wrapper functions
+        (window as any).runMigrationTests = () => migrationValidator.runAllTests();
+        (window as any).runMigrationTest = (testName: string) => migrationValidator.runSingleTest(testName);
+        (window as any).getMigrationTestNames = () => migrationValidator.getTestNames();
+        (window as any).getMigrationStatus = () => migrationBridge.getMigrationStatus();
+        
+        // Additional debugging function
+        (window as any).testFunction = () => {
+          console.log('✅ Test function works!');
+          return 'Test successful';
         };
-        
-        const runMigrationTest = async (testName: string) => {
-          return await migrationValidationModule.migrationValidator.runSingleTest(testName);
-        };
-        
-        const getMigrationTestNames = () => {
-          return migrationValidationModule.migrationValidator.getTestNames();
-        };
-        
-        const getMigrationStatus = () => {
-          return migrationBridgeModule.migrationBridge.getMigrationStatus();
-        };
-        
-        // Attach to window object
-        (window as any).runMigrationTests = runMigrationTests;
-        (window as any).runMigrationTest = runMigrationTest;
-        (window as any).getMigrationTestNames = getMigrationTestNames;
-        (window as any).getMigrationStatus = getMigrationStatus;
         
         console.log('🧪 Migration test functions exposed to console:');
         console.log('  - runMigrationTests()');
         console.log('  - runMigrationTest(name)');
         console.log('  - getMigrationTestNames()');
         console.log('  - getMigrationStatus()');
+        console.log('  - testFunction() [for debugging]');
         
-        // Verify functions are properly attached
+        // Comprehensive verification
         console.log('🔍 Function verification:');
-        console.log('  - runMigrationTests:', typeof (window as any).runMigrationTests);
-        console.log('  - Window has runMigrationTests:', 'runMigrationTests' in window);
+        Object.keys(window).filter(key => key.includes('Migration') || key === 'testFunction').forEach(key => {
+          console.log(`  - ${key}:`, typeof (window as any)[key]);
+        });
+        
+        // Force a final check
+        console.log('🎯 Direct window check:');
+        console.log('  - window.runMigrationTests exists:', typeof (window as any).runMigrationTests);
+        console.log('  - window.testFunction exists:', typeof (window as any).testFunction);
         
       } catch (error) {
         console.error('❌ Failed to expose migration functions:', error);
+        console.error('❌ Error details:', error);
       }
     };
     
-    // Use a longer delay to ensure everything is loaded
-    const timeoutId = setTimeout(exposeMigrationFunctions, 2000);
-    
-    return () => clearTimeout(timeoutId);
+    // Execute immediately
+    exposeMigrationFunctions();
   }, []);
 
   return (
