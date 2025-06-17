@@ -1,4 +1,4 @@
-import { useMemo, useState, useEffect, useCallback, useRef } from 'react';
+import { useMemo, useState, useEffect } from 'react';
 import { dataStore } from '@/services/dataStore';
 
 export interface CapTableData {
@@ -13,31 +13,32 @@ export interface CapTableData {
 
 export const useCapTable = (entityId: string): CapTableData | null => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const lastComputedRef = useRef<{ entityId: string; data: CapTableData | null; timestamp: number }>({ 
-    entityId: '', 
-    data: null, 
-    timestamp: 0 
+  const [dataSnapshot, setDataSnapshot] = useState({
+    shareholders: dataStore.getShareholders(),
+    shareClasses: dataStore.getShareClasses(),
+    capTable: dataStore.getCapTableByEntityId(entityId)
   });
 
-  // Throttled refresh to prevent excessive re-computations
-  const throttledRefresh = useCallback(() => {
-    const now = Date.now();
-    if (now - lastComputedRef.current.timestamp < 100) { // Throttle to max 10 updates per second
-      return;
-    }
-    setRefreshTrigger(prev => prev + 1);
-  }, []);
-
-  // Enhanced subscription to dataStore with throttling
+  // Enhanced subscription to dataStore with forced refresh
   useEffect(() => {
     console.log('🔗 useCapTable: Subscribing to dataStore for entity:', entityId);
-    const unsubscribe = dataStore.subscribe(throttledRefresh);
+    const unsubscribe = dataStore.subscribe(() => {
+      console.log('📡 useCapTable: DataStore updated, forcing refresh for entity:', entityId);
+      
+      // Update data snapshot to force memoization refresh
+      setDataSnapshot({
+        shareholders: dataStore.getShareholders(),
+        shareClasses: dataStore.getShareClasses(),
+        capTable: dataStore.getCapTableByEntityId(entityId)
+      });
+      
+      setRefreshTrigger(prev => prev + 1);
+    });
     return unsubscribe;
-  }, [entityId, throttledRefresh]);
+  }, [entityId]);
 
   return useMemo(() => {
-    const startTime = performance.now();
-    console.log('🔄 useCapTable: Computing data for entity:', entityId);
+    console.log('🔄 useCapTable: Computing data for entity:', entityId, 'refresh trigger:', refreshTrigger);
     
     const entity = dataStore.getEntityById(entityId);
     if (!entity) {
@@ -45,29 +46,37 @@ export const useCapTable = (entityId: string): CapTableData | null => {
       return null;
     }
 
-    const capTable = dataStore.getCapTableByEntityId(entityId);
+    const capTable = dataSnapshot.capTable;
     if (!capTable) {
       console.log('❌ No cap table found for entity:', entityId);
       return null;
     }
 
-    // Use efficient data fetching
-    const allShareholders = dataStore.getShareholders();
-    const allShareClasses = dataStore.getShareClasses();
+    // Use snapshot data to ensure we get the latest values
+    const allShareholders = dataSnapshot.shareholders;
+    const allShareClasses = dataSnapshot.shareClasses;
 
-    // Create lookup maps for better performance
-    const shareholderMap = new Map(allShareholders.map(s => [s.id, s]));
-    const shareClassMap = new Map(allShareClasses.map(sc => [sc.id, sc]));
-
-    console.log('🔍 DEBUG: Processing cap table for', entity.name, 'with', capTable.investments.length, 'investments');
+    console.log('🔍 DEBUG: Cap table for', entity.name, 'has', capTable.investments.length, 'investments');
+    console.log('🔍 DEBUG: All shareholders count:', allShareholders.length);
+    console.log('🔍 DEBUG: Data snapshot timestamp:', Date.now());
     
+    capTable.investments.forEach((inv, index) => {
+      const shareholder = allShareholders.find(s => s.id === inv.shareholderId);
+      console.log(`  Investment ${index + 1}:`, {
+        investmentId: inv.id,
+        shareholderId: inv.shareholderId,
+        shareholderName: shareholder?.name || 'UNKNOWN',
+        sharesOwned: inv.sharesOwned
+      });
+    });
+
     const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
     const availableShares = capTable.authorizedShares - totalShares;
 
-    // Build table data with optimized lookups
+    // Build table data with current shareholder names from snapshot
     const tableData = capTable.investments.map((investment) => {
-      const shareholder = shareholderMap.get(investment.shareholderId);
-      const shareClass = shareClassMap.get(investment.shareClassId);
+      const shareholder = allShareholders.find(s => s.id === investment.shareholderId);
+      const shareClass = allShareClasses.find(sc => sc.id === investment.shareClassId);
       const ownershipPercentage = totalShares > 0 ? (investment.sharesOwned / totalShares) * 100 : 0;
       const fullyDiluted = capTable.authorizedShares > 0 ? (investment.sharesOwned / capTable.authorizedShares) * 100 : 0;
 
@@ -87,18 +96,20 @@ export const useCapTable = (entityId: string): CapTableData | null => {
 
     const totalInvestment = tableData.reduce((sum, item) => sum + item.investmentAmount, 0);
 
-    // Build chart data with color optimization
-    const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316'];
+    // Build chart data
     const chartData = tableData
       .filter(item => item.sharesOwned > 0)
-      .map((item, index) => ({
-        name: item.name,
-        value: item.ownershipPercentage,
-        shares: item.sharesOwned,
-        investmentAmount: item.investmentAmount,
-        shareClass: item.shareClass,
-        color: colors[index % colors.length],
-      }));
+      .map((item, index) => {
+        const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316'];
+        return {
+          name: item.name,
+          value: item.ownershipPercentage,
+          shares: item.sharesOwned,
+          investmentAmount: item.investmentAmount,
+          shareClass: item.shareClass,
+          color: colors[index % colors.length],
+        };
+      });
 
     // Add available shares to chart if any
     if (availableShares > 0) {
@@ -113,7 +124,10 @@ export const useCapTable = (entityId: string): CapTableData | null => {
       });
     }
 
-    const result = {
+    console.log('✅ Cap table data computed for:', entity.name, 'with', tableData.length, 'stakeholders');
+    console.log('📊 Final table data:', tableData.map(t => ({ name: t.name, shares: t.sharesOwned })));
+
+    return {
       entity,
       capTable: {
         authorizedShares: capTable.authorizedShares,
@@ -127,19 +141,7 @@ export const useCapTable = (entityId: string): CapTableData | null => {
       chartData,
       tableData,
     };
-
-    // Cache the result
-    lastComputedRef.current = {
-      entityId,
-      data: result,
-      timestamp: Date.now()
-    };
-
-    const endTime = performance.now();
-    console.log(`✅ Cap table computed for ${entity.name} in ${(endTime - startTime).toFixed(2)}ms`);
-
-    return result;
-  }, [entityId, refreshTrigger]);
+  }, [entityId, refreshTrigger, dataSnapshot.shareholders.length, dataSnapshot.shareClasses.length, dataSnapshot.capTable?.investments.length]);
 };
 
 // Simplified mutation functions that just use dataStore directly

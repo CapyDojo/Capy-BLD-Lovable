@@ -3,7 +3,6 @@ import { EntityCapTable, Shareholder, ShareClass } from '@/types/capTable';
 import { EntityManager } from './EntityManager';
 import { CapTableManager } from './CapTableManager';
 import { StorageService } from './storage';
-import { invalidateCanvasCache } from '../capTableSync';
 
 export class DataStore {
   private entityManager: EntityManager;
@@ -36,7 +35,7 @@ export class DataStore {
     // Fix missing entityId links for individual shareholders
     this.fixIndividualShareholderLinks();
 
-    console.log('🏪 DataStore initialized with performance optimizations:', {
+    console.log('🏪 DataStore initialized with enhanced cross-component sync:', {
       entities: initialEntities.length,
       capTables: initialCapTables.length,
       shareholders: initialShareholders.length,
@@ -81,44 +80,24 @@ export class DataStore {
     };
   }
 
-  // Optimized notify with cache invalidation
+  // Notify all listeners of changes
   private notify() {
     if (this.isLoading) {
       console.log('🚫 Skipping notify during data loading');
       return;
     }
     
-    // Invalidate expensive computation caches
-    invalidateCanvasCache();
-    
     console.log('📡 Notifying', this.listeners.length, 'listeners of data change');
-    
-    // Batch notifications to prevent excessive updates
-    requestAnimationFrame(() => {
-      this.listeners.forEach((callback, index) => {
-        try {
-          callback();
-        } catch (error) {
-          console.error(`❌ Error in listener ${index}:`, error);
-        }
-      });
+    this.listeners.forEach((callback, index) => {
+      try {
+        callback();
+      } catch (error) {
+        console.error(`❌ Error in listener ${index}:`, error);
+      }
     });
     
-    // Debounced save to reduce localStorage writes
-    this.debouncedSave();
-  }
-
-  // Debounced save to reduce localStorage operations
-  private saveTimeout: NodeJS.Timeout | null = null;
-  private debouncedSave() {
-    if (this.saveTimeout) {
-      clearTimeout(this.saveTimeout);
-    }
-    
-    this.saveTimeout = setTimeout(() => {
-      this.forceSave();
-      this.saveTimeout = null;
-    }, 250); // Save after 250ms of inactivity
+    // Force immediate save after notification
+    this.forceSave();
   }
 
   // Force immediate save to localStorage
@@ -174,9 +153,10 @@ export class DataStore {
     this.isLoading = false;
   }
 
-  // Entity operations with performance logging
+  // Entity operations
   getEntities(): Entity[] {
     const entities = this.entityManager.getAll();
+    console.log('📊 Getting entities, count:', entities.length);
     return entities;
   }
 

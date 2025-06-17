@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, memo, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useCapTable } from '@/hooks/useCapTable';
 import { dataStore } from '@/services/dataStore';
@@ -8,7 +8,7 @@ interface OwnershipChartProps {
   entityId: string;
 }
 
-const CustomTooltip = memo(({ active, payload }: any) => {
+const CustomTooltip = ({ active, payload }: any) => {
   if (active && payload && payload.length) {
     const data = payload[0].payload;
     return (
@@ -26,32 +26,21 @@ const CustomTooltip = memo(({ active, payload }: any) => {
     );
   }
   return null;
-});
+};
 
-export const OwnershipChart: React.FC<OwnershipChartProps> = memo(({ entityId }) => {
+export const OwnershipChart: React.FC<OwnershipChartProps> = ({ entityId }) => {
   const capTableData = useCapTable(entityId);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Throttled refresh to prevent excessive re-renders
-  const throttledRefresh = useCallback(() => {
-    setRefreshKey(prev => prev + 1);
-  }, []);
-
-  // Subscribe to data store changes with throttling
+  // Subscribe to data store changes to force re-render
   useEffect(() => {
     console.log('🔗 OwnershipChart subscribing to data store for entity:', entityId);
-    let timeoutId: NodeJS.Timeout;
-    
     const unsubscribe = dataStore.subscribe(() => {
-      clearTimeout(timeoutId);
-      timeoutId = setTimeout(throttledRefresh, 100); // Throttle updates
+      console.log('📡 OwnershipChart received data store update for entity:', entityId);
+      setRefreshKey(prev => prev + 1);
     });
-    
-    return () => {
-      clearTimeout(timeoutId);
-      unsubscribe();
-    };
-  }, [entityId, throttledRefresh]);
+    return unsubscribe;
+  }, [entityId]);
 
   if (!capTableData) {
     return (
@@ -150,6 +139,4 @@ export const OwnershipChart: React.FC<OwnershipChartProps> = memo(({ entityId })
       </div>
     </div>
   );
-});
-
-OwnershipChart.displayName = 'OwnershipChart';
+};

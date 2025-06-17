@@ -10,15 +10,10 @@ import {
   OnNodeDrag
 } from '@xyflow/react';
 import { EntityNode } from './EntityNode';
-import { OwnershipEdge } from './OwnershipEdge';
 import { useNavigate } from 'react-router-dom';
 
 const nodeTypes = {
   entity: EntityNode,
-};
-
-const edgeTypes = {
-  ownership: OwnershipEdge,
 };
 
 interface ReactFlowCanvasProps {
@@ -69,7 +64,6 @@ export const ReactFlowCanvas: React.FC<ReactFlowCanvasProps> = ({
       onDrop={onDrop}
       onDragOver={onDragOver}
       nodeTypes={nodeTypes}
-      edgeTypes={edgeTypes}
       fitView
       className="bg-gray-50"
     >
