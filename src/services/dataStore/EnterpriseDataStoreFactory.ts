@@ -1,65 +1,22 @@
 
 import { EnterpriseDataStore } from './EnterpriseDataStore';
-import { EnterpriseDataStoreConfig } from '@/types/enterprise';
+import { IEnterpriseDataStore, EnterpriseDataStoreConfig } from '@/types/enterprise';
 
 export class EnterpriseDataStoreFactory {
-  static createProductionConfig(): EnterpriseDataStoreConfig {
-    return {
+  static createEnterpriseStore(environment: 'development' | 'production' | 'test'): IEnterpriseDataStore {
+    const config: EnterpriseDataStoreConfig = {
       enableAuditLogging: true,
       enableTransactions: true,
       enableValidation: true,
-      autoBackup: true,
-      backupInterval: 60, // 1 hour
-      maxAuditRetention: 2555, // 7 years for legal compliance
+      autoBackup: environment === 'production',
+      backupInterval: environment === 'production' ? 60 : 1440, // 1 hour prod, 24 hours dev
+      maxAuditRetention: 365, // 1 year
       enableCircularOwnershipDetection: true,
-      strictValidation: true,
+      strictValidation: environment === 'production',
       enableRealTimeValidation: true
     };
-  }
 
-  static createDevelopmentConfig(): EnterpriseDataStoreConfig {
-    return {
-      enableAuditLogging: true,
-      enableTransactions: false,
-      enableValidation: true,
-      autoBackup: false,
-      backupInterval: 0,
-      maxAuditRetention: 30, // 30 days for development
-      enableCircularOwnershipDetection: true,
-      strictValidation: false, // Allow warnings to pass
-      enableRealTimeValidation: true
-    };
-  }
-
-  static createTestConfig(): EnterpriseDataStoreConfig {
-    return {
-      enableAuditLogging: false,
-      enableTransactions: false,
-      enableValidation: false,
-      autoBackup: false,
-      backupInterval: 0,
-      maxAuditRetention: 1,
-      enableCircularOwnershipDetection: false,
-      strictValidation: false,
-      enableRealTimeValidation: false
-    };
-  }
-
-  static createEnterpriseStore(environment: 'production' | 'development' | 'test' = 'development'): EnterpriseDataStore {
-    let config: EnterpriseDataStoreConfig;
-
-    switch (environment) {
-      case 'production':
-        config = this.createProductionConfig();
-        break;
-      case 'test':
-        config = this.createTestConfig();
-        break;
-      default:
-        config = this.createDevelopmentConfig();
-    }
-
-    console.log('🏭 EnterpriseDataStoreFactory: Creating store for', environment, 'environment');
+    console.log(`🏭 Creating EnterpriseDataStore for ${environment} environment`);
     return new EnterpriseDataStore(config);
   }
 }

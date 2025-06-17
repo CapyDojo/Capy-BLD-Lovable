@@ -1,176 +1,141 @@
 
-// PHASE 1: Business Rule Validation Engine
-// This defines the business rules that will protect data integrity
-
-import { UnifiedOwnership, BusinessRule, BusinessRuleViolation, ValidationResult } from '@/types/unified';
 import { Entity, ShareClass } from '@/types/entity';
+import { UnifiedOwnership, ValidationResult, BusinessRuleViolation } from '@/types/unified';
+
+export interface ValidationContext {
+  newOwnership: UnifiedOwnership;
+  entities: Entity[];
+  allOwnerships: UnifiedOwnership[];
+  shareClasses: ShareClass[];
+  operation: 'CREATE' | 'UPDATE' | 'DELETE';
+}
 
 export class BusinessRuleEngine {
-  private rules: Map<BusinessRule, (context: ValidationContext) => BusinessRuleViolation[]> = new Map();
-
-  constructor() {
-    this.initializeRules();
-  }
-
-  private initializeRules() {
-    this.rules.set('NO_CIRCULAR_OWNERSHIP', this.validateNoCircularOwnership.bind(this));
-    this.rules.set('NO_OVER_ALLOCATION', this.validateNoOverAllocation.bind(this));
-    this.rules.set('OWNER_ENTITY_EXISTS', this.validateOwnerEntityExists.bind(this));
-    this.rules.set('OWNED_ENTITY_EXISTS', this.validateOwnedEntityExists.bind(this));
-    this.rules.set('SHARE_CLASS_EXISTS', this.validateShareClassExists.bind(this));
-    this.rules.set('NO_ORPHANED_ENTITIES', this.validateNoOrphanedEntities.bind(this));
-    this.rules.set('POSITIVE_SHARES_ONLY', this.validatePositiveSharesOnly.bind(this));
-    this.rules.set('FUTURE_EFFECTIVE_DATE_ALLOWED', this.validateEffectiveDate.bind(this));
-  }
-
   validateAll(context: ValidationContext): ValidationResult {
-    const violations: BusinessRuleViolation[] = [];
-    const warnings: BusinessRuleViolation[] = [];
+    const errors: ValidationResult['errors'] = [];
+    const warnings: ValidationResult['warnings'] = [];
 
-    for (const [rule, validator] of this.rules) {
-      const ruleViolations = validator(context);
-      ruleViolations.forEach(violation => {
+    // Run all business rule validations
+    const rules = [
+      'NO_CIRCULAR_OWNERSHIP',
+      'OWNER_ENTITY_EXISTS', 
+      'OWNED_ENTITY_EXISTS',
+      'SHARE_CLASS_EXISTS',
+      'POSITIVE_SHARES_ONLY'
+    ];
+
+    for (const rule of rules) {
+      const violations = this.validateRule(rule, context);
+      violations.forEach(violation => {
         if (violation.severity === 'ERROR') {
-          violations.push(violation);
+          errors.push({
+            code: violation.rule,
+            message: violation.message,
+            field: 'ownership'
+          });
         } else {
-          warnings.push(violation);
+          warnings.push({
+            code: violation.rule,
+            message: violation.message,
+            field: 'ownership'
+          });
         }
       });
     }
 
     return {
-      isValid: violations.length === 0,
-      errors: violations.map(v => ({
-        code: v.rule,
-        message: v.message,
-        field: 'ownership',
-        relatedEntityId: v.affectedEntities[0]
-      })),
-      warnings: warnings.map(v => ({
-        code: v.rule,
-        message: v.message,
-        field: 'ownership'
-      }))
+      isValid: errors.length === 0,
+      errors,
+      warnings
     };
   }
 
-  validateRule(rule: BusinessRule, context: ValidationContext): BusinessRuleViolation[] {
-    const validator = this.rules.get(rule);
-    if (!validator) {
-      throw new Error(`Unknown business rule: ${rule}`);
+  validateRule(rule: string, context: ValidationContext): BusinessRuleViolation[] {
+    switch (rule) {
+      case 'NO_CIRCULAR_OWNERSHIP':
+        return this.checkCircularOwnership(context);
+      case 'OWNER_ENTITY_EXISTS':
+        return this.checkOwnerExists(context);
+      case 'OWNED_ENTITY_EXISTS':
+        return this.checkOwnedExists(context);
+      case 'SHARE_CLASS_EXISTS':
+        return this.checkShareClassExists(context);
+      case 'POSITIVE_SHARES_ONLY':
+        return this.checkPositiveShares(context);
+      default:
+        return [];
     }
-    return validator(context);
   }
 
-  private validateNoCircularOwnership(context: ValidationContext): BusinessRuleViolation[] {
+  private checkCircularOwnership(context: ValidationContext): BusinessRuleViolation[] {
     const { newOwnership, allOwnerships } = context;
-    if (!newOwnership) return [];
-
-    // Build ownership graph
-    const ownershipGraph = new Map<string, string[]>();
     
-    // Add existing ownerships
-    allOwnerships.forEach(ownership => {
-      if (!ownershipGraph.has(ownership.ownerEntityId)) {
-        ownershipGraph.set(ownership.ownerEntityId, []);
-      }
-      ownershipGraph.get(ownership.ownerEntityId)!.push(ownership.ownedEntityId);
-    });
+    // Check if creating this ownership would create a cycle
+    const wouldCreateCycle = this.detectCycle(
+      newOwnership.ownerEntityId,
+      newOwnership.ownedEntityId,
+      allOwnerships
+    );
 
-    // Add the new ownership we're testing
-    if (!ownershipGraph.has(newOwnership.ownerEntityId)) {
-      ownershipGraph.set(newOwnership.ownerEntityId, []);
-    }
-    ownershipGraph.get(newOwnership.ownerEntityId)!.push(newOwnership.ownedEntityId);
-
-    // Check for cycles using DFS
-    const visited = new Set<string>();
-    const recursionStack = new Set<string>();
-
-    const hasCycle = (entityId: string): boolean => {
-      if (recursionStack.has(entityId)) {
-        return true; // Found a cycle
-      }
-      if (visited.has(entityId)) {
-        return false; // Already processed
-      }
-
-      visited.add(entityId);
-      recursionStack.add(entityId);
-
-      const ownedEntities = ownershipGraph.get(entityId) || [];
-      for (const ownedEntityId of ownedEntities) {
-        if (hasCycle(ownedEntityId)) {
-          return true;
-        }
-      }
-
-      recursionStack.delete(entityId);
-      return false;
-    };
-
-    // Check if adding this ownership creates a cycle
-    if (hasCycle(newOwnership.ownerEntityId)) {
+    if (wouldCreateCycle) {
       return [{
         rule: 'NO_CIRCULAR_OWNERSHIP',
         severity: 'ERROR',
-        message: `Creating this ownership would result in circular ownership: ${newOwnership.ownerEntityId} would eventually own itself`,
+        message: `Creating this ownership would result in circular ownership`,
         affectedEntities: [newOwnership.ownerEntityId, newOwnership.ownedEntityId],
-        suggestedAction: 'Remove or modify the ownership relationship to prevent the cycle'
+        suggestedAction: 'Review ownership structure to prevent cycles'
       }];
     }
 
     return [];
   }
 
-  private validateNoOverAllocation(context: ValidationContext): BusinessRuleViolation[] {
-    const { newOwnership, allOwnerships, shareClasses } = context;
-    if (!newOwnership) return [];
+  private detectCycle(
+    startEntity: string,
+    targetEntity: string,
+    ownerships: UnifiedOwnership[],
+    visited: Set<string> = new Set()
+  ): boolean {
+    if (startEntity === targetEntity) return true;
+    if (visited.has(startEntity)) return false;
 
-    const shareClass = shareClasses.find(sc => sc.id === newOwnership.shareClassId);
-    if (!shareClass) return []; // This will be caught by SHARE_CLASS_EXISTS rule
+    visited.add(startEntity);
 
-    // Calculate total shares for this entity and share class
-    const totalShares = allOwnerships
-      .filter(o => o.ownedEntityId === newOwnership.ownedEntityId && o.shareClassId === newOwnership.shareClassId)
-      .reduce((sum, o) => sum + o.shares, 0) + newOwnership.shares;
+    // Find all entities that the start entity owns
+    const ownedEntities = ownerships
+      .filter(o => o.ownerEntityId === startEntity)
+      .map(o => o.ownedEntityId);
 
-    if (totalShares > shareClass.totalAuthorizedShares) {
-      return [{
-        rule: 'NO_OVER_ALLOCATION',
-        severity: 'ERROR',
-        message: `Total shares (${totalShares}) would exceed authorized shares (${shareClass.totalAuthorizedShares}) for share class ${shareClass.name}`,
-        affectedEntities: [newOwnership.ownedEntityId],
-        suggestedAction: `Reduce shares to ${shareClass.totalAuthorizedShares - (totalShares - newOwnership.shares)} or increase authorized shares`
-      }];
+    for (const ownedEntity of ownedEntities) {
+      if (this.detectCycle(ownedEntity, targetEntity, ownerships, new Set(visited))) {
+        return true;
+      }
     }
 
-    return [];
+    return false;
   }
 
-  private validateOwnerEntityExists(context: ValidationContext): BusinessRuleViolation[] {
+  private checkOwnerExists(context: ValidationContext): BusinessRuleViolation[] {
     const { newOwnership, entities } = context;
-    if (!newOwnership) return [];
-
     const ownerExists = entities.some(e => e.id === newOwnership.ownerEntityId);
+
     if (!ownerExists) {
       return [{
         rule: 'OWNER_ENTITY_EXISTS',
         severity: 'ERROR',
         message: `Owner entity ${newOwnership.ownerEntityId} does not exist`,
         affectedEntities: [newOwnership.ownerEntityId],
-        suggestedAction: 'Create the owner entity first or use a valid entity ID'
+        suggestedAction: 'Create the owner entity first or use a valid owner ID'
       }];
     }
 
     return [];
   }
 
-  private validateOwnedEntityExists(context: ValidationContext): BusinessRuleViolation[] {
+  private checkOwnedExists(context: ValidationContext): BusinessRuleViolation[] {
     const { newOwnership, entities } = context;
-    if (!newOwnership) return [];
-
     const ownedExists = entities.some(e => e.id === newOwnership.ownedEntityId);
+
     if (!ownedExists) {
       return [{
         rule: 'OWNED_ENTITY_EXISTS',
@@ -184,11 +149,10 @@ export class BusinessRuleEngine {
     return [];
   }
 
-  private validateShareClassExists(context: ValidationContext): BusinessRuleViolation[] {
+  private checkShareClassExists(context: ValidationContext): BusinessRuleViolation[] {
     const { newOwnership, shareClasses } = context;
-    if (!newOwnership) return [];
-
     const shareClassExists = shareClasses.some(sc => sc.id === newOwnership.shareClassId);
+
     if (!shareClassExists) {
       return [{
         rule: 'SHARE_CLASS_EXISTS',
@@ -202,58 +166,19 @@ export class BusinessRuleEngine {
     return [];
   }
 
-  private validateNoOrphanedEntities(context: ValidationContext): BusinessRuleViolation[] {
-    // This rule is checked during entity deletion
-    // Will be implemented when we add the deletion validation logic
-    return [];
-  }
-
-  private validatePositiveSharesOnly(context: ValidationContext): BusinessRuleViolation[] {
+  private checkPositiveShares(context: ValidationContext): BusinessRuleViolation[] {
     const { newOwnership } = context;
-    if (!newOwnership) return [];
 
     if (newOwnership.shares <= 0) {
       return [{
         rule: 'POSITIVE_SHARES_ONLY',
         severity: 'ERROR',
-        message: `Shares must be positive, got ${newOwnership.shares}`,
+        message: 'Share count must be positive',
         affectedEntities: [newOwnership.ownedEntityId],
-        suggestedAction: 'Set shares to a positive number'
+        suggestedAction: 'Enter a positive number of shares'
       }];
     }
 
     return [];
   }
-
-  private validateEffectiveDate(context: ValidationContext): BusinessRuleViolation[] {
-    const { newOwnership } = context;
-    if (!newOwnership) return [];
-
-    const now = new Date();
-    const effectiveDate = new Date(newOwnership.effectiveDate);
-
-    // Allow future dates but warn if too far in the future
-    const oneYearFromNow = new Date(now.getFullYear() + 1, now.getMonth(), now.getDate());
-    
-    if (effectiveDate > oneYearFromNow) {
-      return [{
-        rule: 'FUTURE_EFFECTIVE_DATE_ALLOWED',
-        severity: 'WARNING',
-        message: `Effective date ${effectiveDate.toDateString()} is more than one year in the future`,
-        affectedEntities: [newOwnership.ownedEntityId],
-        suggestedAction: 'Verify this is the intended effective date'
-      }];
-    }
-
-    return [];
-  }
-}
-
-export interface ValidationContext {
-  newOwnership?: UnifiedOwnership;
-  entities: Entity[];
-  allOwnerships: UnifiedOwnership[];
-  shareClasses: ShareClass[];
-  currentUserId?: string;
-  operation?: 'CREATE' | 'UPDATE' | 'DELETE';
 }

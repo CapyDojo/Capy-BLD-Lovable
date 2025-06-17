@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { Node } from '@xyflow/react';
 import { EntityCapTableWrapper } from './EntityCapTableWrapper';
@@ -5,7 +6,7 @@ import { NameField } from './forms/NameField';
 import { TypeField } from './forms/TypeField';
 import { IndividualFieldsForm } from './forms/IndividualFieldsForm';
 import { EntityFieldsForm } from './forms/EntityFieldsForm';
-import { dataStore } from '@/services/dataStore';
+import { migrationBridge } from '@/services/dataStore/MigrationBridge';
 
 interface EntityDetailsPanelProps {
   selectedNode: Node;
@@ -24,6 +25,15 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
   const [refreshKey, setRefreshKey] = useState(0);
   const [localName, setLocalName] = useState(String(selectedNode?.data?.name || ''));
 
+  // Enable migration for this component
+  useEffect(() => {
+    migrationBridge.enableMigrationFor('EntityDetailsPanel');
+    console.log('🔄 EntityDetailsPanel migrated to use enterprise store');
+  }, []);
+
+  // Get the appropriate store (enterprise or legacy based on migration status)
+  const dataStore = migrationBridge.getStoreFor('EntityDetailsPanel');
+
   // Subscribe to data store changes
   useEffect(() => {
     console.log('🔗 EntityDetailsPanel subscribing to data store changes');
@@ -32,7 +42,11 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
       
       // Check if selected entity still exists
       if (selectedNode) {
-        const currentEntity = dataStore.getEntityById(selectedNode.id);
+        const currentEntity = dataStore.getEntityById ? 
+          dataStore.getEntityById(selectedNode.id) : 
+          dataStore.getEntity ? 
+          dataStore.getEntity(selectedNode.id) : null;
+        
         if (!currentEntity) {
           console.log('🚪 Selected entity was deleted, closing panel');
           onClose();
@@ -53,28 +67,40 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
       setRefreshKey(prev => prev + 1);
     });
     return unsubscribe;
-  }, [selectedNode, onClose]);
+  }, [selectedNode, onClose, dataStore]);
 
   // Update local data when selectedNode changes
   useEffect(() => {
     if (selectedNode) {
-      const entity = dataStore.getEntityById(selectedNode.id);
-      if (entity) {
-        const newEntityData = {
-          name: entity.name,
-          type: entity.type,
-          jurisdiction: entity.jurisdiction,
-          ...selectedNode.data
-        };
-        setEntityData(newEntityData);
-        setLocalName(String(entity.name || ''));
-      } else {
-        // Entity no longer exists, close panel
-        console.log('🚪 Entity no longer exists in panel effect, closing');
-        onClose();
-      }
+      const getEntity = async () => {
+        let entity;
+        if (dataStore.getEntityById) {
+          // Legacy store method
+          entity = dataStore.getEntityById(selectedNode.id);
+        } else if (dataStore.getEntity) {
+          // Enterprise store method
+          entity = await dataStore.getEntity(selectedNode.id);
+        }
+        
+        if (entity) {
+          const newEntityData = {
+            name: entity.name,
+            type: entity.type,
+            jurisdiction: entity.jurisdiction,
+            ...selectedNode.data
+          };
+          setEntityData(newEntityData);
+          setLocalName(String(entity.name || ''));
+        } else {
+          // Entity no longer exists, close panel
+          console.log('🚪 Entity no longer exists in panel effect, closing');
+          onClose();
+        }
+      };
+
+      getEntity();
     }
-  }, [selectedNode, refreshKey, onClose]);
+  }, [selectedNode, refreshKey, onClose, dataStore]);
 
   // Don't render if entity doesn't exist
   if (!isOpen || !selectedNode) {
@@ -82,16 +108,36 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
   }
 
   // Double-check entity exists before rendering
-  const entityExists = dataStore.getEntityById(selectedNode.id);
-  if (!entityExists) {
+  const checkEntityExists = async () => {
+    if (dataStore.getEntityById) {
+      return dataStore.getEntityById(selectedNode.id);
+    } else if (dataStore.getEntity) {
+      return await dataStore.getEntity(selectedNode.id);
+    }
     return null;
-  }
+  };
 
-  const handleUpdateField = (field: string, value: string) => {
+  const handleUpdateField = async (field: string, value: string) => {
     console.log('📝 EntityDetailsPanel updating field:', field, value);
     const updates = { [field]: value };
     setEntityData(prev => ({ ...prev, ...updates }));
     onUpdateNode(updates);
+
+    // Update in the appropriate store
+    if (dataStore.updateEntity) {
+      try {
+        if (dataStore.updateEntity.length > 3) {
+          // Enterprise store signature: updateEntity(id, updates, updatedBy, reason)
+          await dataStore.updateEntity(selectedNode.id, updates, 'user', `Updated ${field}`);
+        } else {
+          // Legacy store signature: updateEntity(id, updates)
+          dataStore.updateEntity(selectedNode.id, updates);
+        }
+        console.log('✅ Entity updated successfully in store');
+      } catch (error) {
+        console.error('❌ Error updating entity in store:', error);
+      }
+    }
   };
 
   const handleNameChange = (value: string) => {
@@ -127,6 +173,11 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
         >
           ×
         </button>
+      </div>
+      
+      {/* Migration status indicator */}
+      <div className="mb-4 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
+        ✅ Using Enterprise Store (Phase 1 Migration)
       </div>
       
       <div className="space-y-4">
