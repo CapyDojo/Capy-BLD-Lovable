@@ -238,15 +238,4 @@ export class MigrationValidationSuite {
 // Global instance for easy access in console
 export const migrationValidator = new MigrationValidationSuite();
 
-// Console helper functions
-(window as any).runMigrationTests = () => migrationValidator.runAllTests();
-(window as any).runMigrationTest = (testName: string) => migrationValidator.runSingleTest(testName);
-(window as any).getMigrationTestNames = () => migrationValidator.getTestNames();
-(window as any).getMigrationStatus = () => migrationBridge.getMigrationStatus();
-
 console.log('🧪 Migration Validation Suite loaded!');
-console.log('📋 Available console commands:');
-console.log('  - runMigrationTests() - Run all 10 validation tests');
-console.log('  - runMigrationTest("Test Name") - Run a specific test');
-console.log('  - getMigrationTestNames() - List all test names');
-console.log('  - getMigrationStatus() - Get current migration status');
