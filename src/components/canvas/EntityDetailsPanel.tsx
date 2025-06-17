@@ -107,21 +107,23 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
     updateEntityData();
   }, [selectedNode, refreshKey, onClose, repository]);
 
+  // Double-check entity exists before rendering - MOVED BEFORE EARLY RETURN
+  useEffect(() => {
+    const checkEntityExists = async () => {
+      if (selectedNode && repository) {
+        const entityExists = await repository.getEntity(selectedNode.id);
+        if (!entityExists) {
+          onClose();
+        }
+      }
+    };
+    checkEntityExists();
+  }, [selectedNode?.id, repository, onClose]);
+
   // Don't render if no repository or entity doesn't exist
   if (!isOpen || !selectedNode || !repository) {
     return null;
   }
-
-  // Double-check entity exists before rendering
-  useEffect(() => {
-    const checkEntityExists = async () => {
-      const entityExists = await repository.getEntity(selectedNode.id);
-      if (!entityExists) {
-        onClose();
-      }
-    };
-    checkEntityExists();
-  }, [selectedNode.id, repository, onClose]);
 
   const handleUpdateField = async (field: string, value: string) => {
     if (!repository) return;
