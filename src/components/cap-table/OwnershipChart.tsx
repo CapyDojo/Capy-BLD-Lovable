@@ -1,10 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { getUnifiedRepository } from '@/services/repositories/unified';
 import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
 import { Entity } from '@/types/entity';
 import { CapTableView } from '@/types/unified';
+import { Badge } from '@/components/ui/badge';
 
 interface OwnershipChartProps {
   entityId: string;
