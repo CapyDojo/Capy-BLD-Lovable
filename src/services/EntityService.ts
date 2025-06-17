@@ -182,11 +182,11 @@ export class EntityService {
 
   private async createDefaultShareClass(entityId: string, entityType: Entity['type']): Promise<ShareClass> {
     const shareClassMap = {
-      'Corporation': { name: 'Common Stock', totalShares: 10000000 },
-      'LLC': { name: 'Membership Units', totalShares: 1000000 },
-      'Partnership': { name: 'Partnership Interests', totalShares: 1000000 },
-      'Trust': { name: 'Trust Units', totalShares: 1000000 },
-      'Individual': { name: 'N/A', totalShares: 0 }, // Individuals don't have share classes
+      'Corporation': { name: 'Common Stock', type: 'Common Stock' as const, totalShares: 10000000 },
+      'LLC': { name: 'Membership Units', type: 'Common Stock' as const, totalShares: 1000000 },
+      'Partnership': { name: 'Partnership Interests', type: 'Common Stock' as const, totalShares: 1000000 },
+      'Trust': { name: 'Trust Units', type: 'Common Stock' as const, totalShares: 1000000 },
+      'Individual': { name: 'N/A', type: 'Common Stock' as const, totalShares: 0 }, // Individuals don't have share classes
     };
 
     const config = shareClassMap[entityType];
@@ -196,6 +196,7 @@ export class EntityService {
       id,
       entityId,
       name: config.name,
+      type: config.type,
       totalAuthorizedShares: config.totalShares,
       votingRights: true,
     });
