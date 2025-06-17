@@ -1,4 +1,3 @@
-
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 
@@ -218,7 +217,7 @@ const buildOwnershipHierarchy = () => {
   return { entityLevels, levelGroups, ownershipMap, reverseOwnershipMap };
 };
 
-// Canvas structure generation with hierarchical layout
+// Canvas structure generation with simplified stakeholder matching
 export const generateSyncedCanvasStructure = () => {
   console.log('🔄 Generating hierarchical canvas structure');
   const allEntities = dataStore.getEntities();
@@ -285,7 +284,7 @@ export const generateSyncedCanvasStructure = () => {
     });
   });
   
-  // Create ownership edges with improved shareholder matching
+  // Create ownership edges with simplified entityId-based matching
   allEntities.forEach((entity) => {
     const syncedData = syncCapTableData(entity.id);
     if (!syncedData || syncedData.totalShares === 0) return;
@@ -296,43 +295,21 @@ export const generateSyncedCanvasStructure = () => {
       
       let sourceNodeId: string | null = null;
       
-      if (stakeholder.type === 'Entity' && stakeholder.entityId) {
-        // Entity stakeholder - use the entityId directly (this is reliable)
+      // Use entityId as primary matching strategy for all stakeholder types
+      if (stakeholder.entityId) {
         sourceNodeId = stakeholder.entityId;
-        console.log(`🔗 DEBUG: Entity stakeholder found: ${stakeholder.name} -> ${entity.name} (using entityId: ${stakeholder.entityId})`);
+        console.log(`🔗 DEBUG: Stakeholder matched via entityId: ${stakeholder.name} (${stakeholder.entityId}) -> ${entity.name} (${entity.id})`);
       } else if (stakeholder.type === 'Individual') {
-        // Individual stakeholder - improved matching logic
-        // First try to find by exact name match
-        let individualEntity = allEntities.find(e => e.name === stakeholder.name && e.type === 'Individual');
-        
-        // If not found by exact name, try to find individual shareholders that might represent the same person
-        if (!individualEntity) {
-          // Find the shareholder record to get more context
-          const shareholderRecord = allShareholders.find(s => s.id === stakeholder.id || s.name === stakeholder.name);
-          
-          if (shareholderRecord && shareholderRecord.entityId) {
-            // If shareholder has an entityId, use that
-            individualEntity = allEntities.find(e => e.id === shareholderRecord.entityId);
-            console.log(`🔗 DEBUG: Individual stakeholder matched via entityId: ${stakeholder.name} -> ${individualEntity?.name}`);
-          } else {
-            // Try fuzzy matching for individuals (handle name changes)
-            individualEntity = allEntities.find(e => 
-              e.type === 'Individual' && 
-              (e.name.toLowerCase().includes(stakeholder.name.toLowerCase()) || 
-               stakeholder.name.toLowerCase().includes(e.name.toLowerCase()))
-            );
-            console.log(`🔗 DEBUG: Individual stakeholder fuzzy matched: ${stakeholder.name} -> ${individualEntity?.name}`);
-          }
-        }
-        
+        // For individuals without entityId, try exact name match as fallback
+        const individualEntity = allEntities.find(e => e.name === stakeholder.name && e.type === 'Individual');
         if (individualEntity) {
           sourceNodeId = individualEntity.id;
-          console.log(`🔗 DEBUG: Individual stakeholder edge: ${stakeholder.name} (${sourceNodeId}) -> ${entity.name} (${entity.id})`);
+          console.log(`🔗 DEBUG: Individual stakeholder matched by name: ${stakeholder.name} -> ${entity.name}`);
         } else {
           console.log(`⚠️ DEBUG: No matching entity found for individual stakeholder: ${stakeholder.name}`);
         }
       }
-      // Skip Pool type stakeholders for edges
+      // Skip Pool type stakeholders for edges as they don't represent entities
       
       if (sourceNodeId && nodeIds.has(sourceNodeId) && sourceNodeId !== entity.id) {
         const edgeId = `e-${sourceNodeId}-${entity.id}`;
