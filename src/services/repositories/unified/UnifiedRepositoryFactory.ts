@@ -1,22 +1,28 @@
 
-import { IUnifiedRepositoryFactory, IUnifiedEntityRepository, RepositoryType } from './IUnifiedRepository';
+import { IUnifiedEntityRepository, IUnifiedRepositoryFactory, RepositoryType } from './IUnifiedRepository';
 import { EnterpriseRepositoryAdapter } from './EnterpriseRepositoryAdapter';
 import { LegacyRepositoryAdapter } from './LegacyRepositoryAdapter';
-import { EnterpriseDataStoreFactory } from '@/services/dataStore/EnterpriseDataStoreFactory';
+import { migrationBridge } from '@/services/dataStore/MigrationBridge';
 import { dataStore } from '@/services/dataStore';
 
 export class UnifiedRepositoryFactory implements IUnifiedRepositoryFactory {
-  private activeRepository: IUnifiedEntityRepository | null = null;
-  private activeType: RepositoryType = 'LEGACY';
+  private activeRepositoryType: RepositoryType = 'ENTERPRISE';
+  private repositories: Map<RepositoryType, IUnifiedEntityRepository> = new Map();
 
   async createRepository(type: RepositoryType): Promise<IUnifiedEntityRepository> {
     console.log(`🏭 UnifiedRepositoryFactory: Creating ${type} repository`);
+    
+    // Return cached repository if it exists
+    if (this.repositories.has(type)) {
+      console.log(`📋 UnifiedRepositoryFactory: Returning cached ${type} repository`);
+      return this.repositories.get(type)!;
+    }
 
     let repository: IUnifiedEntityRepository;
 
     switch (type) {
       case 'ENTERPRISE':
-        const enterpriseStore = await EnterpriseDataStoreFactory.createEnterpriseStore('development');
+        const enterpriseStore = await migrationBridge.initializeEnterpriseStore();
         repository = new EnterpriseRepositoryAdapter(enterpriseStore);
         break;
       
@@ -28,73 +34,37 @@ export class UnifiedRepositoryFactory implements IUnifiedRepositoryFactory {
         throw new Error(`Unknown repository type: ${type}`);
     }
 
-    console.log(`✅ UnifiedRepositoryFactory: ${type} repository created`);
+    // Cache the repository
+    this.repositories.set(type, repository);
+    console.log(`✅ UnifiedRepositoryFactory: Created and cached ${type} repository`);
+    
     return repository;
   }
 
   getActiveRepositoryType(): RepositoryType {
-    return this.activeType;
+    return this.activeRepositoryType;
   }
 
   async switchToRepository(type: RepositoryType): Promise<void> {
     console.log(`🔄 UnifiedRepositoryFactory: Switching to ${type} repository`);
-
-    // Clean up existing repository if needed
-    if (this.activeRepository && 'destroy' in this.activeRepository) {
-      (this.activeRepository as any).destroy();
-    }
-
-    // Create new repository
-    this.activeRepository = await this.createRepository(type);
-    this.activeType = type;
-
+    this.activeRepositoryType = type;
+    
+    // Ensure the repository is created
+    await this.createRepository(type);
     console.log(`✅ UnifiedRepositoryFactory: Switched to ${type} repository`);
   }
 
   async getActiveRepository(): Promise<IUnifiedEntityRepository> {
-    if (!this.activeRepository) {
-      console.log('🔄 UnifiedRepositoryFactory: No active repository, creating default legacy repository');
-      this.activeRepository = await this.createRepository(this.activeType);
-    }
-    return this.activeRepository;
-  }
-
-  // Utility method to migrate data between repositories
-  async migrateData(fromType: RepositoryType, toType: RepositoryType): Promise<void> {
-    console.log(`🔄 UnifiedRepositoryFactory: Starting data migration from ${fromType} to ${toType}`);
-
-    const sourceRepo = await this.createRepository(fromType);
-    const targetRepo = await this.createRepository(toType);
-
-    try {
-      // Migrate entities first
-      const entities = await sourceRepo.getAllEntities();
-      console.log(`📦 Migrating ${entities.length} entities...`);
-      
-      for (const entity of entities) {
-        try {
-          await targetRepo.createEntity({
-            name: entity.name,
-            type: entity.type,
-            jurisdiction: entity.jurisdiction,
-            registrationNumber: entity.registrationNumber,
-            incorporationDate: entity.incorporationDate,
-            address: entity.address,
-            position: entity.position,
-            metadata: entity.metadata
-          }, 'migration-system', `Migrated from ${fromType}`);
-        } catch (error) {
-          console.log(`⚠️ Skipping entity ${entity.name} (likely already exists):`, error);
-        }
-      }
-
-      console.log('✅ UnifiedRepositoryFactory: Data migration completed');
-    } catch (error) {
-      console.error('❌ UnifiedRepositoryFactory: Data migration failed:', error);
-      throw error;
-    }
+    return this.createRepository(this.activeRepositoryType);
   }
 }
 
-// Create singleton instance
+// Create and export singleton instance
 export const unifiedRepositoryFactory = new UnifiedRepositoryFactory();
+
+// Initialize with enterprise store by default
+unifiedRepositoryFactory.switchToRepository('ENTERPRISE').then(() => {
+  console.log('🎉 UnifiedRepositoryFactory: Auto-initialized with enterprise store');
+}).catch(error => {
+  console.error('❌ UnifiedRepositoryFactory: Auto-initialization failed:', error);
+});

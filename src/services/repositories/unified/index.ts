@@ -1,12 +1,12 @@
 
 // Unified Repository exports
-export { IUnifiedEntityRepository, IUnifiedRepositoryFactory, RepositoryEvent, RepositoryType } from './IUnifiedRepository';
+export type { IUnifiedEntityRepository, IUnifiedRepositoryFactory, RepositoryEvent, RepositoryType } from './IUnifiedRepository';
 export { EnterpriseRepositoryAdapter } from './EnterpriseRepositoryAdapter';
 export { LegacyRepositoryAdapter } from './LegacyRepositoryAdapter';
 export { UnifiedRepositoryFactory, unifiedRepositoryFactory } from './UnifiedRepositoryFactory';
 
 // Convenience function to get the appropriate repository
-export async function getUnifiedRepository(type?: RepositoryType) {
+export async function getUnifiedRepository(type?: import('./IUnifiedRepository').RepositoryType) {
   const factory = unifiedRepositoryFactory;
   
   if (type) {
