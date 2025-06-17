@@ -15,63 +15,53 @@ import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import NotFound from "./pages/NotFound";
 
+// Import migration modules directly and expose functions immediately
+import { migrationValidator } from '@/services/dataStore/MigrationValidation';
+import { migrationBridge } from '@/services/dataStore/MigrationBridge';
+
+// Expose functions to global window object immediately
+console.log('🔄 Exposing migration functions to window...');
+
+(window as any).runMigrationTests = () => {
+  console.log('🧪 Running migration tests...');
+  return migrationValidator.runAllTests();
+};
+
+(window as any).runMigrationTest = (testName: string) => {
+  console.log(`🧪 Running single test: ${testName}`);
+  return migrationValidator.runSingleTest(testName);
+};
+
+(window as any).getMigrationTestNames = () => {
+  console.log('📋 Getting migration test names...');
+  return migrationValidator.getTestNames();
+};
+
+(window as any).getMigrationStatus = () => {
+  console.log('📊 Getting migration status...');
+  return migrationBridge.getMigrationStatus();
+};
+
+(window as any).testFunction = () => {
+  console.log('✅ Test function called successfully!');
+  return 'Test function works!';
+};
+
+console.log('✅ Migration functions exposed to window:');
+console.log('  - runMigrationTests()');
+console.log('  - runMigrationTest(name)');
+console.log('  - getMigrationTestNames()');
+console.log('  - getMigrationStatus()');
+console.log('  - testFunction()');
+
+// Verify functions are attached
+console.log('🔍 Verification:');
+console.log('  - testFunction type:', typeof (window as any).testFunction);
+console.log('  - runMigrationTests type:', typeof (window as any).runMigrationTests);
+
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Expose migration functions immediately when component mounts
-  React.useEffect(() => {
-    const exposeMigrationFunctions = async () => {
-      try {
-        console.log('🔄 Loading migration validation functions...');
-        
-        // Import the modules
-        const { migrationValidator } = await import('@/services/dataStore/MigrationValidation');
-        const { migrationBridge } = await import('@/services/dataStore/MigrationBridge');
-        
-        console.log('✅ Migration modules loaded successfully');
-        console.log('📦 migrationValidator:', migrationValidator);
-        console.log('📦 migrationBridge:', migrationBridge);
-        
-        // Expose functions directly to window - no wrapper functions
-        (window as any).runMigrationTests = () => migrationValidator.runAllTests();
-        (window as any).runMigrationTest = (testName: string) => migrationValidator.runSingleTest(testName);
-        (window as any).getMigrationTestNames = () => migrationValidator.getTestNames();
-        (window as any).getMigrationStatus = () => migrationBridge.getMigrationStatus();
-        
-        // Additional debugging function
-        (window as any).testFunction = () => {
-          console.log('✅ Test function works!');
-          return 'Test successful';
-        };
-        
-        console.log('🧪 Migration test functions exposed to console:');
-        console.log('  - runMigrationTests()');
-        console.log('  - runMigrationTest(name)');
-        console.log('  - getMigrationTestNames()');
-        console.log('  - getMigrationStatus()');
-        console.log('  - testFunction() [for debugging]');
-        
-        // Comprehensive verification
-        console.log('🔍 Function verification:');
-        Object.keys(window).filter(key => key.includes('Migration') || key === 'testFunction').forEach(key => {
-          console.log(`  - ${key}:`, typeof (window as any)[key]);
-        });
-        
-        // Force a final check
-        console.log('🎯 Direct window check:');
-        console.log('  - window.runMigrationTests exists:', typeof (window as any).runMigrationTests);
-        console.log('  - window.testFunction exists:', typeof (window as any).testFunction);
-        
-      } catch (error) {
-        console.error('❌ Failed to expose migration functions:', error);
-        console.error('❌ Error details:', error);
-      }
-    };
-    
-    // Execute immediately
-    exposeMigrationFunctions();
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
