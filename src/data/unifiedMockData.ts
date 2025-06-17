@@ -112,7 +112,7 @@ export const unifiedMockShareClasses: ShareClass[] = [
     id: 'nexus-preferred-seed',
     entityId: 'nexus-corp',
     name: 'Preferred Seed',
-    type: 'Preferred Seed',
+    type: 'Preferred Series A', // Changed from "Preferred Seed" to valid type
     totalAuthorizedShares: 2000000,
     votingRights: true,
     liquidationPreference: 1.0,

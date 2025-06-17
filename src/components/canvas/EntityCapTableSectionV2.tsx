@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, User, Users, Building2 } from 'lucide-react';
 import { migrationBridge } from '@/services/dataStore/MigrationBridge';
@@ -19,10 +18,7 @@ export const EntityCapTableSectionV2: React.FC<EntityCapTableSectionV2Props> = (
       console.log('🔄 EntityCapTableSectionV2: Loading cap table for entity:', entityId);
       
       try {
-        // Ensure entity exists in enterprise store
-        await migrationBridge.syncEntityFromLegacy(entityId);
-        
-        // Get cap table view
+        // Get cap table view directly from enterprise store
         const capTable = await enterpriseStore.getCapTableView(entityId);
         setCapTableData(capTable);
         
