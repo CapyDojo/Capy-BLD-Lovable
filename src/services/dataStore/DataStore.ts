@@ -3,13 +3,13 @@ import { EntityCapTable, Shareholder, ShareClass } from '@/types/capTable';
 import { EntityManager } from './EntityManager';
 import { CapTableManager } from './CapTableManager';
 import { StorageService } from './storage';
+import { NotificationManager } from './NotificationManager';
 
 export class DataStore {
   private entityManager: EntityManager;
   private capTableManager: CapTableManager;
   private storageService: StorageService;
-  private listeners: (() => void)[] = [];
-  private isLoading = false;
+  private notificationManager: NotificationManager;
 
   constructor(
     initialEntities: Entity[],
@@ -18,6 +18,7 @@ export class DataStore {
     initialShareClasses: ShareClass[]
   ) {
     this.storageService = new StorageService();
+    this.notificationManager = new NotificationManager();
     
     const notifyChange = () => this.notify();
     
@@ -72,29 +73,12 @@ export class DataStore {
 
   // Subscribe to data changes
   subscribe(callback: () => void) {
-    this.listeners.push(callback);
-    console.log('🔗 New subscriber added, total listeners:', this.listeners.length);
-    return () => {
-      this.listeners = this.listeners.filter(l => l !== callback);
-      console.log('🔗 Subscriber removed, total listeners:', this.listeners.length);
-    };
+    return this.notificationManager.subscribe(callback);
   }
 
   // Notify all listeners of changes
   private notify() {
-    if (this.isLoading) {
-      console.log('🚫 Skipping notify during data loading');
-      return;
-    }
-    
-    console.log('📡 Notifying', this.listeners.length, 'listeners of data change');
-    this.listeners.forEach((callback, index) => {
-      try {
-        callback();
-      } catch (error) {
-        console.error(`❌ Error in listener ${index}:`, error);
-      }
-    });
+    this.notificationManager.notify();
     
     // Force immediate save after notification
     this.forceSave();
@@ -128,7 +112,7 @@ export class DataStore {
   // Load data from localStorage
   loadSavedData() {
     console.log('📥 Loading saved data...');
-    this.isLoading = true;
+    this.notificationManager.setLoading(true);
     
     const data = this.storageService.load();
     if (data) {
@@ -150,7 +134,7 @@ export class DataStore {
       console.log('📥 No saved data to load, using initial data');
     }
     
-    this.isLoading = false;
+    this.notificationManager.setLoading(false);
   }
 
   // Entity operations
