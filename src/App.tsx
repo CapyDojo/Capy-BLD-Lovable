@@ -53,6 +53,11 @@ const App = () => (
               <DataStructure />
             </MainLayout>
           } />
+          <Route path="/database" element={
+            <MainLayout>
+              <Database />
+            </MainLayout>
+          } />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>
