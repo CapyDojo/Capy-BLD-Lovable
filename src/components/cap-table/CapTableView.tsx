@@ -1,7 +1,9 @@
 
-import React from 'react';
-import { Building2, User, Users } from 'lucide-react';
+import React, { useState } from 'react';
+import { Building2, User, Users, Edit, Check, X } from 'lucide-react';
 import { useCapTable } from '@/hooks/useCapTable';
+import { dataStore } from '@/services/dataStore';
+import { Input } from '@/components/ui/input';
 
 interface CapTableViewProps {
   entityId: string;
@@ -9,6 +11,8 @@ interface CapTableViewProps {
 
 export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
   const capTableData = useCapTable(entityId);
+  const [editingRow, setEditingRow] = useState<string | null>(null);
+  const [editData, setEditData] = useState<any>({});
 
   if (!capTableData) {
     return (
@@ -21,6 +25,40 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
   }
 
   const { entity, capTable, totalShares, totalInvestment, availableShares, tableData } = capTableData;
+
+  const startEditing = (itemId: string, item: any) => {
+    setEditingRow(itemId);
+    setEditData({
+      name: item.name,
+      sharesOwned: item.sharesOwned,
+      pricePerShare: item.pricePerShare,
+      investmentAmount: item.investmentAmount
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingRow(null);
+    setEditData({});
+  };
+
+  const saveChanges = (itemId: string) => {
+    try {
+      dataStore.updateStakeholder(entityId, itemId, {
+        name: editData.name,
+        sharesOwned: parseInt(editData.sharesOwned) || 0
+      });
+      setEditingRow(null);
+      setEditData({});
+    } catch (error) {
+      console.error('Error updating stakeholder:', error);
+    }
+  };
+
+  const deleteStakeholder = (itemId: string, itemName: string) => {
+    if (confirm(`Are you sure you want to delete ${itemName}?`)) {
+      dataStore.deleteStakeholder(entityId, itemId);
+    }
+  };
 
   // Add icons to table data
   const enhancedTableData = tableData.map(item => ({
@@ -67,6 +105,9 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
               <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                 Fully Diluted %
               </th>
+              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Actions
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
@@ -80,8 +121,18 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
                       </div>
                     </div>
                     <div className="ml-3">
-                      <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                      <div className="text-sm text-gray-500">{item.type}</div>
+                      {editingRow === item.id ? (
+                        <Input
+                          value={editData.name}
+                          onChange={(e) => setEditData({...editData, name: e.target.value})}
+                          className="text-sm font-medium w-full"
+                        />
+                      ) : (
+                        <>
+                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
+                          <div className="text-sm text-gray-500">{item.type}</div>
+                        </>
+                      )}
                     </div>
                   </div>
                 </td>
@@ -96,7 +147,16 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
-                  {item.sharesOwned > 0 ? item.sharesOwned.toLocaleString() : '-'}
+                  {editingRow === item.id ? (
+                    <Input
+                      type="number"
+                      value={editData.sharesOwned}
+                      onChange={(e) => setEditData({...editData, sharesOwned: e.target.value})}
+                      className="text-right w-24"
+                    />
+                  ) : (
+                    item.sharesOwned > 0 ? item.sharesOwned.toLocaleString() : '-'
+                  )}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
                   ${item.pricePerShare.toFixed(3)}
@@ -109,6 +169,39 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
                   {item.fullyDiluted.toFixed(1)}%
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                  {editingRow === item.id ? (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => saveChanges(item.id)}
+                        className="text-green-600 hover:text-green-900"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={cancelEditing}
+                        className="text-gray-400 hover:text-gray-600"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center space-x-2">
+                      <button
+                        onClick={() => startEditing(item.id, item)}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => deleteStakeholder(item.id, item.name)}
+                        className="text-red-600 hover:text-red-900"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  )}
                 </td>
               </tr>
             ))}
@@ -133,6 +226,7 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
               <td className="px-6 py-3 text-right text-sm font-medium text-gray-900">
                 {((totalShares / capTable.authorizedShares) * 100).toFixed(1)}%
               </td>
+              <td className="px-6 py-3"></td>
             </tr>
             <tr>
               <td className="px-6 py-3 text-sm text-gray-600" colSpan={2}>
@@ -141,7 +235,7 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
               <td className="px-6 py-3 text-right text-sm text-gray-600">
                 {availableShares.toLocaleString()}
               </td>
-              <td className="px-6 py-3 text-right text-sm text-gray-500" colSpan={4}>
+              <td className="px-6 py-3 text-right text-sm text-gray-500" colSpan={5}>
                 Authorized: {capTable.authorizedShares.toLocaleString()} shares
               </td>
             </tr>

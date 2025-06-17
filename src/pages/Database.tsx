@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect } from 'react';
 import { dataStore } from '@/services/dataStore';
 import { Entity } from '@/types/entity';
 import { EntityCapTable, ShareClass } from '@/types/capTable';
+import { Edit, Check, X } from 'lucide-react';
 import { 
   Table, 
   TableBody, 
@@ -15,11 +15,15 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { Input } from '@/components/ui/input';
 
 const Database: React.FC = () => {
   const [entities, setEntities] = useState<Entity[]>([]);
   const [capTables, setCapTables] = useState<EntityCapTable[]>([]);
   const [shareClasses, setShareClasses] = useState<ShareClass[]>([]);
+  const [editingEntity, setEditingEntity] = useState<string | null>(null);
+  const [editingCapTable, setEditingCapTable] = useState<string | null>(null);
+  const [editData, setEditData] = useState<any>({});
 
   useEffect(() => {
     const loadData = () => {
@@ -50,12 +54,57 @@ const Database: React.FC = () => {
     }).format(amount);
   };
 
+  const startEditingEntity = (entity: Entity) => {
+    setEditingEntity(entity.id);
+    setEditData({
+      name: entity.name,
+      type: entity.type,
+      jurisdiction: entity.jurisdiction || '',
+      registrationNumber: entity.registrationNumber || ''
+    });
+  };
+
+  const startEditingCapTable = (capTable: EntityCapTable) => {
+    setEditingCapTable(capTable.entityId);
+    setEditData({
+      authorizedShares: capTable.authorizedShares,
+      totalValuation: capTable.totalValuation || 0
+    });
+  };
+
+  const cancelEditing = () => {
+    setEditingEntity(null);
+    setEditingCapTable(null);
+    setEditData({});
+  };
+
+  const saveEntityChanges = (entityId: string) => {
+    try {
+      dataStore.updateEntity(entityId, {
+        name: editData.name,
+        type: editData.type,
+        jurisdiction: editData.jurisdiction,
+        registrationNumber: editData.registrationNumber
+      });
+      setEditingEntity(null);
+      setEditData({});
+    } catch (error) {
+      console.error('Error updating entity:', error);
+    }
+  };
+
+  const deleteEntity = (entityId: string, entityName: string) => {
+    if (confirm(`Are you sure you want to delete ${entityName}? This will also remove all related cap table data.`)) {
+      dataStore.deleteEntity(entityId);
+    }
+  };
+
   return (
     <div className="h-screen flex flex-col">
       <div className="bg-white border-b border-gray-200 p-4">
         <h1 className="text-2xl font-bold text-gray-900">Database Viewer</h1>
         <p className="text-gray-600 mt-1">
-          Raw data from the definitive single source of truth
+          Raw data from the definitive single source of truth - Click edit to modify entries
         </p>
       </div>
 
@@ -71,39 +120,107 @@ const Database: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Entities Table</CardTitle>
-                <CardDescription>All registered entities in the system</CardDescription>
+                <CardDescription>All registered entities in the system - Click edit to modify</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Type</TableHead>
                       <TableHead>Jurisdiction</TableHead>
                       <TableHead>Registration #</TableHead>
                       <TableHead>Incorporation Date</TableHead>
-                      <TableHead>Canvas Position</TableHead>
-                      <TableHead>Created</TableHead>
-                      <TableHead>Version</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {entities.map((entity) => (
                       <TableRow key={entity.id}>
-                        <TableCell className="font-mono text-xs">{entity.id}</TableCell>
-                        <TableCell className="font-medium">{entity.name}</TableCell>
+                        <TableCell className="font-medium">
+                          {editingEntity === entity.id ? (
+                            <Input
+                              value={editData.name}
+                              onChange={(e) => setEditData({...editData, name: e.target.value})}
+                              className="w-full"
+                            />
+                          ) : (
+                            entity.name
+                          )}
+                        </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{entity.type}</Badge>
+                          {editingEntity === entity.id ? (
+                            <select
+                              value={editData.type}
+                              onChange={(e) => setEditData({...editData, type: e.target.value})}
+                              className="w-full px-3 py-1 border border-gray-300 rounded"
+                            >
+                              <option value="Corporation">Corporation</option>
+                              <option value="LLC">LLC</option>
+                              <option value="Partnership">Partnership</option>
+                              <option value="Trust">Trust</option>
+                              <option value="Individual">Individual</option>
+                            </select>
+                          ) : (
+                            <Badge variant="outline">{entity.type}</Badge>
+                          )}
                         </TableCell>
-                        <TableCell>{entity.jurisdiction || 'N/A'}</TableCell>
-                        <TableCell className="font-mono text-xs">{entity.registrationNumber || 'N/A'}</TableCell>
-                        <TableCell>{formatDate(entity.incorporationDate)}</TableCell>
+                        <TableCell>
+                          {editingEntity === entity.id ? (
+                            <Input
+                              value={editData.jurisdiction}
+                              onChange={(e) => setEditData({...editData, jurisdiction: e.target.value})}
+                              className="w-full"
+                            />
+                          ) : (
+                            entity.jurisdiction || 'N/A'
+                          )}
+                        </TableCell>
                         <TableCell className="font-mono text-xs">
-                          {entity.position ? `(${entity.position.x}, ${entity.position.y})` : 'N/A'}
+                          {editingEntity === entity.id ? (
+                            <Input
+                              value={editData.registrationNumber}
+                              onChange={(e) => setEditData({...editData, registrationNumber: e.target.value})}
+                              className="w-full"
+                            />
+                          ) : (
+                            entity.registrationNumber || 'N/A'
+                          )}
                         </TableCell>
-                        <TableCell>{formatDate(entity.createdAt)}</TableCell>
-                        <TableCell>{entity.version}</TableCell>
+                        <TableCell>{formatDate(entity.incorporationDate)}</TableCell>
+                        <TableCell>
+                          {editingEntity === entity.id ? (
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => saveEntityChanges(entity.id)}
+                                className="text-green-600 hover:text-green-900"
+                              >
+                                <Check className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                className="text-gray-400 hover:text-gray-600"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={() => startEditingEntity(entity)}
+                                className="text-indigo-600 hover:text-indigo-900"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                              <button
+                                onClick={() => deleteEntity(entity.id, entity.name)}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                <X className="h-4 w-4" />
+                              </button>
+                            </div>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -116,19 +233,19 @@ const Database: React.FC = () => {
             <Card>
               <CardHeader>
                 <CardTitle>Cap Tables</CardTitle>
-                <CardDescription>Capitalization tables for each entity with individual investments</CardDescription>
+                <CardDescription>Capitalization tables for each entity with individual investments - Click edit to modify</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Entity ID</TableHead>
                       <TableHead>Entity Name</TableHead>
                       <TableHead>Authorized Shares</TableHead>
                       <TableHead>Investments Count</TableHead>
                       <TableHead>Total Invested Shares</TableHead>
                       <TableHead>Available Shares</TableHead>
                       <TableHead>Total Valuation</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -138,13 +255,63 @@ const Database: React.FC = () => {
                       const availableShares = capTable.authorizedShares - totalInvestedShares;
                       return (
                         <TableRow key={capTable.entityId}>
-                          <TableCell className="font-mono text-xs">{capTable.entityId}</TableCell>
                           <TableCell className="font-medium">{entity?.name || 'Unknown'}</TableCell>
-                          <TableCell>{capTable.authorizedShares.toLocaleString()}</TableCell>
+                          <TableCell>
+                            {editingCapTable === capTable.entityId ? (
+                              <Input
+                                type="number"
+                                value={editData.authorizedShares}
+                                onChange={(e) => setEditData({...editData, authorizedShares: parseInt(e.target.value) || 0})}
+                                className="w-32"
+                              />
+                            ) : (
+                              capTable.authorizedShares.toLocaleString()
+                            )}
+                          </TableCell>
                           <TableCell>{capTable.investments.length}</TableCell>
                           <TableCell>{totalInvestedShares.toLocaleString()}</TableCell>
                           <TableCell>{availableShares.toLocaleString()}</TableCell>
-                          <TableCell>{formatCurrency(capTable.totalValuation)}</TableCell>
+                          <TableCell>
+                            {editingCapTable === capTable.entityId ? (
+                              <Input
+                                type="number"
+                                value={editData.totalValuation}
+                                onChange={(e) => setEditData({...editData, totalValuation: parseInt(e.target.value) || 0})}
+                                className="w-32"
+                              />
+                            ) : (
+                              formatCurrency(capTable.totalValuation)
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {editingCapTable === capTable.entityId ? (
+                              <div className="flex items-center space-x-2">
+                                <button
+                                  onClick={() => {
+                                    // Note: Would need to implement cap table update in dataStore
+                                    console.log('Cap table update not yet implemented');
+                                    cancelEditing();
+                                  }}
+                                  className="text-green-600 hover:text-green-900"
+                                >
+                                  <Check className="h-4 w-4" />
+                                </button>
+                                <button
+                                  onClick={cancelEditing}
+                                  className="text-gray-400 hover:text-gray-600"
+                                >
+                                  <X className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => startEditingCapTable(capTable)}
+                                className="text-indigo-600 hover:text-indigo-900"
+                              >
+                                <Edit className="h-4 w-4" />
+                              </button>
+                            )}
+                          </TableCell>
                         </TableRow>
                       );
                     })}
