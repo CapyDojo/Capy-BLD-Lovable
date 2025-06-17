@@ -6,7 +6,8 @@ import { NameField } from './forms/NameField';
 import { TypeField } from './forms/TypeField';
 import { IndividualFieldsForm } from './forms/IndividualFieldsForm';
 import { EntityFieldsForm } from './forms/EntityFieldsForm';
-import { migrationBridge } from '@/services/dataStore/MigrationBridge';
+import { getUnifiedRepository } from '@/services/repositories/unified';
+import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
 
 interface EntityDetailsPanelProps {
   selectedNode: Node;
@@ -24,31 +25,45 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
   const [entityData, setEntityData] = useState(selectedNode?.data || {});
   const [refreshKey, setRefreshKey] = useState(0);
   const [localName, setLocalName] = useState(String(selectedNode?.data?.name || ''));
+  const [repository, setRepository] = useState<IUnifiedEntityRepository | null>(null);
 
-  // Enable migration for this component
+  // Initialize unified repository
   useEffect(() => {
-    migrationBridge.enableMigrationFor('EntityDetailsPanel');
-    console.log('🔄 EntityDetailsPanel migrated to use enterprise store');
+    const initRepository = async () => {
+      try {
+        console.log('🔄 EntityDetailsPanel: Initializing unified repository...');
+        const repo = await getUnifiedRepository('ENTERPRISE'); // Use enterprise by default
+        setRepository(repo);
+        console.log('✅ EntityDetailsPanel: Unified repository initialized');
+      } catch (error) {
+        console.error('❌ EntityDetailsPanel: Failed to initialize repository:', error);
+        // Fallback to legacy if needed
+        const fallbackRepo = await getUnifiedRepository('LEGACY');
+        setRepository(fallbackRepo);
+      }
+    };
+
+    initRepository();
   }, []);
 
-  // Get the appropriate store (enterprise or legacy based on migration status)
-  const dataStore = migrationBridge.getStoreFor('EntityDetailsPanel');
-
-  // Subscribe to data store changes
+  // Subscribe to repository changes
   useEffect(() => {
-    console.log('🔗 EntityDetailsPanel subscribing to data store changes');
-    const unsubscribe = dataStore.subscribe(async () => {
-      console.log('📡 EntityDetailsPanel received data store update');
+    if (!repository) return;
+
+    console.log('🔗 EntityDetailsPanel: Subscribing to unified repository events');
+    const unsubscribe = repository.subscribe(async (event) => {
+      console.log('📡 EntityDetailsPanel: Received repository event:', event.type, event.entityId);
       
-      // Check if selected entity still exists
-      if (selectedNode) {
-        const currentEntity = await dataStore.getEntity(selectedNode.id);
-        
-        if (!currentEntity) {
+      if (event.entityId === selectedNode?.id) {
+        if (event.type === 'ENTITY_DELETED') {
           console.log('🚪 Selected entity was deleted, closing panel');
           onClose();
           return;
-        } else {
+        }
+        
+        // Refresh entity data
+        const currentEntity = await repository.getEntity(selectedNode.id);
+        if (currentEntity) {
           console.log('📝 Updating entity data in panel');
           const newEntityData = {
             name: currentEntity.name,
@@ -63,14 +78,15 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
       
       setRefreshKey(prev => prev + 1);
     });
+
     return unsubscribe;
-  }, [selectedNode, onClose, dataStore]);
+  }, [repository, selectedNode, onClose]);
 
   // Update local data when selectedNode changes
   useEffect(() => {
     const updateEntityData = async () => {
-      if (selectedNode) {
-        const entity = await dataStore.getEntity(selectedNode.id);
+      if (selectedNode && repository) {
+        const entity = await repository.getEntity(selectedNode.id);
         
         if (entity) {
           const newEntityData = {
@@ -82,44 +98,44 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
           setEntityData(newEntityData);
           setLocalName(String(entity.name || ''));
         } else {
-          // Entity no longer exists, close panel
-          console.log('🚪 Entity no longer exists in panel effect, closing');
+          console.log('🚪 Entity no longer exists in repository, closing panel');
           onClose();
         }
       }
     };
 
     updateEntityData();
-  }, [selectedNode, refreshKey, onClose, dataStore]);
+  }, [selectedNode, refreshKey, onClose, repository]);
 
-  // Don't render if entity doesn't exist
-  if (!isOpen || !selectedNode) {
+  // Don't render if no repository or entity doesn't exist
+  if (!isOpen || !selectedNode || !repository) {
     return null;
   }
 
-  // Double-check entity exists before rendering - use async check
+  // Double-check entity exists before rendering
   useEffect(() => {
     const checkEntityExists = async () => {
-      const entityExists = await dataStore.getEntity(selectedNode.id);
+      const entityExists = await repository.getEntity(selectedNode.id);
       if (!entityExists) {
         onClose();
       }
     };
     checkEntityExists();
-  }, [selectedNode.id, dataStore, onClose]);
+  }, [selectedNode.id, repository, onClose]);
 
   const handleUpdateField = async (field: string, value: string) => {
-    console.log('📝 EntityDetailsPanel updating field:', field, value);
+    if (!repository) return;
+    
+    console.log('📝 EntityDetailsPanel: Updating field via unified repository:', field, value);
     const updates = { [field]: value };
     setEntityData(prev => ({ ...prev, ...updates }));
     onUpdateNode(updates);
 
-    // Update in the appropriate store
     try {
-      await dataStore.updateEntity(selectedNode.id, updates, 'user', `Updated ${field}`);
-      console.log('✅ Entity updated successfully in store');
+      await repository.updateEntity(selectedNode.id, updates, 'user', `Updated ${field}`);
+      console.log('✅ Entity updated successfully in unified repository');
     } catch (error) {
-      console.error('❌ Error updating entity in store:', error);
+      console.error('❌ Error updating entity in unified repository:', error);
     }
   };
 
@@ -159,8 +175,8 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
       </div>
       
       {/* Migration status indicator */}
-      <div className="mb-4 p-2 bg-green-50 border border-green-200 rounded text-xs text-green-700">
-        ✅ Using Enterprise Store (Phase 1 Migration)
+      <div className="mb-4 p-2 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700">
+        🚀 Using Unified Repository Architecture (Phase 2 Migration)
       </div>
       
       <div className="space-y-4">
