@@ -10,6 +10,7 @@ import { CapTableEditor } from "@/components/cap-table/CapTableEditor";
 import { EntityCanvas } from "@/components/canvas/EntityCanvas";
 import { DocumentRepository } from "@/components/documents/DocumentRepository";
 import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
+import DataStructure from "@/pages/DataStructure";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -44,6 +45,11 @@ const App = () => (
           <Route path="/compliance" element={
             <MainLayout>
               <ComplianceTimeline />
+            </MainLayout>
+          } />
+          <Route path="/data-structure" element={
+            <MainLayout>
+              <DataStructure />
             </MainLayout>
           } />
           <Route path="*" element={<NotFound />} />
