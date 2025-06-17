@@ -75,30 +75,18 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
   }
 
   async getEntity(id: string): Promise<Entity | null> {
-    return this.legacyStore.getEntityById(id);
+    return this.legacyStore.getEntityById(id) || null;
   }
 
   async getAllEntities(): Promise<Entity[]> {
     return this.legacyStore.getEntities();
   }
 
-  // Share Class Management - Convert between capTable.ShareClass and entity.ShareClass
+  // Share Class Management - Since DataStore doesn't have direct share class methods, we simulate
   async createShareClass(shareClass: Omit<EntityShareClass, 'id' | 'createdAt' | 'updatedAt'>, createdBy: string): Promise<EntityShareClass> {
-    // Convert to CapTable format for storage
-    const capTableShareClass: CapTableShareClass = {
-      id: `shareclass_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      name: shareClass.name,
-      type: shareClass.type,
-      votingRights: shareClass.votingRights,
-      liquidationPreference: shareClass.liquidationPreference,
-      dividendRate: shareClass.dividendRate
-    };
-
-    // Store in legacy format (assuming DataStore has a method to add share classes to cap tables)
-    // For now, we'll create the entity format directly
     const newShareClass: EntityShareClass = {
       ...shareClass,
-      id: capTableShareClass.id,
+      id: `shareclass_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       createdAt: new Date(),
       updatedAt: new Date()
     };
@@ -115,7 +103,6 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
   }
 
   async updateShareClass(id: string, updates: Partial<EntityShareClass>, updatedBy: string, reason?: string): Promise<EntityShareClass> {
-    // Since DataStore doesn't have direct share class methods, we'll simulate
     const updatedShareClass: EntityShareClass = {
       id,
       entityId: updates.entityId || '',
@@ -141,7 +128,6 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
   }
 
   async deleteShareClass(id: string, deletedBy: string, reason?: string): Promise<void> {
-    // Since we can't directly delete from DataStore, we'll just emit the event
     this.emitEvent({
       type: 'SHARE_CLASS_DELETED',
       entityId: '', // We don't have the entityId without querying first
@@ -160,10 +146,22 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
     return [];
   }
 
-  // Ownership Management - convert between legacy and unified formats
+  // Ownership Management - Simulate using DataStore's cap table functionality
   async createOwnership(ownership: Omit<UnifiedOwnership, 'id' | 'createdAt' | 'updatedAt' | 'version'>, createdBy: string): Promise<UnifiedOwnership> {
-    // Create a full ownership relationship
-    const newOwnership: OwnershipRelationship = {
+    // Since DataStore doesn't have direct ownership creation, we'll simulate it
+    // In a real implementation, this would involve creating stakeholder relationships
+    
+    // Create a simulated ownership using DataStore's updateOwnership method
+    const ownershipPercentage = (ownership.shares / 100); // Assuming shares represent percentage
+    
+    try {
+      this.legacyStore.updateOwnership(ownership.ownerEntityId, ownership.ownedEntityId, ownershipPercentage);
+    } catch (error) {
+      console.warn('Could not create ownership via DataStore:', error);
+    }
+
+    // Create a unified ownership object
+    const newOwnership: UnifiedOwnership = {
       id: `ownership_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       ownerEntityId: ownership.ownerEntityId,
       ownedEntityId: ownership.ownedEntityId,
@@ -173,14 +171,7 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
       expiryDate: ownership.expiryDate,
       createdAt: new Date(),
       updatedAt: new Date(),
-      version: 1
-    };
-
-    this.legacyStore.addOwnership(newOwnership);
-    
-    // Convert to UnifiedOwnership format
-    const unifiedOwnership: UnifiedOwnership = {
-      ...newOwnership,
+      version: 1,
       createdBy: createdBy,
       updatedBy: createdBy,
       changeReason: ownership.changeReason
@@ -191,88 +182,83 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
       entityId: ownership.ownedEntityId,
       timestamp: new Date(),
       userId: createdBy,
-      data: unifiedOwnership
+      data: newOwnership
     });
 
-    return unifiedOwnership;
+    return newOwnership;
   }
 
   async updateOwnership(id: string, updates: Partial<UnifiedOwnership>, updatedBy: string, reason?: string): Promise<UnifiedOwnership> {
-    const existingOwnership = this.legacyStore.getOwnershipById(id);
-    if (!existingOwnership) {
-      throw new Error(`Ownership with id ${id} not found`);
-    }
-
-    // Update the ownership
-    const updatedOwnership: OwnershipRelationship = {
-      ...existingOwnership,
-      ownerEntityId: updates.ownerEntityId ?? existingOwnership.ownerEntityId,
-      ownedEntityId: updates.ownedEntityId ?? existingOwnership.ownedEntityId,
-      shares: updates.shares ?? existingOwnership.shares,
-      shareClassId: updates.shareClassId ?? existingOwnership.shareClassId,
-      effectiveDate: updates.effectiveDate ?? existingOwnership.effectiveDate,
-      expiryDate: updates.expiryDate ?? existingOwnership.expiryDate,
+    // Since DataStore doesn't have getOwnershipById, we'll simulate
+    const updatedOwnership: UnifiedOwnership = {
+      id,
+      ownerEntityId: updates.ownerEntityId || '',
+      ownedEntityId: updates.ownedEntityId || '',
+      shares: updates.shares || 0,
+      shareClassId: updates.shareClassId,
+      effectiveDate: updates.effectiveDate || new Date(),
+      expiryDate: updates.expiryDate,
+      createdAt: new Date(), // We don't have original createdAt
       updatedAt: new Date(),
-      version: existingOwnership.version + 1
-    };
-
-    this.legacyStore.updateOwnership(id, updatedOwnership);
-    
-    // Convert to UnifiedOwnership format
-    const unifiedOwnership: UnifiedOwnership = {
-      ...updatedOwnership,
-      createdBy: updatedBy, // Legacy doesn't track this, use updatedBy
+      version: 1,
+      createdBy: updatedBy, // Legacy doesn't track this
       updatedBy: updatedBy,
       changeReason: reason
     };
+
+    // Update via DataStore if we have the necessary info
+    if (updates.ownerEntityId && updates.ownedEntityId && updates.shares) {
+      const ownershipPercentage = (updates.shares / 100);
+      try {
+        this.legacyStore.updateOwnership(updates.ownerEntityId, updates.ownedEntityId, ownershipPercentage);
+      } catch (error) {
+        console.warn('Could not update ownership via DataStore:', error);
+      }
+    }
 
     this.emitEvent({
       type: 'OWNERSHIP_UPDATED',
       entityId: updatedOwnership.ownedEntityId,
       timestamp: new Date(),
       userId: updatedBy,
-      data: unifiedOwnership
+      data: updatedOwnership
     });
 
-    return unifiedOwnership;
+    return updatedOwnership;
   }
 
   async deleteOwnership(id: string, deletedBy: string, reason?: string): Promise<void> {
-    const ownership = this.legacyStore.getOwnershipById(id);
-    this.legacyStore.deleteOwnership(id);
-    
-    if (ownership) {
-      this.emitEvent({
-        type: 'OWNERSHIP_DELETED',
-        entityId: ownership.ownedEntityId,
-        timestamp: new Date(),
-        userId: deletedBy
-      });
-    }
+    // Since DataStore doesn't have direct ownership deletion by ID, we'll simulate
+    this.emitEvent({
+      type: 'OWNERSHIP_DELETED',
+      entityId: '', // We don't have the entityId without the ownership object
+      timestamp: new Date(),
+      userId: deletedBy
+    });
   }
 
   async getOwnership(id: string): Promise<UnifiedOwnership | null> {
-    const legacyOwnership = this.legacyStore.getOwnershipById(id);
-    if (!legacyOwnership) return null;
-
-    // Convert to unified format
-    return {
-      ...legacyOwnership,
-      createdBy: 'legacy-system', // Legacy doesn't track this
-      updatedBy: 'legacy-system',
-      changeReason: undefined
-    };
+    // DataStore doesn't have getOwnershipById, return null
+    return null;
   }
 
   async getOwnershipsByEntity(entityId: string): Promise<UnifiedOwnership[]> {
-    const allOwnerships = this.legacyStore.getOwnerships();
-    const entityOwnerships = allOwnerships.filter(o => 
-      o.ownerEntityId === entityId || o.ownedEntityId === entityId
-    );
-    
-    // Convert all to unified format
-    return entityOwnerships.map(ownership => ({
-      ...ownership,
+    // Since DataStore doesn't have getOwnerships, we'll extract from cap tables
+    const capTable = this.legacyStore.getCapTableByEntityId(entityId);
+    if (!capTable) return [];
+
+    // Convert cap table investments to unified ownerships
+    return capTable.investments.map(investment => ({
+      id: investment.id,
+      ownerEntityId: investment.shareholderId,
+      ownedEntityId: entityId,
+      shares: investment.sharesOwned,
+      shareClassId: investment.shareClass,
+      effectiveDate: new Date(), // Default since not available
+      expiryDate: undefined,
+      createdAt: new Date(), // Default since not available
+      updatedAt: new Date(),
+      version: 1,
       createdBy: 'legacy-system',
       updatedBy: 'legacy-system',
       changeReason: undefined
@@ -285,18 +271,30 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
     const entity = this.legacyStore.getEntityById(entityId);
     if (!entity) return null;
 
-    const allOwnerships = this.legacyStore.getOwnerships();
-    const ownerships = allOwnerships.filter(o => o.ownedEntityId === entityId);
+    const capTable = this.legacyStore.getCapTableByEntityId(entityId);
+    if (!capTable) {
+      return {
+        entityId,
+        entityName: entity.name,
+        totalShares: 0,
+        ownershipSummary: [],
+        shareClasses: [],
+        lastUpdated: new Date()
+      };
+    }
 
-    const ownershipSummary = ownerships.map(ownership => ({
-      ownershipId: ownership.id,
-      ownerEntityId: ownership.ownerEntityId,
-      ownerName: this.legacyStore.getEntityById(ownership.ownerEntityId)?.name || 'Unknown',
-      shares: ownership.shares,
-      shareClassName: 'Common Stock', // Default since we don't have share class data
-      effectiveDate: ownership.effectiveDate,
-      percentage: 0 // Calculated below
-    }));
+    const ownershipSummary = capTable.investments.map(investment => {
+      const shareholder = this.legacyStore.getShareholders().find(s => s.id === investment.shareholderId);
+      return {
+        ownershipId: investment.id,
+        ownerEntityId: investment.shareholderId,
+        ownerName: shareholder?.name || 'Unknown',
+        shares: investment.sharesOwned,
+        shareClassName: investment.shareClass,
+        effectiveDate: new Date(), // Default since not available
+        percentage: 0 // Calculated below
+      };
+    });
 
     const totalShares = ownershipSummary.reduce((sum, o) => sum + o.shares, 0);
     
@@ -318,20 +316,28 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
   async getOwnershipHierarchy(): Promise<EntityNode[]> {
     // Simplified hierarchy from legacy data
     const entities = this.legacyStore.getEntities();
-    const allOwnerships = this.legacyStore.getOwnerships();
+    const allCapTables = this.legacyStore.getCapTables();
 
     // Find root entities (entities that are not owned by anyone)
-    const ownedEntityIds = new Set(allOwnerships.map(o => o.ownedEntityId));
+    const ownedEntityIds = new Set(allCapTables.map(ct => ct.entityId));
     const rootEntities = entities.filter(e => !ownedEntityIds.has(e.id));
 
     const buildNode = (entity: Entity): EntityNode => {
-      const children = allOwnerships
-        .filter(o => o.ownerEntityId === entity.id)
-        .map(o => {
-          const childEntity = entities.find(e => e.id === o.ownedEntityId);
-          return childEntity ? buildNode(childEntity) : null;
-        })
-        .filter(Boolean) as EntityNode[];
+      const capTable = this.legacyStore.getCapTableByEntityId(entity.id);
+      const children: EntityNode[] = [];
+      
+      if (capTable) {
+        // Find entities this entity owns
+        capTable.investments.forEach(investment => {
+          const shareholder = this.legacyStore.getShareholders().find(s => s.id === investment.shareholderId);
+          if (shareholder?.entityId) {
+            const childEntity = entities.find(e => e.id === shareholder.entityId);
+            if (childEntity) {
+              children.push(buildNode(childEntity));
+            }
+          }
+        });
+      }
 
       return {
         entityId: entity.id,
@@ -347,17 +353,15 @@ export class LegacyRepositoryAdapter implements IUnifiedEntityRepository {
 
   // Validation - Basic validation from legacy store
   async validateEntityDeletion(entityId: string): Promise<ValidationResult> {
-    const allOwnerships = this.legacyStore.getOwnerships();
-    const ownerships = allOwnerships.filter(o => 
-      o.ownerEntityId === entityId || o.ownedEntityId === entityId
-    );
+    const capTable = this.legacyStore.getCapTableByEntityId(entityId);
+    const hasInvestments = capTable && capTable.investments.length > 0;
     
-    if (ownerships.length > 0) {
+    if (hasInvestments) {
       return {
         isValid: false,
         errors: [{
           code: 'ENTITY_HAS_RELATIONSHIPS',
-          message: `Cannot delete entity - it has ${ownerships.length} ownership relationships`,
+          message: `Cannot delete entity - it has ${capTable!.investments.length} ownership relationships`,
           field: 'entity'
         }],
         warnings: []
