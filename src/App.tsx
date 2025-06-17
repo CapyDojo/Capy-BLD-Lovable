@@ -14,8 +14,23 @@ import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import NotFound from "./pages/NotFound";
 
-// Import validation suite to make console functions available
-import "@/services/dataStore/MigrationValidation";
+// Import and expose validation suite
+import { migrationValidator } from "@/services/dataStore/MigrationValidation";
+import { migrationBridge } from "@/services/dataStore/MigrationBridge";
+
+// Explicitly expose functions to global scope
+if (typeof window !== 'undefined') {
+  (window as any).runMigrationTests = () => migrationValidator.runAllTests();
+  (window as any).runMigrationTest = (testName: string) => migrationValidator.runSingleTest(testName);
+  (window as any).getMigrationTestNames = () => migrationValidator.getTestNames();
+  (window as any).getMigrationStatus = () => migrationBridge.getMigrationStatus();
+  
+  console.log('🧪 Migration test functions exposed to console:');
+  console.log('  - runMigrationTests()');
+  console.log('  - runMigrationTest(name)');
+  console.log('  - getMigrationTestNames()');
+  console.log('  - getMigrationStatus()');
+}
 
 const queryClient = new QueryClient();
 
