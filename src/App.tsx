@@ -15,76 +15,47 @@ import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import NotFound from "./pages/NotFound";
 
-// Import migration modules
-import { migrationValidator } from '@/services/dataStore/MigrationValidation';
-import { migrationBridge } from '@/services/dataStore/MigrationBridge';
+// Import the new simple test runner
+import { simpleTestRunner } from '@/services/testing/SimpleTestRunner';
 
-// Create a global testing object
-const setupGlobalFunctions = () => {
-  console.log('🔧 Setting up global test functions...');
-  
-  // Create a global testing namespace
-  (window as any).migrationTest = {
-    runAllTests: () => {
-      console.log('🧪 Running all migration tests...');
-      return migrationValidator.runAllTests();
-    },
-    
-    runSingleTest: (testName: string) => {
-      console.log(`🧪 Running single test: ${testName}`);
-      return migrationValidator.runSingleTest(testName);
-    },
-    
-    getTestNames: () => {
-      console.log('📋 Getting test names...');
-      return migrationValidator.getTestNames();
-    },
-    
-    getMigrationStatus: () => {
-      console.log('📊 Getting migration status...');
-      return migrationBridge.getMigrationStatus();
-    },
-    
-    test: () => {
-      console.log('✅ Test function works!');
-      return 'Hello from migration test!';
-    }
-  };
-  
-  // Also expose individual functions for backward compatibility
-  (window as any).runMigrationTests = (window as any).migrationTest.runAllTests;
-  (window as any).runMigrationTest = (window as any).migrationTest.runSingleTest;
-  (window as any).getMigrationTestNames = (window as any).migrationTest.getTestNames;
-  (window as any).getMigrationStatus = (window as any).migrationTest.getMigrationStatus;
-  (window as any).testFunction = (window as any).migrationTest.test;
-  
-  console.log('✅ Global functions setup complete!');
-  console.log('🎯 Try these commands:');
-  console.log('  - migrationTest.test()');
-  console.log('  - migrationTest.runAllTests()');
-  console.log('  - testFunction()');
-  console.log('  - runMigrationTests()');
-  
-  // Force verify they're accessible
-  console.log('🔍 Verification:');
-  console.log('  - migrationTest exists:', typeof (window as any).migrationTest);
-  console.log('  - testFunction exists:', typeof (window as any).testFunction);
-  console.log('  - runMigrationTests exists:', typeof (window as any).runMigrationTests);
+// Simple, direct global function exposure
+console.log('🔧 Setting up simple test functions...');
+
+// Expose simple test functions directly
+(window as any).testFunction = () => {
+  console.log('✅ Global testFunction called!');
+  return simpleTestRunner.test();
 };
 
-// Setup immediately
-setupGlobalFunctions();
+(window as any).runAllTests = () => {
+  console.log('🧪 Global runAllTests called!');
+  return simpleTestRunner.runAllTests();
+};
+
+(window as any).getTestNames = () => {
+  console.log('📋 Global getTestNames called!');
+  return simpleTestRunner.getTestNames();
+};
+
+// Also expose the test runner itself
+(window as any).simpleTestRunner = simpleTestRunner;
+
+console.log('✅ Simple test functions exposed!');
+console.log('🎯 Try these commands:');
+console.log('  - testFunction()');
+console.log('  - runAllTests()');
+console.log('  - getTestNames()');
+console.log('  - simpleTestRunner.test()');
+
+// Verify immediately
+console.log('🔍 Immediate verification:');
+console.log('  - testFunction exists:', typeof (window as any).testFunction);
+console.log('  - runAllTests exists:', typeof (window as any).runAllTests);
+console.log('  - simpleTestRunner exists:', typeof (window as any).simpleTestRunner);
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Also setup on mount as a fallback
-  React.useEffect(() => {
-    setTimeout(() => {
-      setupGlobalFunctions();
-    }, 100);
-  }, []);
-
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
