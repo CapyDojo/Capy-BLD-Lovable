@@ -8,7 +8,8 @@ import {
   Calendar, 
   Settings,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Database
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +22,7 @@ const navigation = [
   { name: 'Dashboard', href: '/', icon: PieChart },
   { name: 'Structure', href: '/structure', icon: Building2 },
   { name: 'Cap Table', href: '/cap-table', icon: PieChart },
+  { name: 'Data Structure', href: '/data-structure', icon: Database },
   { name: 'Documents', href: '/documents', icon: Folder },
   { name: 'Compliance', href: '/compliance', icon: Calendar },
   { name: 'Settings', href: '/settings', icon: Settings },
