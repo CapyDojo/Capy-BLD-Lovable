@@ -1,4 +1,3 @@
-
 import { Entity, ShareClass } from '@/types/entity';
 import { 
   UnifiedOwnership, 
@@ -10,7 +9,8 @@ import {
   MigrationResult,
   OwnershipQuery,
   EntitySearchQuery,
-  BusinessRuleViolation
+  BusinessRuleViolation,
+  ShareClassSummary
 } from '@/types/unified';
 import { 
   IEnterpriseDataStore, 
@@ -468,8 +468,24 @@ export class EnterpriseDataStore implements IEnterpriseDataStore {
     const ownerships = Array.from(this.ownerships.values())
       .filter(o => o.ownedEntityId === entityId);
 
-    const shareClasses = Array.from(this.shareClasses.values())
+    const shareClassEntries = Array.from(this.shareClasses.values())
       .filter(sc => sc.entityId === entityId);
+
+    // Build share class summaries with issued shares calculation
+    const shareClassSummaries: ShareClassSummary[] = shareClassEntries.map(sc => {
+      const issuedShares = ownerships
+        .filter(o => o.shareClassId === sc.id)
+        .reduce((sum, o) => sum + o.shares, 0);
+      
+      return {
+        id: sc.id,
+        name: sc.name,
+        type: sc.type,
+        authorizedShares: sc.totalAuthorizedShares,
+        issuedShares,
+        votingRights: sc.votingRights
+      };
+    });
 
     // Calculate totals and build ownership summary
     const ownershipSummary = ownerships.map(ownership => {
@@ -499,7 +515,7 @@ export class EnterpriseDataStore implements IEnterpriseDataStore {
       entityName: entity.name,
       totalShares,
       ownershipSummary,
-      shareClasses,
+      shareClasses: shareClassSummaries,
       lastUpdated: new Date()
     };
   }
@@ -731,7 +747,7 @@ export class EnterpriseDataStore implements IEnterpriseDataStore {
     return { isValid: true, errors: [], warnings: [] };
   }
 
-  private async validateEntityUpdate(id: string, updates: Partial<Entity>): Promise<ValidationResult> {
+  private async validateEntityUpdate(id: string, updates: Partial<Entity>): ValidationResult {
     if (updates.name !== undefined && !updates.name?.trim()) {
       return {
         isValid: false,
@@ -796,7 +812,7 @@ export class EnterpriseDataStore implements IEnterpriseDataStore {
       userId,
       startTime: new Date(),
       operations: [],
-      status: 'ACTIVE'
+      status: 'PENDING'
     };
 
     this.transactions.set(transactionId, transaction);
@@ -846,7 +862,7 @@ export class EnterpriseDataStore implements IEnterpriseDataStore {
 
   async getActiveTransactions(): Promise<DataTransaction[]> {
     return Array.from(this.transactions.values())
-      .filter(tx => tx.status === 'ACTIVE');
+      .filter(tx => tx.status === 'PENDING');
   }
 
   // Data Migration and Backup

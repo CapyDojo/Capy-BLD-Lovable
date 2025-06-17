@@ -1,25 +1,29 @@
 
-// PHASE 1: New Unified Data Models for Enterprise Architecture
-// This file defines the new unified data model that will replace the current dual system
+// PHASE 1: Unified Data Model - Single Source of Truth
+// This replaces the current dual entity/cap-table system
 
+import { Entity, ShareClass } from './entity';
+
+// Single unified ownership model (replaces both OwnershipRelationship and Investment)
 export interface UnifiedOwnership {
   id: string;
-  ownerEntityId: string;    // References Entity.id - who owns
-  ownedEntityId: string;    // References Entity.id - what is owned  
-  shares: number;           // Source of truth for ownership amount
+  ownerEntityId: string;    // References Entity.id
+  ownedEntityId: string;    // References Entity.id  
+  shares: number;           // Source of truth for ownership
   shareClassId: string;     // References ShareClass.id
-  effectiveDate: Date;      // When ownership became effective
-  expiryDate?: Date;        // Optional expiry for time-bound ownership
+  effectiveDate: Date;
+  expiryDate?: Date;
   
-  // Audit fields for legal compliance
-  createdBy: string;        // User who created this ownership
+  // Audit fields
+  createdBy: string;
   createdAt: Date;
-  updatedBy: string;        // User who last updated this
+  updatedBy: string;
   updatedAt: Date;
-  version: number;          // For optimistic locking
-  changeReason?: string;    // Why this change was made
+  version: number;
+  changeReason?: string;
 }
 
+// Audit trail for legal compliance
 export interface AuditEntry {
   id: string;
   timestamp: Date;
@@ -28,12 +32,24 @@ export interface AuditEntry {
   entityType: 'ENTITY' | 'OWNERSHIP' | 'SHARE_CLASS';
   entityId: string;         // What was changed
   relatedEntityIds?: string[]; // Related entities affected
-  previousState?: any;      // Before state (for rollback capability)
+  previousState?: any;      // Before state (for rollback)
   newState?: any;          // After state
   changeReason?: string;    // Why the change was made
   validationsPassed: string[]; // What validations were checked
-  ipAddress?: string;       // For security audit
-  userAgent?: string;       // Browser/client info
+}
+
+// Validation system
+export interface ValidationError {
+  code: string;
+  message: string;
+  field: string;
+  relatedEntityId?: string;
+}
+
+export interface ValidationWarning {
+  code: string;
+  message: string;
+  field: string;
 }
 
 export interface ValidationResult {
@@ -42,109 +58,7 @@ export interface ValidationResult {
   warnings: ValidationWarning[];
 }
 
-export interface ValidationError {
-  code: string;
-  message: string;
-  field?: string;
-  relatedEntityId?: string;
-}
-
-export interface ValidationWarning {
-  code: string;
-  message: string;
-  field?: string;
-}
-
-// Computed view types - these are generated from the unified ownership data
-export interface CapTableView {
-  entityId: string;
-  entityName: string;
-  authorizedShares: number;
-  totalIssuedShares: number;
-  availableShares: number;
-  shareClasses: ShareClassSummary[];
-  ownerships: OwnershipSummary[];
-  lastUpdated: Date;
-  calculatedAt: Date; // When this view was computed
-}
-
-export interface ShareClassSummary {
-  id: string;
-  name: string;
-  type: string;
-  authorizedShares: number;
-  issuedShares: number;
-  votingRights: boolean;
-  liquidationPreference?: number;
-  dividendRate?: number;
-}
-
-export interface OwnershipSummary {
-  ownershipId: string;
-  ownerEntityId: string;
-  ownerName: string;
-  ownerType: string;
-  shares: number;
-  percentage: number;        // Calculated as shares / totalIssuedShares
-  fullyDilutedPercentage: number; // Calculated as shares / authorizedShares
-  shareClassId: string;
-  shareClassName: string;
-  effectiveDate: Date;
-  expiryDate?: Date;
-}
-
-// Hierarchy view for ownership chain visualization
-export interface EntityNode {
-  entityId: string;
-  entityName: string;
-  entityType: string;
-  level: number;            // Hierarchy level (0 = root entities)
-  parentOwners: string[];   // Entity IDs that own this entity
-  childEntities: string[];  // Entity IDs that this entity owns
-  totalShares: number;
-  ownedShares: number;      // How many shares this entity holds in others
-}
-
-// Transaction support for atomic operations
-export interface DataTransaction {
-  id: string;
-  userId: string;
-  startedAt: Date;
-  operations: TransactionOperation[];
-  status: 'PENDING' | 'COMMITTED' | 'ROLLED_BACK';
-  completedAt?: Date;
-  rollbackReason?: string;
-}
-
-export interface TransactionOperation {
-  type: 'CREATE' | 'UPDATE' | 'DELETE';
-  entityType: 'ENTITY' | 'OWNERSHIP' | 'SHARE_CLASS';
-  entityId: string;
-  previousState?: any;
-  newState?: any;
-  order: number; // Execution order within transaction
-}
-
-// Migration types for converting from old system
-export interface MigrationResult {
-  success: boolean;
-  entitiesMigrated: number;
-  ownershipsMigrated: number;
-  shareClassesMigrated: number;
-  conflictsFound: MigrationConflict[];
-  warnings: string[];
-  backupLocation: string;
-}
-
-export interface MigrationConflict {
-  type: 'OWNERSHIP_MISMATCH' | 'MISSING_ENTITY' | 'INVALID_SHARES' | 'CIRCULAR_OWNERSHIP';
-  description: string;
-  oldSystemData: any;
-  suggestedResolution: string;
-  affectedEntityIds: string[];
-}
-
-// Business rule validation types
+// Business rules for data integrity
 export type BusinessRule = 
   | 'NO_CIRCULAR_OWNERSHIP'
   | 'NO_OVER_ALLOCATION'
@@ -163,24 +77,86 @@ export interface BusinessRuleViolation {
   suggestedAction: string;
 }
 
-// Search and query types for the new system
-export interface OwnershipQuery {
-  ownerEntityId?: string;
-  ownedEntityId?: string;
-  shareClassId?: string;
-  minShares?: number;
-  maxShares?: number;
-  effectiveAfter?: Date;
-  effectiveBefore?: Date;
-  includeExpired?: boolean;
+// Computed views (always fresh from source data)
+export interface ShareClassSummary {
+  id: string;
+  name: string;
+  type: string;
+  authorizedShares: number;
+  issuedShares: number;
+  votingRights: boolean;
 }
 
+export interface OwnershipSummary {
+  ownershipId: string;
+  ownerEntityId: string;
+  ownerName: string;
+  shares: number;
+  shareClassName: string;
+  effectiveDate: Date;
+  percentage: number;
+}
+
+export interface CapTableView {
+  entityId: string;
+  entityName: string;
+  totalShares: number;
+  ownershipSummary: OwnershipSummary[];
+  shareClasses: ShareClassSummary[];
+  lastUpdated: Date;
+}
+
+export interface EntityNode {
+  entityId: string;
+  entityName: string;
+  entityType: string;
+  children: EntityNode[];
+  totalOwnedEntities: number;
+}
+
+// Transaction management
+export interface DataTransaction {
+  id: string;
+  userId: string;
+  startTime: Date;
+  endTime?: Date;
+  operations: TransactionOperation[];
+  status: 'PENDING' | 'COMMITTED' | 'ROLLED_BACK';
+}
+
+export interface TransactionOperation {
+  type: 'CREATE' | 'UPDATE' | 'DELETE';
+  entityType: 'ENTITY' | 'OWNERSHIP' | 'SHARE_CLASS';
+  entityId: string;
+  data: any;
+}
+
+// Migration support
+export interface MigrationResult {
+  success: boolean;
+  backupLocation?: string;
+  entitiesMigrated: number;
+  ownershipsMigrated: number;
+  shareClassesMigrated: number;
+  errors: string[];
+  duration: number;
+}
+
+// Query interfaces
 export interface EntitySearchQuery {
   name?: string;
   type?: string;
   jurisdiction?: string;
-  hasOwnerships?: boolean;
-  isOwned?: boolean;
   createdAfter?: Date;
   createdBefore?: Date;
+}
+
+export interface OwnershipQuery {
+  ownerEntityId?: string;
+  ownedEntityId?: string;
+  shareClassId?: string;
+  effectiveAfter?: Date;
+  effectiveBefore?: Date;
+  minShares?: number;
+  maxShares?: number;
 }
