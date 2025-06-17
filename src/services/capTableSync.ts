@@ -1,4 +1,3 @@
-
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 
@@ -81,21 +80,13 @@ const buildOwnershipHierarchy = () => {
       const shareholder = allShareholders.find(s => s.id === investment.shareholderId);
       
       // Only process entity shareholders for hierarchy (not individuals or pools)
-      if (shareholder?.type === 'Entity' && shareholder.entityId) {
+      if (shareholder?.type === 'Entity' && shareholder.entityId && investment.sharesOwned > 0) {
         const ownerEntityId = shareholder.entityId;
         const ownedEntityId = capTable.entityId;
         
-        // Only create ownership relationship if owner entity actually owns the target
-        // (Skip if it's just an investor - we want subsidiaries, not investors)
-        const ownerEntity = allEntities.find(e => e.id === ownerEntityId);
-        const ownedEntity = allEntities.find(e => e.id === ownedEntityId);
-        
-        // Determine if this is a subsidiary relationship (owner is a parent company)
-        // vs an investment relationship (investor invests in target)
-        const isSubsidiaryRelationship = investment.sharesOwned > (capTable.authorizedShares * 0.5); // Majority ownership
-        
-        if (isSubsidiaryRelationship) {
-          // Track what entities this entity owns (subsidiaries)
+        // Create ownership relationship for ANY ownership amount (not just majority)
+        if (ownerEntityId !== ownedEntityId) { // Prevent self-ownership
+          // Track what entities this entity owns (subsidiaries/investments)
           if (!reverseOwnershipMap.has(ownerEntityId)) {
             reverseOwnershipMap.set(ownerEntityId, []);
           }
@@ -103,7 +94,7 @@ const buildOwnershipHierarchy = () => {
             reverseOwnershipMap.get(ownerEntityId)!.push(ownedEntityId);
           }
           
-          // Track who owns this entity (parent)
+          // Track who owns this entity (parent/investor)
           if (!ownershipMap.has(ownedEntityId)) {
             ownershipMap.set(ownedEntityId, []);
           }
@@ -128,7 +119,7 @@ const buildOwnershipHierarchy = () => {
     visited.add(entityId);
     entityLevels.set(entityId, level);
     
-    // Recursively calculate levels for owned entities (subsidiaries)
+    // Recursively calculate levels for owned entities (subsidiaries/investments)
     const ownedEntities = reverseOwnershipMap.get(entityId) || [];
     ownedEntities.forEach(ownedId => {
       const childLevel = calculateLevel(ownedId, level + 1);
