@@ -6,6 +6,8 @@ import { useCanvasEvents } from './useCanvasEvents';
 import { useKeyboardHandler } from './useKeyboardHandler';
 
 export const useEntityCanvas = () => {
+  console.log('🎯 useEntityCanvas: Initializing with unified repository architecture');
+  
   const {
     refreshKey,
     selectedNode,
@@ -21,7 +23,8 @@ export const useEntityCanvas = () => {
     nodes,
     edges,
     onNodesChange,
-    onEdgesChange
+    onEdgesChange,
+    isLoading
   } = useCanvasData(refreshKey, isDeleting, selectedNode, setSelectedNode, setSidebarOpen);
 
   const { deleteSelectedNode } = useCanvasDeletion(
@@ -43,6 +46,8 @@ export const useEntityCanvas = () => {
 
   useKeyboardHandler(selectedNode, deleteSelectedNode);
 
+  console.log('✅ useEntityCanvas: All hooks initialized with unified repository');
+
   return {
     nodes,
     edges,
@@ -59,5 +64,7 @@ export const useEntityCanvas = () => {
     onDrop,
     updateSelectedNode,
     deleteSelectedNode,
+    isLoading,
+    triggerRefresh
   };
 };
