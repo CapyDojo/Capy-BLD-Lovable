@@ -65,36 +65,120 @@ export const syncCapTableData = (entityId: string): EntityStructureData | null =
   };
 };
 
-// Canvas structure generation - simplified
+// Helper function to build ownership hierarchy
+const buildOwnershipHierarchy = () => {
+  const allEntities = dataStore.getEntities();
+  const allOwnershipRelationships = dataStore.getOwnershipRelationships();
+  
+  // Create a map of entity ownership relationships
+  const ownershipMap = new Map<string, string[]>(); // ownedEntityId -> ownerEntityIds[]
+  const reverseOwnershipMap = new Map<string, string[]>(); // ownerEntityId -> ownedEntityIds[]
+  
+  allOwnershipRelationships.forEach(rel => {
+    // Track what entities this entity owns
+    if (!reverseOwnershipMap.has(rel.ownerEntityId)) {
+      reverseOwnershipMap.set(rel.ownerEntityId, []);
+    }
+    reverseOwnershipMap.get(rel.ownerEntityId)!.push(rel.ownedEntityId);
+    
+    // Track who owns this entity
+    if (!ownershipMap.has(rel.ownedEntityId)) {
+      ownershipMap.set(rel.ownedEntityId, []);
+    }
+    ownershipMap.get(rel.ownedEntityId)!.push(rel.ownerEntityId);
+  });
+  
+  // Find root entities (entities that are not owned by other entities)
+  const rootEntities = allEntities.filter(entity => !ownershipMap.has(entity.id));
+  
+  // Calculate hierarchy levels
+  const entityLevels = new Map<string, number>();
+  const visited = new Set<string>();
+  
+  const calculateLevel = (entityId: string, level: number = 0): number => {
+    if (visited.has(entityId)) return entityLevels.get(entityId) || level;
+    
+    visited.add(entityId);
+    entityLevels.set(entityId, level);
+    
+    // Recursively calculate levels for owned entities
+    const ownedEntities = reverseOwnershipMap.get(entityId) || [];
+    ownedEntities.forEach(ownedId => {
+      const childLevel = calculateLevel(ownedId, level + 1);
+      // Update if we found a deeper path to this entity
+      if ((entityLevels.get(ownedId) || 0) < childLevel) {
+        entityLevels.set(ownedId, childLevel);
+      }
+    });
+    
+    return level;
+  };
+  
+  // Start from root entities
+  rootEntities.forEach(entity => calculateLevel(entity.id, 0));
+  
+  // Group entities by level
+  const levelGroups = new Map<number, string[]>();
+  entityLevels.forEach((level, entityId) => {
+    if (!levelGroups.has(level)) {
+      levelGroups.set(level, []);
+    }
+    levelGroups.get(level)!.push(entityId);
+  });
+  
+  return { entityLevels, levelGroups, ownershipMap, reverseOwnershipMap };
+};
+
+// Canvas structure generation with hierarchical layout
 export const generateSyncedCanvasStructure = () => {
-  console.log('🔄 Generating canvas structure');
+  console.log('🔄 Generating hierarchical canvas structure');
   const allEntities = dataStore.getEntities();
   
   const nodes: Node[] = [];
   const edges: Edge[] = [];
   const nodeIds = new Set<string>();
-
-  // Create entity nodes
-  allEntities.forEach((entity, index) => {
-    const position = entity.position || { 
-      x: 250 + (index % 3) * 400, 
-      y: 100 + Math.floor(index / 3) * 300
-    };
+  
+  // Build hierarchy
+  const { entityLevels, levelGroups } = buildOwnershipHierarchy();
+  
+  // Layout constants
+  const LEVEL_HEIGHT = 250;
+  const NODE_WIDTH = 300;
+  const NODE_SPACING = 50;
+  const START_Y = 50;
+  
+  // Position nodes by hierarchy level
+  levelGroups.forEach((entityIds, level) => {
+    const y = START_Y + (level * LEVEL_HEIGHT);
+    const totalWidth = entityIds.length * NODE_WIDTH + (entityIds.length - 1) * NODE_SPACING;
+    const startX = Math.max(50, (window.innerWidth - totalWidth) / 2);
     
-    nodes.push({
-      id: entity.id,
-      type: 'entity',
-      position,
-      data: {
-        name: entity.name,
-        type: entity.type,
-        jurisdiction: entity.jurisdiction,
-        basePosition: position,
-      },
+    entityIds.forEach((entityId, index) => {
+      const entity = allEntities.find(e => e.id === entityId);
+      if (!entity) return;
+      
+      const x = startX + (index * (NODE_WIDTH + NODE_SPACING));
+      const position = entity.position || { x, y };
+      
+      // Use saved position if available, otherwise use calculated hierarchical position
+      const finalPosition = entity.position ? entity.position : { x, y };
+      
+      nodes.push({
+        id: entity.id,
+        type: 'entity',
+        position: finalPosition,
+        data: {
+          name: entity.name,
+          type: entity.type,
+          jurisdiction: entity.jurisdiction,
+          basePosition: { x, y }, // Store the calculated hierarchical position
+          hierarchyLevel: level,
+        },
+      });
+      nodeIds.add(entity.id);
     });
-    nodeIds.add(entity.id);
   });
-
+  
   // Create entity-to-entity ownership edges
   allEntities.forEach((entity) => {
     const syncedData = syncCapTableData(entity.id);
@@ -118,7 +202,9 @@ export const generateSyncedCanvasStructure = () => {
     });
   });
 
-  console.log('✅ Canvas structure generated - Nodes:', nodes.length, 'Edges:', edges.length);
+  console.log('✅ Hierarchical canvas structure generated - Nodes:', nodes.length, 'Edges:', edges.length);
+  console.log('📊 Entity levels:', Array.from(levelGroups.entries()));
+  
   return { nodes, edges };
 };
 
