@@ -72,8 +72,10 @@ export class EnterpriseDataStoreFactory {
             shares: ownership.shares,
             shareClassId: ownership.shareClassId,
             effectiveDate: ownership.effectiveDate,
-            changeReason: ownership.changeReason
-          }, ownership.createdBy);
+            changeReason: ownership.changeReason,
+            createdBy: ownership.createdBy || 'unified-mock-data',
+            updatedBy: ownership.updatedBy || 'unified-mock-data'
+          }, ownership.createdBy || 'unified-mock-data');
         } catch (error) {
           console.log(`📝 Ownership ${ownership.id} creation issue:`, error);
         }

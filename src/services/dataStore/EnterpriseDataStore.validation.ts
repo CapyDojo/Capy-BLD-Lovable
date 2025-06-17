@@ -9,7 +9,7 @@ export async function runBasicValidationTests(): Promise<boolean> {
   console.log('🧪 Running EnterpriseDataStore validation tests...');
   
   try {
-    const dataStore = EnterpriseDataStoreFactory.createEnterpriseStore('test');
+    const dataStore = await EnterpriseDataStoreFactory.createEnterpriseStore('test');
     
     // Test 1: Create entity
     console.log('Test 1: Creating entity...');

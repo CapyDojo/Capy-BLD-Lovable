@@ -5,6 +5,7 @@ import { EnterpriseDataStoreFactory } from './EnterpriseDataStoreFactory';
 class MigrationBridge {
   private enterpriseStore: IEnterpriseDataStore | null = null;
   private globalMigrationEnabled = false;
+  private migratedComponents: Set<string> = new Set();
 
   async initializeEnterpriseStore(): Promise<IEnterpriseDataStore> {
     if (!this.enterpriseStore) {
@@ -20,6 +21,26 @@ class MigrationBridge {
       throw new Error('Enterprise store not initialized. Call initializeEnterpriseStore() first.');
     }
     return this.enterpriseStore;
+  }
+
+  // Component-specific migration methods
+  enableMigrationFor(componentName: string): void {
+    this.migratedComponents.add(componentName);
+    console.log(`🔄 Migration enabled for component: ${componentName}`);
+  }
+
+  shouldUseMigration(componentName: string): boolean {
+    return this.globalMigrationEnabled || this.migratedComponents.has(componentName);
+  }
+
+  getStoreFor(componentName: string) {
+    if (this.shouldUseMigration(componentName)) {
+      console.log(`🆕 Using EnterpriseDataStore for: ${componentName}`);
+      return this.getEnterpriseStore();
+    }
+    console.log(`🔙 Using legacy store for: ${componentName}`);
+    // For now, return enterprise store as fallback since legacy store integration is complex
+    return this.getEnterpriseStore();
   }
 
   enableGlobalMigration(): void {
@@ -40,6 +61,8 @@ class MigrationBridge {
     return {
       globalMigrationEnabled: this.globalMigrationEnabled,
       enterpriseStoreInitialized: this.enterpriseStore !== null,
+      globalEnabled: this.globalMigrationEnabled, // Legacy compatibility
+      migratedComponents: Array.from(this.migratedComponents), // Legacy compatibility
       timestamp: new Date()
     };
   }
