@@ -15,43 +15,22 @@ import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import NotFound from "./pages/NotFound";
 
-// Import the new simple test runner
+// Import the simple test runner - this will automatically expose global functions
 import { simpleTestRunner } from '@/services/testing/SimpleTestRunner';
 
-// Simple, direct global function exposure
-console.log('🔧 Setting up simple test functions...');
+console.log('🎯 App.tsx loaded, test functions should be available!');
+console.log('🔍 Verifying global functions:');
+console.log('  - testFunction:', typeof (window as any).testFunction);
+console.log('  - runAllTests:', typeof (window as any).runAllTests);
+console.log('  - getTestNames:', typeof (window as any).getTestNames);
+console.log('  - simpleTestRunner:', typeof (window as any).simpleTestRunner);
 
-// Expose simple test functions directly
-(window as any).testFunction = () => {
-  console.log('✅ Global testFunction called!');
-  return simpleTestRunner.test();
-};
-
-(window as any).runAllTests = () => {
-  console.log('🧪 Global runAllTests called!');
-  return simpleTestRunner.runAllTests();
-};
-
-(window as any).getTestNames = () => {
-  console.log('📋 Global getTestNames called!');
-  return simpleTestRunner.getTestNames();
-};
-
-// Also expose the test runner itself
-(window as any).simpleTestRunner = simpleTestRunner;
-
-console.log('✅ Simple test functions exposed!');
-console.log('🎯 Try these commands:');
-console.log('  - testFunction()');
-console.log('  - runAllTests()');
-console.log('  - getTestNames()');
-console.log('  - simpleTestRunner.test()');
-
-// Verify immediately
-console.log('🔍 Immediate verification:');
-console.log('  - testFunction exists:', typeof (window as any).testFunction);
-console.log('  - runAllTests exists:', typeof (window as any).runAllTests);
-console.log('  - simpleTestRunner exists:', typeof (window as any).simpleTestRunner);
+// Double-check by calling one
+if (typeof (window as any).testFunction === 'function') {
+  console.log('✅ testFunction is ready to use!');
+} else {
+  console.error('❌ testFunction is not available');
+}
 
 const queryClient = new QueryClient();
 

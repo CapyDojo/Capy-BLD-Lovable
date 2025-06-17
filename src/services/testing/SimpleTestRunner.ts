@@ -5,6 +5,7 @@ export class SimpleTestRunner {
 
   constructor() {
     this.setupBasicTests();
+    this.exposeGlobalFunctions();
   }
 
   private setupBasicTests() {
@@ -32,6 +33,34 @@ export class SimpleTestRunner {
         }
       }
     ];
+  }
+
+  private exposeGlobalFunctions() {
+    // Expose functions directly on window with immediate assignment
+    (window as any).testFunction = () => {
+      console.log('✅ Global testFunction called successfully!');
+      return this.test();
+    };
+
+    (window as any).runAllTests = () => {
+      console.log('🧪 Global runAllTests called!');
+      return this.runAllTests();
+    };
+
+    (window as any).getTestNames = () => {
+      console.log('📋 Global getTestNames called!');
+      return this.getTestNames();
+    };
+
+    (window as any).simpleTestRunner = this;
+
+    // Verify they were set
+    console.log('🔧 Functions exposed on window:', {
+      testFunction: typeof (window as any).testFunction,
+      runAllTests: typeof (window as any).runAllTests,
+      getTestNames: typeof (window as any).getTestNames,
+      simpleTestRunner: typeof (window as any).simpleTestRunner
+    });
   }
 
   async runAllTests() {
