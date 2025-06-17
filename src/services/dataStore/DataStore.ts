@@ -143,32 +143,15 @@ export class DataStore {
     console.log('📝 Updating entity with enhanced sync:', id, updates);
     this.entityManager.update(id, updates);
     
-    // If entity name was updated, update ALL corresponding shareholder names
+    // If entity name was updated, update ONLY shareholders with matching entityId
     if (updates.name) {
-      console.log('📝 Entity name changed, updating corresponding shareholders...');
+      console.log('📝 Entity name changed, updating shareholders with entityId match...');
       const shareholders = this.capTableManager.getShareholders();
       
-      // Find shareholders that should be updated - check both entityId and name matching
-      const shareholdersToUpdate = shareholders.filter(s => {
-        // Direct entityId match (most reliable)
-        if (s.entityId === id) {
-          return true;
-        }
-        
-        // For individuals without entityId, check if this might be the same person
-        // This handles legacy data where entityId might not be set
-        if (s.type === 'Individual' && !s.entityId) {
-          const entity = this.entityManager.getById(id);
-          if (entity && entity.type === 'Individual') {
-            // Check if the old name matches this shareholder
-            return s.name !== updates.name; // Only update if names don't already match
-          }
-        }
-        
-        return false;
-      });
+      // Find shareholders with explicit entityId match only
+      const shareholdersToUpdate = shareholders.filter(s => s.entityId === id);
       
-      console.log('📝 Found shareholders to update:', shareholdersToUpdate.map(s => ({ id: s.id, oldName: s.name, entityId: s.entityId })));
+      console.log('📝 Found shareholders to update (entityId match only):', shareholdersToUpdate.map(s => ({ id: s.id, oldName: s.name, entityId: s.entityId })));
       
       // Update each matching shareholder
       shareholdersToUpdate.forEach(shareholder => {
