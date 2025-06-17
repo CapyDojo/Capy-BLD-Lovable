@@ -10,26 +10,26 @@ interface EntityCapTableSectionProps {
 
 export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ entityId }) => {
   const [capTableData, setCapTableData] = useState(() => syncCapTableData(entityId));
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Subscribe to data store changes
+  // Subscribe to data store changes with enhanced refresh
   useEffect(() => {
     console.log('🔗 EntityCapTableSection subscribing to data store for entity:', entityId);
     const unsubscribe = dataStore.subscribe(() => {
       console.log('📡 EntityCapTableSection received data store update for entity:', entityId);
       const updatedData = syncCapTableData(entityId);
       setCapTableData(updatedData);
-      setRefreshKey(prev => prev + 1);
+      setRefreshTrigger(prev => prev + 1);
     });
     return unsubscribe;
   }, [entityId]);
 
-  // Update data when entityId changes
+  // Update data when entityId changes or refresh trigger changes
   useEffect(() => {
-    console.log('🔄 EntityCapTableSection updating data for entity:', entityId);
+    console.log('🔄 EntityCapTableSection updating data for entity:', entityId, 'trigger:', refreshTrigger);
     const updatedData = syncCapTableData(entityId);
     setCapTableData(updatedData);
-  }, [entityId, refreshKey]);
+  }, [entityId, refreshTrigger]);
 
   const handleDeleteStakeholder = (stakeholderId: string, stakeholderName: string) => {
     console.log('🗑️ EntityCapTableSection deleting stakeholder:', stakeholderId, 'from entity:', entityId);
@@ -78,7 +78,7 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
           const IconComponent = getStakeholderIcon(stakeholder.type);
           
           return (
-            <div key={stakeholder.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+            <div key={`${stakeholder.id}-${refreshTrigger}`} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
               <div className="flex items-center space-x-2">
                 <IconComponent className="h-4 w-4 text-gray-400" />
                 <div>

@@ -1,5 +1,4 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Building2, User, Users, Edit, Check, X } from 'lucide-react';
 import { useCapTable } from '@/hooks/useCapTable';
 import { dataStore } from '@/services/dataStore';
@@ -13,6 +12,17 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
   const capTableData = useCapTable(entityId);
   const [editingRow, setEditingRow] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Subscribe to data store changes to force re-render
+  useEffect(() => {
+    console.log('🔗 CapTableView subscribing to data store for entity:', entityId);
+    const unsubscribe = dataStore.subscribe(() => {
+      console.log('📡 CapTableView received data store update for entity:', entityId);
+      setRefreshKey(prev => prev + 1);
+    });
+    return unsubscribe;
+  }, [entityId]);
 
   if (!capTableData) {
     return (
@@ -67,7 +77,7 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
   }));
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" key={`table-${refreshKey}`}>
       <div className="px-6 py-4 border-b border-gray-200">
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-medium text-gray-900">
@@ -112,7 +122,7 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {enhancedTableData.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-50">
+              <tr key={`${item.id}-${refreshKey}`} className="hover:bg-gray-50">
                 <td className="px-6 py-4 whitespace-nowrap">
                   <div className="flex items-center">
                     <div className="flex-shrink-0">

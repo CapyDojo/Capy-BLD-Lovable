@@ -1,7 +1,8 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
 import { useCapTable } from '@/hooks/useCapTable';
+import { dataStore } from '@/services/dataStore';
 
 interface OwnershipChartProps {
   entityId: string;
@@ -29,6 +30,17 @@ const CustomTooltip = ({ active, payload }: any) => {
 
 export const OwnershipChart: React.FC<OwnershipChartProps> = ({ entityId }) => {
   const capTableData = useCapTable(entityId);
+  const [refreshKey, setRefreshKey] = useState(0);
+
+  // Subscribe to data store changes to force re-render
+  useEffect(() => {
+    console.log('🔗 OwnershipChart subscribing to data store for entity:', entityId);
+    const unsubscribe = dataStore.subscribe(() => {
+      console.log('📡 OwnershipChart received data store update for entity:', entityId);
+      setRefreshKey(prev => prev + 1);
+    });
+    return unsubscribe;
+  }, [entityId]);
 
   if (!capTableData) {
     return (
@@ -43,7 +55,7 @@ export const OwnershipChart: React.FC<OwnershipChartProps> = ({ entityId }) => {
   const { entity, capTable, totalShares, totalInvestment, availableShares, chartData } = capTableData;
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 p-6">
+    <div className="bg-white rounded-lg border border-gray-200 p-6" key={`chart-${refreshKey}`}>
       <h3 className="text-lg font-medium text-gray-900 mb-6">
         Ownership Distribution - {entity.name}
       </h3>
@@ -62,7 +74,7 @@ export const OwnershipChart: React.FC<OwnershipChartProps> = ({ entityId }) => {
                 dataKey="value"
               >
                 {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
+                  <Cell key={`cell-${index}-${refreshKey}`} fill={entry.color} />
                 ))}
               </Pie>
               <Tooltip content={<CustomTooltip />} />
@@ -75,7 +87,7 @@ export const OwnershipChart: React.FC<OwnershipChartProps> = ({ entityId }) => {
             <h4 className="text-sm font-medium text-gray-900 mb-4">Ownership Breakdown</h4>
             <div className="space-y-3">
               {chartData.map((item, index) => (
-                <div key={index} className="flex items-center justify-between">
+                <div key={`${index}-${refreshKey}`} className="flex items-center justify-between">
                   <div className="flex items-center space-x-3">
                     <div 
                       className="w-3 h-3 rounded-full"
