@@ -32,12 +32,42 @@ export class DataStore {
     // Inject entity accessor into CapTableManager for better entity-stakeholder naming
     this.capTableManager.setEntityAccessor((id: string) => this.entityManager.getById(id));
 
+    // Fix missing entityId links for individual shareholders
+    this.fixIndividualShareholderLinks();
+
     console.log('🏪 DataStore initialized with enhanced cross-component sync:', {
       entities: initialEntities.length,
       capTables: initialCapTables.length,
       shareholders: initialShareholders.length,
       shareClasses: initialShareClasses.length
     });
+  }
+
+  // Fix missing entityId links for individual shareholders
+  private fixIndividualShareholderLinks() {
+    console.log('🔧 Fixing individual shareholder entityId links...');
+    const entities = this.entityManager.getAll();
+    const shareholders = this.capTableManager.getShareholders();
+    
+    let fixed = 0;
+    shareholders.forEach(shareholder => {
+      if (shareholder.type === 'Individual' && !shareholder.entityId) {
+        // Find matching entity by name for individuals
+        const matchingEntity = entities.find(e => 
+          e.type === 'Individual' && e.name === shareholder.name
+        );
+        
+        if (matchingEntity) {
+          console.log(`🔧 Linking shareholder "${shareholder.name}" to entity ${matchingEntity.id}`);
+          this.capTableManager.updateShareholderDirect(shareholder.id, { 
+            entityId: matchingEntity.id 
+          });
+          fixed++;
+        }
+      }
+    });
+    
+    console.log(`✅ Fixed ${fixed} individual shareholder links`);
   }
 
   // Subscribe to data changes
@@ -143,18 +173,22 @@ export class DataStore {
     console.log('📝 Updating entity with enhanced sync:', id, updates);
     this.entityManager.update(id, updates);
     
-    // If entity name was updated, update ONLY shareholders with matching entityId
+    // If entity name was updated, update shareholders with matching entityId
     if (updates.name) {
-      console.log('📝 Entity name changed, updating shareholders with entityId match...');
+      console.log('📝 Entity name changed, updating linked shareholders...');
       const shareholders = this.capTableManager.getShareholders();
       
-      // Find shareholders with explicit entityId match only
-      const shareholdersToUpdate = shareholders.filter(s => s.entityId === id);
+      // Find shareholders with entityId match
+      const linkedShareholders = shareholders.filter(s => s.entityId === id);
       
-      console.log('📝 Found shareholders to update (entityId match only):', shareholdersToUpdate.map(s => ({ id: s.id, oldName: s.name, entityId: s.entityId })));
+      console.log('📝 Found linked shareholders to update:', linkedShareholders.map(s => ({ 
+        id: s.id, 
+        oldName: s.name, 
+        entityId: s.entityId 
+      })));
       
-      // Update each matching shareholder
-      shareholdersToUpdate.forEach(shareholder => {
+      // Update each linked shareholder's name
+      linkedShareholders.forEach(shareholder => {
         console.log(`📝 Updating shareholder ${shareholder.id} name from "${shareholder.name}" to "${updates.name}"`);
         this.capTableManager.updateShareholderDirect(shareholder.id, { name: updates.name });
       });
