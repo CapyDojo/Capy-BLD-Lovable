@@ -4,6 +4,7 @@ import { StatsGrid } from './StatsGrid';
 import { RecentActivity } from './RecentActivity';
 import { ComplianceAlerts } from './ComplianceAlerts';
 import { QuickActions } from './QuickActions';
+import { TestRunner } from '../testing/TestRunner';
 
 export const Dashboard: React.FC = () => {
   return (
@@ -14,6 +15,12 @@ export const Dashboard: React.FC = () => {
       </div>
 
       <StatsGrid />
+      
+      {/* Add Test Runner Section */}
+      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <h2 className="text-lg font-semibold text-blue-900 mb-3">Development Tools</h2>
+        <TestRunner />
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
