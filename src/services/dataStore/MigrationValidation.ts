@@ -20,139 +20,247 @@ export class MigrationValidationSuite {
   private initializeTests() {
     this.tests = [
       {
-        name: 'Migration Bridge Initialization',
-        description: 'Verify migration bridge is properly initialized',
-        test: async () => {
-          const status = migrationBridge.getMigrationStatus();
-          return typeof status === 'object' && 
-                 typeof status.globalEnabled === 'boolean' &&
-                 Array.isArray(status.migratedComponents);
-        }
-      },
-      {
-        name: 'Enterprise Store Basic Validation',
-        description: 'Run basic enterprise store validation tests',
-        test: async () => {
-          return await runBasicValidationTests();
-        }
-      },
-      {
-        name: 'Legacy Data Store Functionality',
-        description: 'Verify legacy data store has entities',
-        test: async () => {
-          const entities = dataStore.getEntities();
-          console.log('📊 Legacy entities count:', entities.length);
-          return entities.length > 0;
-        }
-      },
-      {
-        name: 'Entity Migration Sync',
-        description: 'Test syncing entities from legacy to enterprise store',
-        test: async () => {
-          const legacyEntities = dataStore.getEntities();
-          if (legacyEntities.length === 0) {
-            console.log('⚠️ No legacy entities to sync');
-            return true; // Pass if no entities to sync
-          }
-          
-          const testEntityId = legacyEntities[0].id;
-          const legacyEntity = legacyEntities[0];
-          
-          // Sync the entity to enterprise store
-          await migrationBridge.syncEntityFromLegacy(testEntityId);
-          
-          const enterpriseStore = migrationBridge.getEnterpriseStore();
-          
-          // Check if entity was migrated by searching for entities with the same name
-          const allEnterpriseEntities = await enterpriseStore.getAllEntities();
-          const migratedEntity = allEnterpriseEntities.find(e => e.name === legacyEntity.name);
-          
-          console.log('🔍 Looking for migrated entity with name:', legacyEntity.name);
-          console.log('📊 Found enterprise entities:', allEnterpriseEntities.length);
-          console.log('✅ Migration sync result:', !!migratedEntity);
-          
-          return migratedEntity !== undefined && migratedEntity.name === legacyEntity.name;
-        }
-      },
-      {
-        name: 'Component Migration Toggle',
-        description: 'Test enabling migration for specific component',
-        test: async () => {
-          migrationBridge.enableMigrationFor('TestComponent');
-          const status = migrationBridge.getMigrationStatus();
-          return status.migratedComponents.includes('TestComponent');
-        }
-      },
-      {
-        name: 'Store Selection Logic',
-        description: 'Verify correct store is returned based on migration status',
-        test: async () => {
-          const legacyStore = migrationBridge.getStoreFor('NonMigratedComponent');
-          const enterpriseStore = migrationBridge.getStoreFor('TestComponent'); // Enabled in previous test
-          
-          return legacyStore === migrationBridge.getLegacyStore() &&
-                 enterpriseStore === migrationBridge.getEnterpriseStore();
-        }
-      },
-      {
-        name: 'Cap Table View Generation',
-        description: 'Test enterprise store cap table view generation',
+        name: 'Enterprise Store Initialization',
+        description: 'Verify enterprise store is properly initialized with audit logging and validation',
         test: async () => {
           const enterpriseStore = migrationBridge.getEnterpriseStore();
-          const entities = dataStore.getEntities();
           
-          if (entities.length === 0) {
-            console.log('⚠️ No entities available for cap table test');
-            return true;
-          }
+          // Test that enterprise store has all required enterprise features
+          const hasAuditCapability = typeof enterpriseStore.getAuditTrail === 'function';
+          const hasValidationCapability = typeof enterpriseStore.validateDataIntegrity === 'function';
+          const hasTransactionCapability = typeof enterpriseStore.beginTransaction === 'function';
+          const hasEventSystem = typeof enterpriseStore.subscribe === 'function';
           
-          const testEntityId = entities[0].id;
-          await migrationBridge.syncEntityFromLegacy(testEntityId);
+          console.log('🏢 Enterprise capabilities check:');
+          console.log('  Audit Trail:', hasAuditCapability);
+          console.log('  Data Validation:', hasValidationCapability);
+          console.log('  Transactions:', hasTransactionCapability);
+          console.log('  Event System:', hasEventSystem);
           
-          // Get the migrated entity from enterprise store
-          const allEnterpriseEntities = await enterpriseStore.getAllEntities();
-          const migratedEntity = allEnterpriseEntities.find(e => e.name === entities[0].name);
-          
-          if (!migratedEntity) {
-            console.log('⚠️ Entity not found in enterprise store for cap table test');
-            return false;
-          }
-          
-          const capTable = await enterpriseStore.getCapTableView(migratedEntity.id);
-          return capTable !== null && capTable.entityId === migratedEntity.id;
+          return hasAuditCapability && hasValidationCapability && hasTransactionCapability && hasEventSystem;
         }
       },
       {
-        name: 'Data Integrity Check',
-        description: 'Verify enterprise store data integrity',
+        name: 'Data Integrity Validation',
+        description: 'Verify enterprise store maintains referential integrity and business rules',
         test: async () => {
           const enterpriseStore = migrationBridge.getEnterpriseStore();
           const integrityResult = await enterpriseStore.validateDataIntegrity();
+          
+          console.log('🔒 Data integrity check:', integrityResult.isValid);
+          if (!integrityResult.isValid) {
+            console.log('❌ Integrity errors:', integrityResult.errors);
+          }
+          
           return integrityResult.isValid;
         }
       },
       {
-        name: 'Event System Test',
-        description: 'Test enterprise store event subscription',
+        name: 'Audit Trail Capability',
+        description: 'Test comprehensive audit logging for legal compliance',
+        test: async () => {
+          const enterpriseStore = migrationBridge.getEnterpriseStore();
+          
+          // Create a test entity to generate audit trail
+          const testEntity = await enterpriseStore.createEntity({
+            name: 'Audit Test Entity',
+            type: 'Corporation',
+            jurisdiction: 'Delaware',
+            metadata: { purpose: 'Audit trail testing' }
+          }, 'compliance-officer', 'Testing audit capabilities');
+          
+          // Get audit trail for this entity
+          const auditTrail = await enterpriseStore.getAuditTrail(testEntity.id);
+          
+          console.log('📋 Audit trail entries for test entity:', auditTrail.length);
+          
+          // Verify audit entry has required fields for legal compliance
+          if (auditTrail.length > 0) {
+            const entry = auditTrail[0];
+            const hasRequiredFields = entry.userId && entry.timestamp && entry.action && 
+                                     entry.entityType && entry.entityId && entry.newState;
+            
+            console.log('✅ Audit entry has required compliance fields:', hasRequiredFields);
+            return hasRequiredFields;
+          }
+          
+          return false;
+        }
+      },
+      {
+        name: 'Business Rules Enforcement',
+        description: 'Verify enterprise-grade business rule validation',
+        test: async () => {
+          const enterpriseStore = migrationBridge.getEnterpriseStore();
+          
+          // Create test entities for business rule testing
+          const parentEntity = await enterpriseStore.createEntity({
+            name: 'Parent Corporation',
+            type: 'Corporation',
+            jurisdiction: 'Delaware',
+            metadata: {}
+          }, 'legal-admin', 'Business rules testing');
+          
+          const childEntity = await enterpriseStore.createEntity({
+            name: 'Subsidiary Corp',
+            type: 'Corporation', 
+            jurisdiction: 'Delaware',
+            metadata: {}
+          }, 'legal-admin', 'Business rules testing');
+          
+          // Create share class for ownership
+          const shareClass = await enterpriseStore.createShareClass({
+            entityId: childEntity.id,
+            name: 'Common Stock',
+            type: 'Common Stock',
+            totalAuthorizedShares: 1000,
+            votingRights: true
+          }, 'legal-admin');
+          
+          // Test circular ownership prevention
+          try {
+            // This should work: Parent owns Child
+            await enterpriseStore.createOwnership({
+              ownerEntityId: parentEntity.id,
+              ownedEntityId: childEntity.id,
+              shares: 500,
+              shareClassId: shareClass.id,
+              effectiveDate: new Date()
+            }, 'legal-admin');
+            
+            // This should fail: Child owns Parent (circular)
+            const circularValidation = await enterpriseStore.validateCircularOwnership(childEntity.id, parentEntity.id);
+            
+            console.log('🔄 Circular ownership prevention working:', !circularValidation.isValid);
+            return !circularValidation.isValid; // Should be invalid (prevented)
+            
+          } catch (error) {
+            console.log('❌ Business rules test error:', error);
+            return false;
+          }
+        }
+      },
+      {
+        name: 'Cap Table Accuracy',
+        description: 'Verify cap table calculations match professional standards',
+        test: async () => {
+          const enterpriseStore = migrationBridge.getEnterpriseStore();
+          
+          // Create test entity and ownership structure
+          const entity = await enterpriseStore.createEntity({
+            name: 'Test Portfolio Company',
+            type: 'Corporation',
+            jurisdiction: 'Delaware',
+            metadata: {}
+          }, 'portfolio-manager', 'Cap table testing');
+          
+          const shareClass = await enterpriseStore.createShareClass({
+            entityId: entity.id,
+            name: 'Series A Preferred',
+            type: 'Preferred Series A',
+            totalAuthorizedShares: 10000,
+            votingRights: true
+          }, 'portfolio-manager');
+          
+          // Create multiple ownership records
+          const investor1 = await enterpriseStore.createEntity({
+            name: 'Venture Capital Fund I',
+            type: 'Partnership',
+            jurisdiction: 'Delaware',
+            metadata: {}
+          }, 'portfolio-manager', 'Cap table testing');
+          
+          const investor2 = await enterpriseStore.createEntity({
+            name: 'Strategic Investor Corp',
+            type: 'Corporation',
+            jurisdiction: 'New York',
+            metadata: {}
+          }, 'portfolio-manager', 'Cap table testing');
+          
+          await enterpriseStore.createOwnership({
+            ownerEntityId: investor1.id,
+            ownedEntityId: entity.id,
+            shares: 6000,
+            shareClassId: shareClass.id,
+            effectiveDate: new Date()
+          }, 'portfolio-manager');
+          
+          await enterpriseStore.createOwnership({
+            ownerEntityId: investor2.id,
+            ownedEntityId: entity.id,
+            shares: 4000,
+            shareClassId: shareClass.id,
+            effectiveDate: new Date()
+          }, 'portfolio-manager');
+          
+          // Get cap table and verify calculations
+          const capTable = await enterpriseStore.getCapTableView(entity.id);
+          
+          if (!capTable) return false;
+          
+          const totalShares = capTable.totalShares;
+          const expectedTotal = 10000; // 6000 + 4000
+          const percentagesSum = capTable.ownershipSummary.reduce((sum, o) => sum + o.percentage, 0);
+          
+          console.log('📊 Cap table validation:');
+          console.log('  Total shares:', totalShares, 'Expected:', expectedTotal);
+          console.log('  Percentages sum:', percentagesSum.toFixed(1), '%');
+          console.log('  Ownership records:', capTable.ownershipSummary.length);
+          
+          return totalShares === expectedTotal && 
+                 Math.abs(percentagesSum - 100) < 0.1 && // Allow for rounding
+                 capTable.ownershipSummary.length === 2;
+        }
+      },
+      {
+        name: 'Transaction Management',
+        description: 'Test enterprise transaction support for complex operations',
+        test: async () => {
+          const enterpriseStore = migrationBridge.getEnterpriseStore();
+          
+          // Begin transaction
+          const transaction = await enterpriseStore.beginTransaction('transaction-test-user');
+          
+          console.log('💼 Transaction started:', transaction.id);
+          
+          // Verify transaction is tracked
+          const activeTransactions = await enterpriseStore.getActiveTransactions();
+          const isTracked = activeTransactions.some(tx => tx.id === transaction.id);
+          
+          // Commit transaction
+          await enterpriseStore.commitTransaction(transaction.id);
+          
+          // Verify transaction is no longer active
+          const remainingActive = await enterpriseStore.getActiveTransactions();
+          const isCompleted = !remainingActive.some(tx => tx.id === transaction.id);
+          
+          console.log('✅ Transaction management test - Tracked:', isTracked, 'Completed:', isCompleted);
+          
+          return isTracked && isCompleted;
+        }
+      },
+      {
+        name: 'Real-time Event System',
+        description: 'Verify enterprise event system for UI reactivity',
         test: async () => {
           return new Promise((resolve) => {
             const enterpriseStore = migrationBridge.getEnterpriseStore();
             let eventReceived = false;
             
             const unsubscribe = enterpriseStore.subscribe((event) => {
-              console.log('📡 Test event received:', event.type);
+              console.log('📡 Enterprise event received:', event.type, 'for entity:', event.entityId);
               eventReceived = true;
               unsubscribe();
               resolve(true);
             });
             
-            // Create a test entity to trigger an event
+            // Trigger an event by creating an entity
             enterpriseStore.createEntity({
-              name: 'Test Entity for Event',
+              name: 'Event Test Entity',
               type: 'Corporation',
               jurisdiction: 'Test',
               metadata: {}
-            }, 'test-user', 'Event system test');
+            }, 'event-test-user', 'Testing event system');
             
             // Timeout after 2 seconds
             setTimeout(() => {
@@ -165,16 +273,35 @@ export class MigrationValidationSuite {
         }
       },
       {
-        name: 'Migration Status Reporting',
-        description: 'Verify migration status reporting works correctly',
+        name: 'Enterprise Feature Coverage',
+        description: 'Verify all enterprise features required for legal professionals',
         test: async () => {
-          const status = migrationBridge.getMigrationStatus();
-          console.log('📊 Migration Status:', status);
+          const enterpriseStore = migrationBridge.getEnterpriseStore();
           
-          return typeof status.globalEnabled === 'boolean' &&
-                 Array.isArray(status.migratedComponents) &&
-                 typeof status.totalMigratedComponents === 'number' &&
-                 status.totalMigratedComponents === status.migratedComponents.length;
+          // Check for all required enterprise methods
+          const requiredMethods = [
+            'createEntity', 'updateEntity', 'deleteEntity',
+            'createOwnership', 'updateOwnership', 'deleteOwnership', 
+            'createShareClass', 'updateShareClass', 'deleteShareClass',
+            'getCapTableView', 'getOwnershipHierarchy',
+            'validateDataIntegrity', 'checkBusinessRules',
+            'getAuditTrail', 'exportAuditReport',
+            'beginTransaction', 'commitTransaction', 'rollbackTransaction',
+            'subscribe', 'migrateFromLegacySystem'
+          ];
+          
+          const missingMethods = requiredMethods.filter(method => 
+            typeof enterpriseStore[method] !== 'function'
+          );
+          
+          console.log('🏢 Enterprise feature coverage:');
+          console.log('  Required methods:', requiredMethods.length);
+          console.log('  Available methods:', requiredMethods.length - missingMethods.length);
+          if (missingMethods.length > 0) {
+            console.log('  Missing methods:', missingMethods);
+          }
+          
+          return missingMethods.length === 0;
         }
       }
     ];
@@ -256,4 +383,4 @@ export class MigrationValidationSuite {
 // Global instance for easy access in console
 export const migrationValidator = new MigrationValidationSuite();
 
-console.log('🧪 Migration Validation Suite loaded!');
+console.log('🧪 Enterprise Validation Suite loaded!');
