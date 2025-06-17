@@ -26,8 +26,6 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
         console.log('✅ useCanvasData: Unified repository initialized');
       } catch (error) {
         console.error('❌ useCanvasData: Failed to initialize repository:', error);
-        const fallbackRepo = await getUnifiedRepository('LEGACY');
-        setRepository(fallbackRepo);
       }
     };
 

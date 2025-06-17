@@ -11,7 +11,7 @@ export const useCanvasState = () => {
   const triggerRefresh = () => {
     setRefreshKey(prev => {
       const newKey = prev + 1;
-      console.log('🔄 useCanvasState: Refresh key updated from', prev, 'to', newKey);
+      console.log('🔄 useCanvasState: Refresh key updated from', prev, 'to', newKey, '(unified system)');
       return newKey;
     });
   };

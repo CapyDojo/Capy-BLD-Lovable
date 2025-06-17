@@ -1,58 +1,80 @@
 
 import React, { useState, useEffect } from 'react';
 import { Plus, Edit, Trash2, User, Users, Building2 } from 'lucide-react';
-import { dataStore } from '@/services/dataStore';
-import { syncCapTableData } from '@/services/capTableSync';
+import { getUnifiedRepository } from '@/services/repositories/unified';
+import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
 
 interface EntityCapTableSectionProps {
   entityId: string;
 }
 
 export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ entityId }) => {
-  const [capTableData, setCapTableData] = useState(() => syncCapTableData(entityId));
+  const [capTableData, setCapTableData] = useState(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [repository, setRepository] = useState<IUnifiedEntityRepository | null>(null);
 
-  // Subscribe to data store changes with enhanced refresh
+  // Initialize unified repository
   useEffect(() => {
-    console.log('🔗 EntityCapTableSection subscribing to data store for entity:', entityId);
-    const unsubscribe = dataStore.subscribe(() => {
-      console.log('📡 EntityCapTableSection received data store update for entity:', entityId);
-      const updatedData = syncCapTableData(entityId);
-      setCapTableData(updatedData);
-      setRefreshTrigger(prev => prev + 1);
+    const initRepository = async () => {
+      try {
+        console.log('🔄 EntityCapTableSection: Initializing unified repository for entity:', entityId);
+        const repo = await getUnifiedRepository('ENTERPRISE');
+        setRepository(repo);
+        console.log('✅ EntityCapTableSection: Unified repository initialized');
+      } catch (error) {
+        console.error('❌ EntityCapTableSection: Failed to initialize repository:', error);
+      }
+    };
+
+    initRepository();
+  }, []);
+
+  // Load data when repository is ready
+  useEffect(() => {
+    if (!repository) return;
+
+    const loadData = async () => {
+      try {
+        console.log('🔄 EntityCapTableSection: Loading cap table for entity:', entityId);
+        const capTable = await repository.getCapTableView(entityId);
+        setCapTableData(capTable);
+        console.log('✅ EntityCapTableSection: Cap table loaded');
+      } catch (error) {
+        console.error('❌ EntityCapTableSection: Error loading cap table:', error);
+        setCapTableData(null);
+      }
+    };
+
+    loadData();
+
+    // Subscribe to repository changes
+    const unsubscribe = repository.subscribe((event) => {
+      console.log('📡 EntityCapTableSection: Received repository event:', event.type, event.entityId);
+      if (event.entityId === entityId) {
+        setRefreshTrigger(prev => prev + 1);
+        loadData();
+      }
     });
+
     return unsubscribe;
-  }, [entityId]);
+  }, [repository, entityId, refreshTrigger]);
 
-  // Update data when entityId changes or refresh trigger changes
-  useEffect(() => {
-    console.log('🔄 EntityCapTableSection updating data for entity:', entityId, 'trigger:', refreshTrigger);
-    const updatedData = syncCapTableData(entityId);
-    setCapTableData(updatedData);
-  }, [entityId, refreshTrigger]);
-
-  const handleDeleteStakeholder = (stakeholderId: string, stakeholderName: string) => {
-    console.log('🗑️ EntityCapTableSection deleting stakeholder:', stakeholderId, 'from entity:', entityId);
+  const handleDeleteStakeholder = async (ownershipId: string, ownerName: string) => {
+    if (!repository) return;
     
-    // Confirm deletion
-    if (!confirm(`Are you sure you want to delete ${stakeholderName}?`)) {
+    console.log('🗑️ EntityCapTableSection: Deleting ownership via unified repository:', ownershipId);
+    
+    if (!confirm(`Are you sure you want to delete ${ownerName}?`)) {
       return;
     }
 
-    // Delete from data store - this will trigger auto-save and notifications
-    dataStore.deleteStakeholder(entityId, stakeholderId);
-    
-    console.log('✅ Stakeholder deletion completed');
+    try {
+      await repository.deleteOwnership(ownershipId, 'user', 'Deleted via EntityCapTableSection');
+      console.log('✅ Ownership deletion completed via unified repository');
+    } catch (error) {
+      console.error('❌ Error deleting ownership via unified repository:', error);
+    }
   };
-
-  if (!capTableData || capTableData.totalShares === 0) {
-    return (
-      <div className="mt-6 pt-6 border-t border-gray-200">
-        <h4 className="text-sm font-medium text-gray-900 mb-3">Cap Table</h4>
-        <p className="text-sm text-gray-500">No cap table data available.</p>
-      </div>
-    );
-  }
 
   const getStakeholderIcon = (type: string) => {
     switch (type) {
@@ -62,6 +84,24 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
       default: return User;
     }
   };
+
+  if (!capTableData) {
+    return (
+      <div className="mt-6 pt-6 border-t border-gray-200">
+        <h4 className="text-sm font-medium text-gray-900 mb-3">Cap Table</h4>
+        <p className="text-sm text-gray-500">Loading cap table data...</p>
+      </div>
+    );
+  }
+
+  if (capTableData.totalShares === 0) {
+    return (
+      <div className="mt-6 pt-6 border-t border-gray-200">
+        <h4 className="text-sm font-medium text-gray-900 mb-3">Cap Table</h4>
+        <p className="text-sm text-gray-500">No cap table data available.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="mt-6 pt-6 border-t border-gray-200">
@@ -74,17 +114,17 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
       </div>
       
       <div className="space-y-2">
-        {capTableData.stakeholders.map((stakeholder) => {
-          const IconComponent = getStakeholderIcon(stakeholder.type);
+        {capTableData.ownershipSummary.map((ownership) => {
+          const IconComponent = getStakeholderIcon('Individual'); // Default for unified view
           
           return (
-            <div key={`${stakeholder.id}-${refreshTrigger}`} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
+            <div key={`${ownership.ownershipId}-${refreshTrigger}`} className="flex items-center justify-between p-2 bg-gray-50 rounded-md">
               <div className="flex items-center space-x-2">
                 <IconComponent className="h-4 w-4 text-gray-400" />
                 <div>
-                  <div className="text-sm font-medium text-gray-900">{stakeholder.name}</div>
+                  <div className="text-sm font-medium text-gray-900">{ownership.ownerName}</div>
                   <div className="text-xs text-gray-500">
-                    {stakeholder.ownershipPercentage.toFixed(1)}% • {stakeholder.sharesOwned.toLocaleString()} shares
+                    {ownership.percentage.toFixed(1)}% • {ownership.shares.toLocaleString()} shares
                   </div>
                 </div>
               </div>
@@ -94,7 +134,7 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
                   <Edit className="h-3 w-3" />
                 </button>
                 <button 
-                  onClick={() => handleDeleteStakeholder(stakeholder.id, stakeholder.name)}
+                  onClick={() => handleDeleteStakeholder(ownership.ownershipId, ownership.ownerName)}
                   className="p-1 text-gray-400 hover:text-red-600"
                 >
                   <Trash2 className="h-3 w-3" />
@@ -108,6 +148,9 @@ export const EntityCapTableSection: React.FC<EntityCapTableSectionProps> = ({ en
       <div className="mt-3 pt-3 border-t border-gray-100">
         <div className="text-xs text-gray-500">
           Total: {capTableData.totalShares.toLocaleString()} shares
+        </div>
+        <div className="text-xs text-green-600 mt-1">
+          ✅ Using Unified Repository
         </div>
       </div>
     </div>

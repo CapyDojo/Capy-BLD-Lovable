@@ -1,5 +1,7 @@
+
 import { useMemo, useState, useEffect } from 'react';
-import { dataStore } from '@/services/dataStore';
+import { getUnifiedRepository } from '@/services/repositories/unified';
+import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
 
 export interface CapTableData {
   entity: any;
@@ -13,84 +15,87 @@ export interface CapTableData {
 
 export const useCapTable = (entityId: string): CapTableData | null => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const [dataSnapshot, setDataSnapshot] = useState({
-    shareholders: dataStore.getShareholders(),
-    shareClasses: dataStore.getShareClasses(),
-    capTable: dataStore.getCapTableByEntityId(entityId)
-  });
+  const [capTableView, setCapTableView] = useState(null);
+  const [entity, setEntity] = useState(null);
+  const [repository, setRepository] = useState<IUnifiedEntityRepository | null>(null);
 
-  // Enhanced subscription to dataStore with forced refresh
+  // Initialize unified repository
   useEffect(() => {
-    console.log('🔗 useCapTable: Subscribing to dataStore for entity:', entityId);
-    const unsubscribe = dataStore.subscribe(() => {
-      console.log('📡 useCapTable: DataStore updated, forcing refresh for entity:', entityId);
-      
-      // Update data snapshot to force memoization refresh
-      setDataSnapshot({
-        shareholders: dataStore.getShareholders(),
-        shareClasses: dataStore.getShareClasses(),
-        capTable: dataStore.getCapTableByEntityId(entityId)
-      });
-      
-      setRefreshTrigger(prev => prev + 1);
+    const initRepository = async () => {
+      try {
+        console.log('🔄 useCapTable: Initializing unified repository for entity:', entityId);
+        const repo = await getUnifiedRepository('ENTERPRISE');
+        setRepository(repo);
+        console.log('✅ useCapTable: Unified repository initialized');
+      } catch (error) {
+        console.error('❌ useCapTable: Failed to initialize repository:', error);
+      }
+    };
+
+    initRepository();
+  }, []);
+
+  // Load data when repository is ready
+  useEffect(() => {
+    if (!repository) return;
+
+    const loadData = async () => {
+      try {
+        console.log('🔄 useCapTable: Loading data for entity:', entityId);
+        
+        const entityData = await repository.getEntity(entityId);
+        const capTable = await repository.getCapTableView(entityId);
+        
+        setEntity(entityData);
+        setCapTableView(capTable);
+        
+        console.log('✅ useCapTable: Data loaded successfully');
+      } catch (error) {
+        console.error('❌ useCapTable: Error loading data:', error);
+      }
+    };
+
+    loadData();
+
+    // Subscribe to repository changes
+    const unsubscribe = repository.subscribe((event) => {
+      console.log('📡 useCapTable: Received repository event:', event.type, event.entityId);
+      if (event.entityId === entityId) {
+        setRefreshTrigger(prev => prev + 1);
+        loadData();
+      }
     });
+
     return unsubscribe;
-  }, [entityId]);
+  }, [repository, entityId, refreshTrigger]);
 
   return useMemo(() => {
+    if (!entity || !capTableView) {
+      console.log('❌ useCapTable: Missing entity or cap table data');
+      return null;
+    }
+
     console.log('🔄 useCapTable: Computing data for entity:', entityId, 'refresh trigger:', refreshTrigger);
-    
-    const entity = dataStore.getEntityById(entityId);
-    if (!entity) {
-      console.log('❌ Entity not found:', entityId);
-      return null;
-    }
 
-    const capTable = dataSnapshot.capTable;
-    if (!capTable) {
-      console.log('❌ No cap table found for entity:', entityId);
-      return null;
-    }
+    const totalShares = capTableView.totalShares;
+    const availableShares = Math.max(0, (capTableView.authorizedShares || totalShares) - totalShares);
 
-    // Use snapshot data to ensure we get the latest values
-    const allShareholders = dataSnapshot.shareholders;
-    const allShareClasses = dataSnapshot.shareClasses;
-
-    console.log('🔍 DEBUG: Cap table for', entity.name, 'has', capTable.investments.length, 'investments');
-    console.log('🔍 DEBUG: All shareholders count:', allShareholders.length);
-    console.log('🔍 DEBUG: Data snapshot timestamp:', Date.now());
-    
-    capTable.investments.forEach((inv, index) => {
-      const shareholder = allShareholders.find(s => s.id === inv.shareholderId);
-      console.log(`  Investment ${index + 1}:`, {
-        investmentId: inv.id,
-        shareholderId: inv.shareholderId,
-        shareholderName: shareholder?.name || 'UNKNOWN',
-        sharesOwned: inv.sharesOwned
-      });
-    });
-
-    const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
-    const availableShares = capTable.authorizedShares - totalShares;
-
-    // Build table data with current shareholder names from snapshot
-    const tableData = capTable.investments.map((investment) => {
-      const shareholder = allShareholders.find(s => s.id === investment.shareholderId);
-      const shareClass = allShareClasses.find(sc => sc.id === investment.shareClassId);
-      const ownershipPercentage = totalShares > 0 ? (investment.sharesOwned / totalShares) * 100 : 0;
-      const fullyDiluted = capTable.authorizedShares > 0 ? (investment.sharesOwned / capTable.authorizedShares) * 100 : 0;
+    // Build table data from ownership summary
+    const tableData = capTableView.ownershipSummary.map((ownership) => {
+      const totalInvestmentAmount = ownership.shares * (ownership.pricePerShare || 1); // Fallback price
 
       return {
-        id: investment.id,
-        name: shareholder?.name || 'Unknown',
-        type: shareholder?.type || 'Individual',
-        entityId: shareholder?.entityId,
-        sharesOwned: investment.sharesOwned,
-        shareClass: shareClass?.name || 'Unknown',
-        ownershipPercentage,
-        fullyDiluted,
-        pricePerShare: investment.pricePerShare,
-        investmentAmount: investment.investmentAmount,
+        id: ownership.ownershipId,
+        name: ownership.ownerName,
+        type: 'Individual', // Default type from unified view
+        entityId: ownership.ownerEntityId,
+        sharesOwned: ownership.shares,
+        shareClass: ownership.shareClassName,
+        ownershipPercentage: ownership.percentage,
+        fullyDiluted: (capTableView.authorizedShares || totalShares) > 0 ? 
+          (ownership.shares / (capTableView.authorizedShares || totalShares)) * 100 : 0,
+        pricePerShare: ownership.pricePerShare || 1,
+        investmentAmount: totalInvestmentAmount,
       };
     });
 
@@ -113,7 +118,8 @@ export const useCapTable = (entityId: string): CapTableData | null => {
 
     // Add available shares to chart if any
     if (availableShares > 0) {
-      const availablePercentage = (availableShares / capTable.authorizedShares) * 100;
+      const availablePercentage = ((capTableView.authorizedShares || totalShares) > 0) ? 
+        (availableShares / (capTableView.authorizedShares || totalShares)) * 100 : 0;
       chartData.push({
         name: 'Available for Issuance',
         value: availablePercentage,
@@ -125,37 +131,82 @@ export const useCapTable = (entityId: string): CapTableData | null => {
     }
 
     console.log('✅ Cap table data computed for:', entity.name, 'with', tableData.length, 'stakeholders');
-    console.log('📊 Final table data:', tableData.map(t => ({ name: t.name, shares: t.sharesOwned })));
 
     return {
       entity,
-      capTable: {
-        authorizedShares: capTable.authorizedShares,
-        shareholders: allShareholders,
-        shareClasses: allShareClasses,
-        investments: capTable.investments
-      },
+      capTable: capTableView,
       totalShares,
       totalInvestment,
       availableShares,
       chartData,
       tableData,
     };
-  }, [entityId, refreshTrigger, dataSnapshot.shareholders.length, dataSnapshot.shareClasses.length, dataSnapshot.capTable?.investments.length]);
+  }, [entity, capTableView, refreshTrigger]);
 };
 
-// Simplified mutation functions that just use dataStore directly
-export const addStakeholder = (entityId: string, stakeholder: { name: string; shareClass: string; sharesOwned: number; type?: 'Individual' | 'Entity' | 'Pool' }) => {
-  console.log('➕ Adding stakeholder to entity:', entityId, stakeholder);
-  dataStore.addStakeholder(entityId, stakeholder);
+// Unified mutation functions using the unified repository
+export const addStakeholder = async (entityId: string, stakeholder: { name: string; shareClass: string; sharesOwned: number; type?: 'Individual' | 'Entity' | 'Pool' }) => {
+  console.log('➕ Adding stakeholder to entity via unified repository:', entityId, stakeholder);
+  
+  try {
+    const repository = await getUnifiedRepository('ENTERPRISE');
+    
+    // Create owner entity if it doesn't exist (for new stakeholders)
+    let ownerEntityId = stakeholder.name; // Use name as ID for now
+    
+    const existingOwner = await repository.getEntity(ownerEntityId);
+    if (!existingOwner) {
+      await repository.createEntity({
+        name: stakeholder.name,
+        type: stakeholder.type || 'Individual',
+        jurisdiction: stakeholder.type === 'Individual' ? undefined : 'Delaware',
+      }, 'user', 'Created from stakeholder addition');
+    }
+    
+    // Create ownership relationship
+    await repository.createOwnership({
+      ownerEntityId,
+      ownedEntityId: entityId,
+      shares: stakeholder.sharesOwned,
+      shareClassId: stakeholder.shareClass,
+      effectiveDate: new Date(),
+      createdBy: 'user',
+      updatedBy: 'user'
+    }, 'user');
+    
+    console.log('✅ Stakeholder added via unified repository');
+  } catch (error) {
+    console.error('❌ Error adding stakeholder via unified repository:', error);
+  }
 };
 
-export const updateStakeholder = (entityId: string, stakeholderId: string, updates: { name?: string; shareClass?: string; sharesOwned?: number }) => {
-  console.log('📝 Updating stakeholder:', stakeholderId, 'in entity:', entityId, updates);
-  dataStore.updateStakeholder(entityId, stakeholderId, updates);
+export const updateStakeholder = async (entityId: string, stakeholderId: string, updates: { name?: string; shareClass?: string; sharesOwned?: number }) => {
+  console.log('📝 Updating stakeholder via unified repository:', stakeholderId, 'in entity:', entityId, updates);
+  
+  try {
+    const repository = await getUnifiedRepository('ENTERPRISE');
+    
+    // Update ownership record
+    await repository.updateOwnership(stakeholderId, {
+      shares: updates.sharesOwned,
+      shareClassId: updates.shareClass,
+      updatedBy: 'user'
+    }, 'user', 'Updated stakeholder details');
+    
+    console.log('✅ Stakeholder updated via unified repository');
+  } catch (error) {
+    console.error('❌ Error updating stakeholder via unified repository:', error);
+  }
 };
 
-export const deleteStakeholder = (entityId: string, stakeholderId: string) => {
-  console.log('🗑️ Deleting stakeholder:', stakeholderId, 'from entity:', entityId);
-  dataStore.deleteStakeholder(entityId, stakeholderId);
+export const deleteStakeholder = async (entityId: string, stakeholderId: string) => {
+  console.log('🗑️ Deleting stakeholder via unified repository:', stakeholderId, 'from entity:', entityId);
+  
+  try {
+    const repository = await getUnifiedRepository('ENTERPRISE');
+    await repository.deleteOwnership(stakeholderId, 'user', 'Deleted stakeholder');
+    console.log('✅ Stakeholder deleted via unified repository');
+  } catch (error) {
+    console.error('❌ Error deleting stakeholder via unified repository:', error);
+  }
 };
