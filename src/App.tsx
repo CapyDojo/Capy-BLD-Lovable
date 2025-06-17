@@ -14,6 +14,9 @@ import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import NotFound from "./pages/NotFound";
 
+// Import validation suite to make console functions available
+import "@/services/dataStore/MigrationValidation";
+
 const queryClient = new QueryClient();
 
 const App = () => (
