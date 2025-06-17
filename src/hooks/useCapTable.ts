@@ -1,7 +1,6 @@
 
 import { useMemo, useState, useEffect } from 'react';
 import { dataStore } from '@/services/dataStore';
-import { syncCapTableData, SyncedStakeholderData } from '@/services/capTableSync';
 
 export interface CapTableData {
   entity: any;
@@ -10,142 +9,126 @@ export interface CapTableData {
   totalInvestment: number;
   availableShares: number;
   chartData: any[];
-  tableData: SyncedStakeholderData[];
+  tableData: any[];
 }
 
 export const useCapTable = (entityId: string): CapTableData | null => {
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [entityExists, setEntityExists] = useState(true);
+  const [, forceUpdate] = useState({});
 
+  // Simple subscription to dataStore - no complex refresh logic
   useEffect(() => {
-    console.log('🔗 useCapTable: Enhanced subscription to data store for entity:', entityId);
+    console.log('🔗 useCapTable: Subscribing to dataStore for entity:', entityId);
     const unsubscribe = dataStore.subscribe(() => {
-      console.log('📡 useCapTable: Enhanced data store update received for entity:', entityId);
-      
-      // Check if entity still exists
-      const entity = dataStore.getEntityById(entityId);
-      if (!entity) {
-        console.log('⚠️ Entity no longer exists:', entityId);
-        setEntityExists(false);
-      } else {
-        console.log('✅ Entity still exists, triggering enhanced refresh for stakeholder updates');
-        setEntityExists(true);
-        // Force a complete refresh to pick up stakeholder name changes
-        setRefreshKey(prev => prev + 1);
-      }
+      console.log('📡 useCapTable: DataStore updated, refreshing');
+      forceUpdate({});
     });
     return unsubscribe;
   }, [entityId]);
 
-  // Also refresh when entityId changes
-  useEffect(() => {
-    console.log('🔄 useCapTable: Entity changed, forcing refresh:', entityId);
-    setRefreshKey(prev => prev + 1);
-  }, [entityId]);
-
   return useMemo(() => {
-    console.log('🔄 useCapTable: Enhanced data computation for entity:', entityId, 'refreshKey:', refreshKey);
+    console.log('🔄 useCapTable: Computing data for entity:', entityId);
     
-    if (!entityExists) {
-      console.log('❌ Entity does not exist, returning null');
-      return null;
-    }
-
     const entity = dataStore.getEntityById(entityId);
-    const syncedData = syncCapTableData(entityId);
-
-    if (!entity || !syncedData) {
-      console.log('❌ No entity or synced data found for:', entityId);
+    if (!entity) {
+      console.log('❌ Entity not found:', entityId);
       return null;
     }
 
-    console.log('✅ Computing enhanced cap table data for:', entity.name, 'with', syncedData.stakeholders.length, 'stakeholders');
+    const capTable = dataStore.getCapTableByEntityId(entityId);
+    if (!capTable) {
+      console.log('❌ No cap table found for entity:', entityId);
+      return null;
+    }
 
-    const totalInvestment = syncedData.stakeholders.reduce((sum, stakeholder) => sum + stakeholder.investmentAmount, 0);
+    // Get fresh data directly from dataStore
+    const allShareholders = dataStore.getShareholders();
+    const allShareClasses = dataStore.getShareClasses();
 
-    // Calculate chart data using synced stakeholder data
-    const chartData = syncedData.stakeholders
-      .filter(stakeholder => stakeholder.sharesOwned > 0)
-      .map((stakeholder, index) => {
+    const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
+    const availableShares = capTable.authorizedShares - totalShares;
+
+    // Build table data with current shareholder names
+    const tableData = capTable.investments.map((investment) => {
+      const shareholder = allShareholders.find(s => s.id === investment.shareholderId);
+      const shareClass = allShareClasses.find(sc => sc.id === investment.shareClassId);
+      const ownershipPercentage = totalShares > 0 ? (investment.sharesOwned / totalShares) * 100 : 0;
+      const fullyDiluted = capTable.authorizedShares > 0 ? (investment.sharesOwned / capTable.authorizedShares) * 100 : 0;
+
+      return {
+        id: investment.id,
+        name: shareholder?.name || 'Unknown',
+        type: shareholder?.type || 'Individual',
+        entityId: shareholder?.entityId,
+        sharesOwned: investment.sharesOwned,
+        shareClass: shareClass?.name || 'Unknown',
+        ownershipPercentage,
+        fullyDiluted,
+        pricePerShare: investment.pricePerShare,
+        investmentAmount: investment.investmentAmount,
+      };
+    });
+
+    const totalInvestment = tableData.reduce((sum, item) => sum + item.investmentAmount, 0);
+
+    // Build chart data
+    const chartData = tableData
+      .filter(item => item.sharesOwned > 0)
+      .map((item, index) => {
         const colors = ['#10b981', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316'];
-        
         return {
-          name: stakeholder.name,
-          value: stakeholder.ownershipPercentage,
-          shares: stakeholder.sharesOwned,
-          investmentAmount: stakeholder.investmentAmount,
-          shareClass: stakeholder.shareClass,
+          name: item.name,
+          value: item.ownershipPercentage,
+          shares: item.sharesOwned,
+          investmentAmount: item.investmentAmount,
+          shareClass: item.shareClass,
           color: colors[index % colors.length],
         };
       });
 
-    // Add available shares if any
-    if (syncedData.availableShares > 0) {
-      const availablePercentage = (syncedData.availableShares / syncedData.authorizedShares) * 100;
+    // Add available shares to chart if any
+    if (availableShares > 0) {
+      const availablePercentage = (availableShares / capTable.authorizedShares) * 100;
       chartData.push({
         name: 'Available for Issuance',
         value: availablePercentage,
-        shares: syncedData.availableShares,
+        shares: availableShares,
         investmentAmount: 0,
         shareClass: 'Unissued',
         color: '#e5e7eb',
       });
     }
 
-    console.log('📊 Enhanced cap table data computed with updated stakeholder names:', {
-      totalShares: syncedData.totalShares,
-      stakeholders: syncedData.stakeholders.map(s => s.name),
-      chartItems: chartData.length,
-      entityName: entity.name
-    });
+    console.log('✅ Cap table data computed for:', entity.name, 'with', tableData.length, 'stakeholders');
 
     return {
       entity,
       capTable: {
-        authorizedShares: syncedData.authorizedShares,
-        shareholders: syncedData.stakeholders.map(s => ({
-          id: s.id,
-          name: s.name,
-          type: s.type,
-          entityId: s.entityId
-        })),
-        shareClasses: syncedData.stakeholders.map(s => ({
-          id: s.id,
-          name: s.shareClass,
-          type: s.shareClass,
-          votingRights: true
-        })),
-        investments: syncedData.stakeholders.map(s => ({
-          id: s.id,
-          shareholderId: s.id,
-          shareClassId: s.id,
-          sharesOwned: s.sharesOwned,
-          pricePerShare: s.pricePerShare,
-          investmentAmount: s.investmentAmount,
-          investmentDate: new Date()
-        }))
+        authorizedShares: capTable.authorizedShares,
+        shareholders: allShareholders,
+        shareClasses: allShareClasses,
+        investments: capTable.investments
       },
-      totalShares: syncedData.totalShares,
+      totalShares,
       totalInvestment,
-      availableShares: syncedData.availableShares,
+      availableShares,
       chartData,
-      tableData: syncedData.stakeholders,
+      tableData,
     };
-  }, [entityId, refreshKey, entityExists]);
+  }, [entityId]);
 };
 
-// Enhanced export functions for cap table mutations
+// Simplified mutation functions that just use dataStore directly
 export const addStakeholder = (entityId: string, stakeholder: { name: string; shareClass: string; sharesOwned: number; type?: 'Individual' | 'Entity' | 'Pool' }) => {
-  console.log('➕ Enhanced stakeholder addition to entity:', entityId, stakeholder);
+  console.log('➕ Adding stakeholder to entity:', entityId, stakeholder);
   dataStore.addStakeholder(entityId, stakeholder);
 };
 
 export const updateStakeholder = (entityId: string, stakeholderId: string, updates: { name?: string; shareClass?: string; sharesOwned?: number }) => {
-  console.log('📝 Enhanced stakeholder update:', stakeholderId, 'in entity:', entityId, updates);
+  console.log('📝 Updating stakeholder:', stakeholderId, 'in entity:', entityId, updates);
   dataStore.updateStakeholder(entityId, stakeholderId, updates);
 };
 
 export const deleteStakeholder = (entityId: string, stakeholderId: string) => {
-  console.log('🗑️ Enhanced stakeholder deletion:', stakeholderId, 'from entity:', entityId);
+  console.log('🗑️ Deleting stakeholder:', stakeholderId, 'from entity:', entityId);
   dataStore.deleteStakeholder(entityId, stakeholderId);
 };
