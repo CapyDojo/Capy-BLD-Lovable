@@ -80,25 +80,36 @@ const buildOwnershipHierarchy = () => {
     capTable.investments.forEach(investment => {
       const shareholder = allShareholders.find(s => s.id === investment.shareholderId);
       
-      // Only process entity shareholders (not individuals or pools)
+      // Only process entity shareholders for hierarchy (not individuals or pools)
       if (shareholder?.type === 'Entity' && shareholder.entityId) {
         const ownerEntityId = shareholder.entityId;
         const ownedEntityId = capTable.entityId;
         
-        // Track what entities this entity owns
-        if (!reverseOwnershipMap.has(ownerEntityId)) {
-          reverseOwnershipMap.set(ownerEntityId, []);
-        }
-        if (!reverseOwnershipMap.get(ownerEntityId)!.includes(ownedEntityId)) {
-          reverseOwnershipMap.get(ownerEntityId)!.push(ownedEntityId);
-        }
+        // Only create ownership relationship if owner entity actually owns the target
+        // (Skip if it's just an investor - we want subsidiaries, not investors)
+        const ownerEntity = allEntities.find(e => e.id === ownerEntityId);
+        const ownedEntity = allEntities.find(e => e.id === ownedEntityId);
         
-        // Track who owns this entity
-        if (!ownershipMap.has(ownedEntityId)) {
-          ownershipMap.set(ownedEntityId, []);
-        }
-        if (!ownershipMap.get(ownedEntityId)!.includes(ownerEntityId)) {
-          ownershipMap.get(ownedEntityId)!.push(ownerEntityId);
+        // Determine if this is a subsidiary relationship (owner is a parent company)
+        // vs an investment relationship (investor invests in target)
+        const isSubsidiaryRelationship = investment.sharesOwned > (capTable.authorizedShares * 0.5); // Majority ownership
+        
+        if (isSubsidiaryRelationship) {
+          // Track what entities this entity owns (subsidiaries)
+          if (!reverseOwnershipMap.has(ownerEntityId)) {
+            reverseOwnershipMap.set(ownerEntityId, []);
+          }
+          if (!reverseOwnershipMap.get(ownerEntityId)!.includes(ownedEntityId)) {
+            reverseOwnershipMap.get(ownerEntityId)!.push(ownedEntityId);
+          }
+          
+          // Track who owns this entity (parent)
+          if (!ownershipMap.has(ownedEntityId)) {
+            ownershipMap.set(ownedEntityId, []);
+          }
+          if (!ownershipMap.get(ownedEntityId)!.includes(ownerEntityId)) {
+            ownershipMap.get(ownedEntityId)!.push(ownerEntityId);
+          }
         }
       }
     });
@@ -117,7 +128,7 @@ const buildOwnershipHierarchy = () => {
     visited.add(entityId);
     entityLevels.set(entityId, level);
     
-    // Recursively calculate levels for owned entities
+    // Recursively calculate levels for owned entities (subsidiaries)
     const ownedEntities = reverseOwnershipMap.get(entityId) || [];
     ownedEntities.forEach(ownedId => {
       const childLevel = calculateLevel(ownedId, level + 1);
@@ -149,6 +160,7 @@ const buildOwnershipHierarchy = () => {
 export const generateSyncedCanvasStructure = () => {
   console.log('🔄 Generating hierarchical canvas structure');
   const allEntities = dataStore.getEntities();
+  const allShareholders = dataStore.getShareholders();
   
   const nodes: Node[] = [];
   const edges: Edge[] = [];
@@ -157,27 +169,26 @@ export const generateSyncedCanvasStructure = () => {
   // Build hierarchy
   const { entityLevels, levelGroups } = buildOwnershipHierarchy();
   
-  // Layout constants
+  // Layout constants - increased spacing to prevent overlap
   const LEVEL_HEIGHT = 250;
-  const NODE_WIDTH = 300;
-  const NODE_SPACING = 50;
+  const NODE_WIDTH = 250; // Increased from 200 to account for actual node size
+  const NODE_SPACING = 80; // Increased spacing between nodes
   const START_Y = 50;
   
   // Position nodes by hierarchy level
   levelGroups.forEach((entityIds, level) => {
     const y = START_Y + (level * LEVEL_HEIGHT);
     const totalWidth = entityIds.length * NODE_WIDTH + (entityIds.length - 1) * NODE_SPACING;
-    const startX = Math.max(50, (window.innerWidth - totalWidth) / 2);
+    const startX = Math.max(50, (Math.max(1200, window.innerWidth) - totalWidth) / 2); // Use minimum width for consistent layout
     
     entityIds.forEach((entityId, index) => {
       const entity = allEntities.find(e => e.id === entityId);
       if (!entity) return;
       
       const x = startX + (index * (NODE_WIDTH + NODE_SPACING));
-      const position = entity.position || { x, y };
       
       // Use saved position if available, otherwise use calculated hierarchical position
-      const finalPosition = entity.position ? entity.position : { x, y };
+      const finalPosition = entity.position || { x, y };
       
       nodes.push({
         id: entity.id,
@@ -195,20 +206,33 @@ export const generateSyncedCanvasStructure = () => {
     });
   });
   
-  // Create entity-to-entity ownership edges
+  // Create ALL ownership edges (entity-to-entity AND individual-to-entity)
   allEntities.forEach((entity) => {
     const syncedData = syncCapTableData(entity.id);
     if (!syncedData || syncedData.totalShares === 0) return;
 
-    const entityStakeholders = syncedData.stakeholders.filter(
-      sh => sh.type === 'Entity' && sh.entityId
-    );
-
-    entityStakeholders.forEach((stakeholder) => {
-      if (stakeholder.entityId && nodeIds.has(stakeholder.entityId)) {
+    // Create edges for ALL stakeholders with ownership > 0
+    syncedData.stakeholders.forEach((stakeholder) => {
+      if (stakeholder.sharesOwned <= 0) return;
+      
+      let sourceNodeId: string | null = null;
+      
+      if (stakeholder.type === 'Entity' && stakeholder.entityId) {
+        // Entity stakeholder - use entity ID
+        sourceNodeId = stakeholder.entityId;
+      } else if (stakeholder.type === 'Individual') {
+        // Individual stakeholder - find corresponding entity node
+        const individualEntity = allEntities.find(e => e.name === stakeholder.name && e.type === 'Individual');
+        if (individualEntity) {
+          sourceNodeId = individualEntity.id;
+        }
+      }
+      // Skip Pool type stakeholders for edges
+      
+      if (sourceNodeId && nodeIds.has(sourceNodeId) && sourceNodeId !== entity.id) {
         edges.push({
-          id: `e-${stakeholder.entityId}-${entity.id}`,
-          source: stakeholder.entityId,
+          id: `e-${sourceNodeId}-${entity.id}`,
+          source: sourceNodeId,
           target: entity.id,
           label: `${stakeholder.ownershipPercentage.toFixed(1)}%`,
           style: { stroke: '#3b82f6', strokeWidth: 2 },
