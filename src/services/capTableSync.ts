@@ -1,3 +1,4 @@
+
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 
@@ -106,34 +107,64 @@ const buildOwnershipHierarchy = () => {
     });
   });
   
-  // Find root entities (entities that are not owned by other entities)
-  const rootEntities = allEntities.filter(entity => !ownershipMap.has(entity.id));
-  
-  // Calculate hierarchy levels
+  // NEW APPROACH: Calculate hierarchy levels using topological sorting
+  // Ensure owners are ALWAYS positioned above owned entities
   const entityLevels = new Map<string, number>();
-  const visited = new Set<string>();
+  const inDegree = new Map<string, number>();
+  const queue: string[] = [];
   
-  const calculateLevel = (entityId: string, level: number = 0): number => {
-    if (visited.has(entityId)) return entityLevels.get(entityId) || level;
+  // Initialize in-degree count for all entities
+  allEntities.forEach(entity => {
+    const owners = ownershipMap.get(entity.id) || [];
+    inDegree.set(entity.id, owners.length);
     
-    visited.add(entityId);
-    entityLevels.set(entityId, level);
+    // Entities with no owners start at level 0
+    if (owners.length === 0) {
+      queue.push(entity.id);
+      entityLevels.set(entity.id, 0);
+    }
+  });
+  
+  // Process entities level by level using topological sort
+  let currentLevel = 0;
+  const processedAtLevel = new Set<string>();
+  
+  while (queue.length > 0) {
+    const entitiesAtCurrentLevel = [...queue];
+    queue.length = 0; // Clear the queue
     
-    // Recursively calculate levels for owned entities (subsidiaries/investments)
-    const ownedEntities = reverseOwnershipMap.get(entityId) || [];
-    ownedEntities.forEach(ownedId => {
-      const childLevel = calculateLevel(ownedId, level + 1);
-      // Update if we found a deeper path to this entity
-      if ((entityLevels.get(ownedId) || 0) < childLevel) {
-        entityLevels.set(ownedId, childLevel);
-      }
+    // Process all entities at the current level
+    entitiesAtCurrentLevel.forEach(entityId => {
+      if (processedAtLevel.has(entityId)) return;
+      
+      processedAtLevel.add(entityId);
+      entityLevels.set(entityId, currentLevel);
+      
+      // Update owned entities (they go to the next level)
+      const ownedEntities = reverseOwnershipMap.get(entityId) || [];
+      ownedEntities.forEach(ownedId => {
+        const currentInDegree = inDegree.get(ownedId) || 0;
+        inDegree.set(ownedId, currentInDegree - 1);
+        
+        // If all owners of this entity have been processed, add it to next level
+        if (inDegree.get(ownedId) === 0 && !processedAtLevel.has(ownedId)) {
+          queue.push(ownedId);
+        }
+      });
     });
     
-    return level;
-  };
+    // Move to next level only if we have entities to process
+    if (queue.length > 0) {
+      currentLevel++;
+    }
+  }
   
-  // Start from root entities
-  rootEntities.forEach(entity => calculateLevel(entity.id, 0));
+  // Handle any remaining entities (shouldn't happen with proper data)
+  allEntities.forEach(entity => {
+    if (!entityLevels.has(entity.id)) {
+      entityLevels.set(entity.id, 0);
+    }
+  });
   
   // Group entities by level
   const levelGroups = new Map<number, string[]>();
