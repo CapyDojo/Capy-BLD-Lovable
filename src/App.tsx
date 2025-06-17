@@ -27,13 +27,30 @@ const App = () => {
         const migrationValidationModule = await import('@/services/dataStore/MigrationValidation');
         const migrationBridgeModule = await import('@/services/dataStore/MigrationBridge');
         
-        console.log('✅ Migration modules loaded:', migrationValidationModule, migrationBridgeModule);
+        console.log('✅ Migration modules loaded successfully');
         
-        // Explicitly attach to window object
-        (window as any).runMigrationTests = migrationValidationModule.migrationValidator.runAllTests.bind(migrationValidationModule.migrationValidator);
-        (window as any).runMigrationTest = (testName: string) => migrationValidationModule.migrationValidator.runSingleTest(testName);
-        (window as any).getMigrationTestNames = () => migrationValidationModule.migrationValidator.getTestNames();
-        (window as any).getMigrationStatus = () => migrationBridgeModule.migrationBridge.getMigrationStatus();
+        // Create wrapper functions to avoid binding issues
+        const runMigrationTests = async () => {
+          return await migrationValidationModule.migrationValidator.runAllTests();
+        };
+        
+        const runMigrationTest = async (testName: string) => {
+          return await migrationValidationModule.migrationValidator.runSingleTest(testName);
+        };
+        
+        const getMigrationTestNames = () => {
+          return migrationValidationModule.migrationValidator.getTestNames();
+        };
+        
+        const getMigrationStatus = () => {
+          return migrationBridgeModule.migrationBridge.getMigrationStatus();
+        };
+        
+        // Attach to window object
+        (window as any).runMigrationTests = runMigrationTests;
+        (window as any).runMigrationTest = runMigrationTest;
+        (window as any).getMigrationTestNames = getMigrationTestNames;
+        (window as any).getMigrationStatus = getMigrationStatus;
         
         console.log('🧪 Migration test functions exposed to console:');
         console.log('  - runMigrationTests()');
@@ -41,20 +58,20 @@ const App = () => {
         console.log('  - getMigrationTestNames()');
         console.log('  - getMigrationStatus()');
         
-        // Test that functions are actually available
-        console.log('🔍 Testing function availability:');
+        // Verify functions are properly attached
+        console.log('🔍 Function verification:');
         console.log('  - runMigrationTests:', typeof (window as any).runMigrationTests);
-        console.log('  - runMigrationTest:', typeof (window as any).runMigrationTest);
-        console.log('  - getMigrationTestNames:', typeof (window as any).getMigrationTestNames);
-        console.log('  - getMigrationStatus:', typeof (window as any).getMigrationStatus);
+        console.log('  - Window has runMigrationTests:', 'runMigrationTests' in window);
         
       } catch (error) {
         console.error('❌ Failed to expose migration functions:', error);
       }
     };
     
-    // Add a small delay to ensure all modules are loaded
-    setTimeout(exposeMigrationFunctions, 1000);
+    // Use a longer delay to ensure everything is loaded
+    const timeoutId = setTimeout(exposeMigrationFunctions, 2000);
+    
+    return () => clearTimeout(timeoutId);
   }, []);
 
   return (
