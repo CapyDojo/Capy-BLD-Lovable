@@ -257,14 +257,15 @@ export const generateSyncedCanvasStructure = () => {
       
       const x = startX + (index * (NODE_WIDTH + NODE_SPACING));
       
-      // Use saved position if available, otherwise use calculated hierarchical position
-      const finalPosition = entity.position || { x, y };
+      // ALWAYS use calculated hierarchical position to ensure proper hierarchy display
+      const finalPosition = { x, y };
       
       console.log(`🎯 DEBUG: Entity ${entity.name} positioned at:`, {
         level,
         calculatedPosition: { x, y },
         savedPosition: entity.position,
-        finalPosition
+        finalPosition,
+        note: 'Using calculated position for proper hierarchy'
       });
       
       nodes.push({
