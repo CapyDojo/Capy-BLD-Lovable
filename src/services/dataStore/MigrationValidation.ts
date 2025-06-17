@@ -125,7 +125,9 @@ export class MigrationValidationSuite {
               ownedEntityId: childEntity.id,
               shares: 500,
               shareClassId: shareClass.id,
-              effectiveDate: new Date()
+              effectiveDate: new Date(),
+              createdBy: 'legal-admin',
+              updatedBy: 'legal-admin'
             }, 'legal-admin');
             
             // This should fail: Child owns Parent (circular)
@@ -182,7 +184,9 @@ export class MigrationValidationSuite {
             ownedEntityId: entity.id,
             shares: 6000,
             shareClassId: shareClass.id,
-            effectiveDate: new Date()
+            effectiveDate: new Date(),
+            createdBy: 'portfolio-manager',
+            updatedBy: 'portfolio-manager'
           }, 'portfolio-manager');
           
           await enterpriseStore.createOwnership({
@@ -190,7 +194,9 @@ export class MigrationValidationSuite {
             ownedEntityId: entity.id,
             shares: 4000,
             shareClassId: shareClass.id,
-            effectiveDate: new Date()
+            effectiveDate: new Date(),
+            createdBy: 'portfolio-manager',
+            updatedBy: 'portfolio-manager'
           }, 'portfolio-manager');
           
           // Get cap table and verify calculations
