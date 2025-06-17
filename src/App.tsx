@@ -14,22 +14,25 @@ import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import NotFound from "./pages/NotFound";
 
-// Import and expose validation suite
+// Import validation suite and bridge
 import { migrationValidator } from "@/services/dataStore/MigrationValidation";
 import { migrationBridge } from "@/services/dataStore/MigrationBridge";
 
-// Explicitly expose functions to global scope
+// Explicitly expose functions to global scope after components are loaded
 if (typeof window !== 'undefined') {
-  (window as any).runMigrationTests = () => migrationValidator.runAllTests();
-  (window as any).runMigrationTest = (testName: string) => migrationValidator.runSingleTest(testName);
-  (window as any).getMigrationTestNames = () => migrationValidator.getTestNames();
-  (window as any).getMigrationStatus = () => migrationBridge.getMigrationStatus();
-  
-  console.log('🧪 Migration test functions exposed to console:');
-  console.log('  - runMigrationTests()');
-  console.log('  - runMigrationTest(name)');
-  console.log('  - getMigrationTestNames()');
-  console.log('  - getMigrationStatus()');
+  // Use setTimeout to ensure everything is loaded
+  setTimeout(() => {
+    (window as any).runMigrationTests = () => migrationValidator.runAllTests();
+    (window as any).runMigrationTest = (testName: string) => migrationValidator.runSingleTest(testName);
+    (window as any).getMigrationTestNames = () => migrationValidator.getTestNames();
+    (window as any).getMigrationStatus = () => migrationBridge.getMigrationStatus();
+    
+    console.log('🧪 Migration test functions exposed to console:');
+    console.log('  - runMigrationTests()');
+    console.log('  - runMigrationTest(name)');
+    console.log('  - getMigrationTestNames()');
+    console.log('  - getMigrationStatus()');
+  }, 100);
 }
 
 const queryClient = new QueryClient();
