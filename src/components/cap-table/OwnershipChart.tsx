@@ -1,8 +1,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from 'recharts';
-import { useCapTable } from '@/hooks/useCapTable';
-import { dataStore } from '@/services/dataStore';
+import { getUnifiedRepository } from '@/services/repositories/unified';
+import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
+import { Entity } from '@/types/entity';
+import { CapTableView } from '@/types/unified';
 
 interface OwnershipChartProps {
   entityId: string;
@@ -15,13 +17,8 @@ const CustomTooltip = ({ active, payload }: any) => {
       <div className="bg-white p-3 border border-gray-200 rounded-lg shadow">
         <p className="font-medium text-gray-900">{data.name}</p>
         <p className="text-sm text-gray-600">
-          {data.value.toFixed(1)}% ({data.shares > 0 ? data.shares.toLocaleString() + ' shares' : 'Future dilution'})
+          {data.value.toFixed(1)}% ({data.shares > 0 ? data.shares.toLocaleString() + ' shares' : 'No shares'})
         </p>
-        {data.investmentAmount > 0 && (
-          <p className="text-sm text-gray-600">
-            Investment: ${data.investmentAmount.toLocaleString()}
-          </p>
-        )}
       </div>
     );
   }
@@ -29,20 +26,92 @@ const CustomTooltip = ({ active, payload }: any) => {
 };
 
 export const OwnershipChart: React.FC<OwnershipChartProps> = ({ entityId }) => {
-  const capTableData = useCapTable(entityId);
+  const [entity, setEntity] = useState<Entity | null>(null);
+  const [capTableView, setCapTableView] = useState<CapTableView | null>(null);
+  const [chartData, setChartData] = useState<any[]>([]);
+  const [repository, setRepository] = useState<IUnifiedEntityRepository | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Subscribe to data store changes to force re-render
+  // Initialize repository
   useEffect(() => {
-    console.log('🔗 OwnershipChart subscribing to data store for entity:', entityId);
-    const unsubscribe = dataStore.subscribe(() => {
-      console.log('📡 OwnershipChart received data store update for entity:', entityId);
-      setRefreshKey(prev => prev + 1);
-    });
-    return unsubscribe;
-  }, [entityId]);
+    const initRepository = async () => {
+      try {
+        console.log('🔄 OwnershipChart: Initializing unified repository for entity:', entityId);
+        const repo = await getUnifiedRepository('ENTERPRISE');
+        setRepository(repo);
+        console.log('✅ OwnershipChart: Unified repository initialized');
+      } catch (error) {
+        console.error('❌ OwnershipChart: Failed to initialize repository:', error);
+      }
+    };
 
-  if (!capTableData) {
+    initRepository();
+  }, []);
+
+  // Load data when repository is ready
+  useEffect(() => {
+    if (!repository) return;
+
+    const loadData = async () => {
+      try {
+        console.log('🔄 OwnershipChart: Loading data for entity:', entityId);
+        
+        const entityData = await repository.getEntity(entityId);
+        const capTable = await repository.getCapTableView(entityId);
+        
+        setEntity(entityData);
+        setCapTableView(capTable);
+
+        // Generate chart data
+        if (capTable && capTable.ownershipSummary.length > 0) {
+          const colors = [
+            '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6',
+            '#06b6d4', '#84cc16', '#f97316', '#ec4899', '#6366f1'
+          ];
+
+          const data = capTable.ownershipSummary.map((ownership, index) => ({
+            name: ownership.ownerName,
+            value: ownership.percentage,
+            shares: ownership.shares,
+            color: colors[index % colors.length]
+          }));
+
+          setChartData(data);
+        } else {
+          setChartData([]);
+        }
+
+        console.log('✅ OwnershipChart: Data loaded successfully');
+      } catch (error) {
+        console.error('❌ OwnershipChart: Error loading data:', error);
+      }
+    };
+
+    loadData();
+
+    // Subscribe to repository changes
+    const unsubscribe = repository.subscribe((event) => {
+      console.log('📡 OwnershipChart: Received repository event:', event.type, event.entityId);
+      if (event.entityId === entityId) {
+        setRefreshKey(prev => prev + 1);
+        loadData();
+      }
+    });
+
+    return unsubscribe;
+  }, [repository, entityId, refreshKey]);
+
+  if (!entity || !capTableView) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="text-center text-gray-500">
+          <p>Loading ownership data...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (capTableView.totalShares === 0) {
     return (
       <div className="bg-white rounded-lg border border-gray-200 p-6">
         <div className="text-center text-gray-500">
@@ -52,13 +121,16 @@ export const OwnershipChart: React.FC<OwnershipChartProps> = ({ entityId }) => {
     );
   }
 
-  const { entity, capTable, totalShares, totalInvestment, availableShares, chartData } = capTableData;
-
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6" key={`chart-${refreshKey}`}>
-      <h3 className="text-lg font-medium text-gray-900 mb-6">
-        Ownership Distribution - {entity.name}
-      </h3>
+      <div className="flex items-center justify-between mb-6">
+        <h3 className="text-lg font-medium text-gray-900">
+          Ownership Distribution - {entity.name}
+        </h3>
+        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          ✅ Enterprise Store
+        </Badge>
+      </div>
       
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="h-80">
@@ -109,30 +181,20 @@ export const OwnershipChart: React.FC<OwnershipChartProps> = ({ entityId }) => {
               </div>
               <div className="flex justify-between">
                 <span>Jurisdiction:</span>
-                <span className="font-medium">{entity.jurisdiction}</span>
+                <span className="font-medium">{entity.jurisdiction || 'N/A'}</span>
               </div>
               <div className="flex justify-between">
-                <span>Total Authorized Shares:</span>
-                <span className="font-medium">{capTable.authorizedShares.toLocaleString()}</span>
+                <span>Total Shares:</span>
+                <span className="font-medium">{capTableView.totalShares.toLocaleString()}</span>
               </div>
               <div className="flex justify-between">
-                <span>Shares Outstanding:</span>
-                <span className="font-medium">{totalShares.toLocaleString()}</span>
+                <span>Shareholders:</span>
+                <span className="font-medium">{capTableView.ownershipSummary.length}</span>
               </div>
               <div className="flex justify-between">
-                <span>Available for Issuance:</span>
-                <span className="font-medium">{availableShares.toLocaleString()}</span>
+                <span>Share Classes:</span>
+                <span className="font-medium">{capTableView.shareClasses.length}</span>
               </div>
-              <div className="flex justify-between pt-2 border-t border-gray-100">
-                <span>Total Investment:</span>
-                <span className="font-medium">${totalInvestment.toLocaleString()}</span>
-              </div>
-              {capTable.lastRoundValuation && (
-                <div className="flex justify-between">
-                  <span>Last Round Valuation:</span>
-                  <span className="font-medium">${(capTable.lastRoundValuation / 1000000).toFixed(1)}M</span>
-                </div>
-              )}
             </div>
           </div>
         </div>

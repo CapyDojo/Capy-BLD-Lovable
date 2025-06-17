@@ -1,7 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
-import { dataStore } from '@/services/dataStore';
+import { getUnifiedRepository } from '@/services/repositories/unified';
+import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
 import { Entity } from '@/types/entity';
-import { EntityCapTable, ShareClass } from '@/types/capTable';
+import { UnifiedOwnership, CapTableView } from '@/types/unified';
 import { Edit, Check, X } from 'lucide-react';
 import { 
   Table, 
@@ -19,39 +21,75 @@ import { Input } from '@/components/ui/input';
 
 const Database: React.FC = () => {
   const [entities, setEntities] = useState<Entity[]>([]);
-  const [capTables, setCapTables] = useState<EntityCapTable[]>([]);
-  const [shareClasses, setShareClasses] = useState<ShareClass[]>([]);
+  const [ownerships, setOwnerships] = useState<UnifiedOwnership[]>([]);
+  const [capTableViews, setCapTableViews] = useState<CapTableView[]>([]);
   const [editingEntity, setEditingEntity] = useState<string | null>(null);
-  const [editingCapTable, setEditingCapTable] = useState<string | null>(null);
   const [editData, setEditData] = useState<any>({});
+  const [repository, setRepository] = useState<IUnifiedEntityRepository | null>(null);
 
   useEffect(() => {
-    const loadData = () => {
-      setEntities(dataStore.getEntities());
-      setCapTables(dataStore.getCapTables());
-      setShareClasses(dataStore.getShareClasses());
+    const initRepository = async () => {
+      try {
+        console.log('🔄 Database: Initializing unified repository...');
+        const repo = await getUnifiedRepository('ENTERPRISE');
+        setRepository(repo);
+        console.log('✅ Database: Unified repository initialized');
+      } catch (error) {
+        console.error('❌ Database: Failed to initialize repository:', error);
+      }
+    };
+
+    initRepository();
+  }, []);
+
+  useEffect(() => {
+    if (!repository) return;
+
+    const loadData = async () => {
+      try {
+        console.log('🔄 Database: Loading data from unified repository...');
+        const entitiesData = await repository.getAllEntities();
+        setEntities(entitiesData);
+
+        // Load ownerships for all entities
+        const allOwnerships: UnifiedOwnership[] = [];
+        for (const entity of entitiesData) {
+          const entityOwnerships = await repository.getOwnershipsByEntity(entity.id);
+          allOwnerships.push(...entityOwnerships);
+        }
+        setOwnerships(allOwnerships);
+
+        // Load cap table views
+        const capTables: CapTableView[] = [];
+        for (const entity of entitiesData) {
+          const capTable = await repository.getCapTableView(entity.id);
+          if (capTable) {
+            capTables.push(capTable);
+          }
+        }
+        setCapTableViews(capTables);
+
+        console.log('✅ Database: Data loaded from unified repository');
+      } catch (error) {
+        console.error('❌ Database: Error loading data:', error);
+      }
     };
 
     // Load initial data
     loadData();
 
     // Subscribe to changes
-    const unsubscribe = dataStore.subscribe(loadData);
+    const unsubscribe = repository.subscribe((event) => {
+      console.log('📡 Database: Received repository event:', event.type);
+      loadData(); // Reload all data on any change
+    });
 
     return unsubscribe;
-  }, []);
+  }, [repository]);
 
   const formatDate = (date: Date | string | undefined) => {
     if (!date) return 'N/A';
     return new Date(date).toLocaleDateString();
-  };
-
-  const formatCurrency = (amount: number | undefined) => {
-    if (amount === undefined) return 'N/A';
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
   };
 
   const startEditingEntity = (entity: Entity) => {
@@ -64,38 +102,40 @@ const Database: React.FC = () => {
     });
   };
 
-  const startEditingCapTable = (capTable: EntityCapTable) => {
-    setEditingCapTable(capTable.entityId);
-    setEditData({
-      authorizedShares: capTable.authorizedShares,
-      totalValuation: capTable.totalValuation || 0
-    });
-  };
-
   const cancelEditing = () => {
     setEditingEntity(null);
-    setEditingCapTable(null);
     setEditData({});
   };
 
-  const saveEntityChanges = (entityId: string) => {
+  const saveEntityChanges = async (entityId: string) => {
+    if (!repository) return;
+
     try {
-      dataStore.updateEntity(entityId, {
+      await repository.updateEntity(entityId, {
         name: editData.name,
         type: editData.type,
         jurisdiction: editData.jurisdiction,
         registrationNumber: editData.registrationNumber
-      });
+      }, 'user', 'Updated via Database page');
+      
       setEditingEntity(null);
       setEditData({});
+      console.log('✅ Entity updated successfully');
     } catch (error) {
-      console.error('Error updating entity:', error);
+      console.error('❌ Error updating entity:', error);
     }
   };
 
-  const deleteEntity = (entityId: string, entityName: string) => {
-    if (confirm(`Are you sure you want to delete ${entityName}? This will also remove all related cap table data.`)) {
-      dataStore.deleteEntity(entityId);
+  const deleteEntity = async (entityId: string, entityName: string) => {
+    if (!repository) return;
+
+    if (confirm(`Are you sure you want to delete ${entityName}? This will also remove all related data.`)) {
+      try {
+        await repository.deleteEntity(entityId, 'user', 'Deleted via Database page');
+        console.log('✅ Entity deleted successfully');
+      } catch (error) {
+        console.error('❌ Error deleting entity:', error);
+      }
     }
   };
 
@@ -104,23 +144,28 @@ const Database: React.FC = () => {
       <div className="bg-white border-b border-gray-200 p-4">
         <h1 className="text-2xl font-bold text-gray-900">Database Viewer</h1>
         <p className="text-gray-600 mt-1">
-          Raw data from the definitive single source of truth - Click edit to modify entries
+          Unified repository data - Click edit to modify entries
         </p>
+        <div className="mt-2">
+          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+            ✅ Using Enterprise Data Store
+          </Badge>
+        </div>
       </div>
 
       <div className="flex-1 p-6 overflow-auto">
         <Tabs defaultValue="entities" className="w-full">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="entities">Entities ({entities.length})</TabsTrigger>
-            <TabsTrigger value="captables">Cap Tables ({capTables.length})</TabsTrigger>
-            <TabsTrigger value="shareclasses">Share Classes ({shareClasses.length})</TabsTrigger>
+            <TabsTrigger value="ownerships">Ownership ({ownerships.length})</TabsTrigger>
+            <TabsTrigger value="captables">Cap Tables ({capTableViews.length})</TabsTrigger>
           </TabsList>
 
           <TabsContent value="entities" className="mt-6">
             <Card>
               <CardHeader>
                 <CardTitle>Entities Table</CardTitle>
-                <CardDescription>All registered entities in the system - Click edit to modify</CardDescription>
+                <CardDescription>All registered entities in the unified system - Click edit to modify</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
@@ -229,89 +274,34 @@ const Database: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="captables" className="mt-6">
+          <TabsContent value="ownerships" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Cap Tables</CardTitle>
-                <CardDescription>Capitalization tables for each entity with individual investments - Click edit to modify</CardDescription>
+                <CardTitle>Ownership Relationships</CardTitle>
+                <CardDescription>Share-based ownership relationships between entities</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Entity Name</TableHead>
-                      <TableHead>Authorized Shares</TableHead>
-                      <TableHead>Investments Count</TableHead>
-                      <TableHead>Total Invested Shares</TableHead>
-                      <TableHead>Available Shares</TableHead>
-                      <TableHead>Total Valuation</TableHead>
-                      <TableHead>Actions</TableHead>
+                      <TableHead>Owner</TableHead>
+                      <TableHead>Owned Entity</TableHead>
+                      <TableHead>Shares</TableHead>
+                      <TableHead>Share Class</TableHead>
+                      <TableHead>Effective Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {capTables.map((capTable) => {
-                      const entity = entities.find(e => e.id === capTable.entityId);
-                      const totalInvestedShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
-                      const availableShares = capTable.authorizedShares - totalInvestedShares;
+                    {ownerships.map((ownership) => {
+                      const owner = entities.find(e => e.id === ownership.ownerEntityId);
+                      const owned = entities.find(e => e.id === ownership.ownedEntityId);
                       return (
-                        <TableRow key={capTable.entityId}>
-                          <TableCell className="font-medium">{entity?.name || 'Unknown'}</TableCell>
-                          <TableCell>
-                            {editingCapTable === capTable.entityId ? (
-                              <Input
-                                type="number"
-                                value={editData.authorizedShares}
-                                onChange={(e) => setEditData({...editData, authorizedShares: parseInt(e.target.value) || 0})}
-                                className="w-32"
-                              />
-                            ) : (
-                              capTable.authorizedShares.toLocaleString()
-                            )}
-                          </TableCell>
-                          <TableCell>{capTable.investments.length}</TableCell>
-                          <TableCell>{totalInvestedShares.toLocaleString()}</TableCell>
-                          <TableCell>{availableShares.toLocaleString()}</TableCell>
-                          <TableCell>
-                            {editingCapTable === capTable.entityId ? (
-                              <Input
-                                type="number"
-                                value={editData.totalValuation}
-                                onChange={(e) => setEditData({...editData, totalValuation: parseInt(e.target.value) || 0})}
-                                className="w-32"
-                              />
-                            ) : (
-                              formatCurrency(capTable.totalValuation)
-                            )}
-                          </TableCell>
-                          <TableCell>
-                            {editingCapTable === capTable.entityId ? (
-                              <div className="flex items-center space-x-2">
-                                <button
-                                  onClick={() => {
-                                    // Note: Would need to implement cap table update in dataStore
-                                    console.log('Cap table update not yet implemented');
-                                    cancelEditing();
-                                  }}
-                                  className="text-green-600 hover:text-green-900"
-                                >
-                                  <Check className="h-4 w-4" />
-                                </button>
-                                <button
-                                  onClick={cancelEditing}
-                                  className="text-gray-400 hover:text-gray-600"
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => startEditingCapTable(capTable)}
-                                className="text-indigo-600 hover:text-indigo-900"
-                              >
-                                <Edit className="h-4 w-4" />
-                              </button>
-                            )}
-                          </TableCell>
+                        <TableRow key={ownership.id}>
+                          <TableCell className="font-medium">{owner?.name || 'Unknown'}</TableCell>
+                          <TableCell>{owned?.name || 'Unknown'}</TableCell>
+                          <TableCell>{ownership.shares.toLocaleString()}</TableCell>
+                          <TableCell className="font-mono text-xs">{ownership.shareClassId}</TableCell>
+                          <TableCell>{formatDate(ownership.effectiveDate)}</TableCell>
                         </TableRow>
                       );
                     })}
@@ -321,39 +311,31 @@ const Database: React.FC = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="shareclasses" className="mt-6">
+          <TabsContent value="captables" className="mt-6">
             <Card>
               <CardHeader>
-                <CardTitle>Share Classes</CardTitle>
-                <CardDescription>All share classes and their characteristics</CardDescription>
+                <CardTitle>Cap Table Views</CardTitle>
+                <CardDescription>Computed capitalization table views for each entity</CardDescription>
               </CardHeader>
               <CardContent>
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>ID</TableHead>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Voting Rights</TableHead>
-                      <TableHead>Liquidation Preference</TableHead>
-                      <TableHead>Dividend Rate</TableHead>
+                      <TableHead>Entity Name</TableHead>
+                      <TableHead>Total Shares</TableHead>
+                      <TableHead>Shareholders</TableHead>
+                      <TableHead>Share Classes</TableHead>
+                      <TableHead>Last Updated</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {shareClasses.map((shareClass) => (
-                      <TableRow key={shareClass.id}>
-                        <TableCell className="font-mono text-xs">{shareClass.id}</TableCell>
-                        <TableCell className="font-medium">{shareClass.name}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">{shareClass.type}</Badge>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={shareClass.votingRights ? 'default' : 'secondary'}>
-                            {shareClass.votingRights ? 'Yes' : 'No'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{shareClass.liquidationPreference || 'N/A'}</TableCell>
-                        <TableCell>{shareClass.dividendRate ? `${shareClass.dividendRate}%` : 'N/A'}</TableCell>
+                    {capTableViews.map((capTable) => (
+                      <TableRow key={capTable.entityId}>
+                        <TableCell className="font-medium">{capTable.entityName}</TableCell>
+                        <TableCell>{capTable.totalShares.toLocaleString()}</TableCell>
+                        <TableCell>{capTable.ownershipSummary.length}</TableCell>
+                        <TableCell>{capTable.shareClasses.length}</TableCell>
+                        <TableCell>{formatDate(capTable.lastUpdated)}</TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -368,7 +350,7 @@ const Database: React.FC = () => {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>Database Statistics</CardTitle>
-            <CardDescription>Summary of all data in the system</CardDescription>
+            <CardDescription>Summary of all data in the unified system</CardDescription>
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -377,12 +359,12 @@ const Database: React.FC = () => {
                 <div className="text-sm text-blue-600">Total Entities</div>
               </div>
               <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-2xl font-bold text-green-700">{capTables.length}</div>
-                <div className="text-sm text-green-600">Cap Tables</div>
+                <div className="text-2xl font-bold text-green-700">{ownerships.length}</div>
+                <div className="text-sm text-green-600">Ownership Relations</div>
               </div>
               <div className="text-center p-4 bg-orange-50 rounded-lg">
-                <div className="text-2xl font-bold text-orange-700">{shareClasses.length}</div>
-                <div className="text-sm text-orange-600">Share Classes</div>
+                <div className="text-2xl font-bold text-orange-700">{capTableViews.length}</div>
+                <div className="text-sm text-orange-600">Cap Tables</div>
               </div>
             </div>
           </CardContent>
