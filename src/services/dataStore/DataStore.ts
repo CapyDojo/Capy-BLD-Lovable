@@ -1,4 +1,3 @@
-
 import { Entity } from '@/types/entity';
 import { EntityCapTable, Shareholder, ShareClass } from '@/types/capTable';
 import { EntityManager } from './EntityManager';
@@ -144,18 +143,38 @@ export class DataStore {
     console.log('📝 Updating entity with enhanced sync:', id, updates);
     this.entityManager.update(id, updates);
     
-    // If entity name was updated, update corresponding shareholder names
+    // If entity name was updated, update ALL corresponding shareholder names
     if (updates.name) {
+      console.log('📝 Entity name changed, updating corresponding shareholders...');
       const shareholders = this.capTableManager.getShareholders();
-      const entityShareholder = shareholders.find(s => s.entityId === id);
-      if (entityShareholder) {
-        // Update shareholder name to match entity name
-        this.capTableManager.updateStakeholder(
-          entityShareholder.entityId || '', 
-          entityShareholder.id, 
-          { name: updates.name }
-        );
-      }
+      
+      // Find shareholders that should be updated - check both entityId and name matching
+      const shareholdersToUpdate = shareholders.filter(s => {
+        // Direct entityId match (most reliable)
+        if (s.entityId === id) {
+          return true;
+        }
+        
+        // For individuals without entityId, check if this might be the same person
+        // This handles legacy data where entityId might not be set
+        if (s.type === 'Individual' && !s.entityId) {
+          const entity = this.entityManager.getById(id);
+          if (entity && entity.type === 'Individual') {
+            // Check if the old name matches this shareholder
+            return s.name !== updates.name; // Only update if names don't already match
+          }
+        }
+        
+        return false;
+      });
+      
+      console.log('📝 Found shareholders to update:', shareholdersToUpdate.map(s => ({ id: s.id, oldName: s.name, entityId: s.entityId })));
+      
+      // Update each matching shareholder
+      shareholdersToUpdate.forEach(shareholder => {
+        console.log(`📝 Updating shareholder ${shareholder.id} name from "${shareholder.name}" to "${updates.name}"`);
+        this.capTableManager.updateShareholderDirect(shareholder.id, { name: updates.name });
+      });
     }
   }
 

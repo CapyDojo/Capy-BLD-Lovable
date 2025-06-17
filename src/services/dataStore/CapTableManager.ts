@@ -1,10 +1,12 @@
 import { EntityCapTable, Shareholder, ShareClass, Investment } from '@/types/capTable';
+import { Entity } from '@/types/entity';
 
 export class CapTableManager {
-  private capTables: EntityCapTable[] = [];
-  private shareholders: Shareholder[] = [];
-  private shareClasses: ShareClass[] = [];
+  private capTables: EntityCapTable[];
+  private shareholders: Shareholder[];
+  private shareClasses: ShareClass[];
   private notifyChange: () => void;
+  private getEntity?: (id: string) => Entity | undefined;
 
   constructor(
     initialCapTables: EntityCapTable[],
@@ -16,6 +18,10 @@ export class CapTableManager {
     this.shareholders = [...initialShareholders];
     this.shareClasses = [...initialShareClasses];
     this.notifyChange = notifyChange;
+  }
+
+  setEntityAccessor(getEntity: (id: string) => Entity | undefined) {
+    this.getEntity = getEntity;
   }
 
   getCapTables(): EntityCapTable[] {
@@ -41,7 +47,7 @@ export class CapTableManager {
     let shareholder = this.shareholders.find(s => s.entityId === sourceEntityId);
     if (!shareholder) {
       // Get the source entity name from dataStore for better naming
-      const sourceEntity = this.getEntityById?.(sourceEntityId);
+      const sourceEntity = this.getEntity?.(sourceEntityId);
       shareholder = {
         id: `shareholder-${sourceEntityId}`,
         name: sourceEntity?.name || `Entity ${sourceEntityId}`,
@@ -227,6 +233,25 @@ export class CapTableManager {
     this.capTables = [...newCapTables];
     this.shareholders = [...newShareholders];
     this.shareClasses = [...newShareClasses];
+  }
+
+  updateShareholderDirect(shareholderId: string, updates: Partial<Shareholder>) {
+    console.log('📝 CapTableManager: Direct shareholder update:', shareholderId, updates);
+    
+    const shareholderIndex = this.shareholders.findIndex(s => s.id === shareholderId);
+    if (shareholderIndex === -1) {
+      console.warn('⚠️ Shareholder not found for direct update:', shareholderId);
+      return;
+    }
+    
+    // Update the shareholder
+    this.shareholders[shareholderIndex] = {
+      ...this.shareholders[shareholderIndex],
+      ...updates
+    };
+    
+    console.log('✅ Direct shareholder update completed:', this.shareholders[shareholderIndex]);
+    this.notifyChange();
   }
 
   // Helper method to access entity data (will be injected by DataStore)
