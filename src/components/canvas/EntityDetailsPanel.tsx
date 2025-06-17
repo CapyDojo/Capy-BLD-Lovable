@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Node } from '@xyflow/react';
-import { EntityCapTableSection } from './EntityCapTableSection';
+import { EntityCapTableWrapper } from './EntityCapTableWrapper';
 import { NameField } from './forms/NameField';
 import { TypeField } from './forms/TypeField';
 import { IndividualFieldsForm } from './forms/IndividualFieldsForm';
@@ -157,7 +157,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
         )}
       </div>
 
-      <EntityCapTableSection entityId={selectedNode.id} key={`${selectedNode.id}-${refreshKey}`} />
+      <EntityCapTableWrapper entityId={selectedNode.id} key={`${selectedNode.id}-${refreshKey}`} />
     </div>
   );
 };
