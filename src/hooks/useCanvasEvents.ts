@@ -1,8 +1,7 @@
 
 import { useCallback, useRef } from 'react';
 import { Node, Connection } from '@xyflow/react';
-import { updateOwnershipFromChart, addEntityFromChart, updateEntityFromChart } from '@/services/capTableSync';
-import { dataStore } from '@/services/dataStore';
+import { getUnifiedRepository } from '@/services/repositories/unified';
 import { EntityTypes } from '@/types/entity';
 
 type DraggableNodeType = EntityTypes;
@@ -15,61 +14,84 @@ export const useCanvasEvents = (
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const onConnect = useCallback(
-    (params: Connection | { source: string; target: string; label: string }) => {
+    async (params: Connection | { source: string; target: string; label: string }) => {
       console.log('🔗 Creating ownership connection:', params);
       
-      // Extract ownership percentage from label
-      const percentageMatch = 'label' in params ? params.label.match(/(\d+(?:\.\d+)?)%/) : null;
-      const ownershipPercentage = percentageMatch ? parseFloat(percentageMatch[1]) : 10;
+      try {
+        const repository = await getUnifiedRepository('ENTERPRISE');
+        
+        // Extract ownership percentage from label
+        const percentageMatch = 'label' in params ? params.label.match(/(\d+(?:\.\d+)?)%/) : null;
+        const shares = percentageMatch ? parseFloat(percentageMatch[1]) * 100 : 1000; // Convert percentage to shares
 
-      console.log('🔗 Extracted ownership percentage:', ownershipPercentage);
+        console.log('🔗 Creating ownership with shares:', shares);
 
-      // Update ownership in data store (this will auto-save and sync)
-      updateOwnershipFromChart(params.source, params.target, ownershipPercentage);
+        // Create ownership in unified repository
+        await repository.createOwnership({
+          ownerEntityId: params.source,
+          ownedEntityId: params.target,
+          shares,
+          shareClassId: 'default-common', // Default share class
+          effectiveDate: new Date(),
+          createdBy: 'user',
+          updatedBy: 'user'
+        }, 'user');
 
-      // The edge will be recreated automatically when the data store updates
+        console.log('✅ Ownership created successfully via unified repository');
+      } catch (error) {
+        console.error('❌ Error creating ownership via unified repository:', error);
+      }
     },
     [],
   );
 
-  const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+  const onNodeClick = useCallback(async (event: React.MouseEvent, node: Node) => {
     console.log('🎯 Node clicked:', node.id, node.type);
     
     if (node.type === 'entity') {
       console.log('🎯 Entity node clicked:', node.id);
       
-      // Verify the entity still exists in the data store
-      const entity = dataStore.getEntityById(node.id);
-      if (!entity) {
-        console.warn('⚠️ Clicked entity no longer exists in data store:', node.id);
-        return;
+      try {
+        const repository = await getUnifiedRepository('ENTERPRISE');
+        // Verify the entity still exists in the unified repository
+        const entity = await repository.getEntity(node.id);
+        if (!entity) {
+          console.warn('⚠️ Clicked entity no longer exists in repository:', node.id);
+          return;
+        }
+        
+        setSelectedNode(node);
+        setSidebarOpen(true);
+      } catch (error) {
+        console.error('❌ Error checking entity existence:', error);
       }
-      
-      setSelectedNode(node);
-      setSidebarOpen(true);
     }
   }, [setSelectedNode, setSidebarOpen]);
 
-  const createNode = useCallback((type: DraggableNodeType, position: { x: number; y: number }) => {
+  const createNode = useCallback(async (type: DraggableNodeType, position: { x: number; y: number }) => {
     const id = `new-${Date.now().toString()}`;
     console.log('➕ Creating new node:', type, 'at position:', position, 'with id:', id);
 
-    const newEntity = {
-      id,
-      name: `New ${type}`,
-      type,
-      jurisdiction: 'Delaware',
-      ownership: 0,
-      registrationNumber: `REG-${Date.now()}`,
-      incorporationDate: new Date(),
-      address: 'TBD',
-      position // Store the exact drop position
-    };
-    
-    console.log('➕ Creating new entity in data store:', newEntity);
-    // Add to data store (this will auto-save and sync)
-    addEntityFromChart(newEntity);
-    console.log('✅ Entity added to data store with position:', position);
+    try {
+      const repository = await getUnifiedRepository('ENTERPRISE');
+      
+      const newEntity = {
+        name: `New ${type}`,
+        type,
+        jurisdiction: type === 'Individual' ? undefined : 'Delaware',
+        registrationNumber: type === 'Individual' ? undefined : `REG-${Date.now()}`,
+        incorporationDate: type === 'Individual' ? undefined : new Date(),
+        address: 'TBD',
+        position, // Store the exact drop position
+        metadata: { position }
+      };
+      
+      console.log('➕ Creating new entity in unified repository:', newEntity);
+      await repository.createEntity(newEntity, 'user', `Created ${type} entity from canvas`);
+      console.log('✅ Entity added to unified repository with position:', position);
+    } catch (error) {
+      console.error('❌ Error creating entity via unified repository:', error);
+    }
   }, []);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
@@ -115,28 +137,37 @@ export const useCanvasEvents = (
     [createNode],
   );
 
-  const updateSelectedNode = useCallback((updates: Partial<Node['data']>) => {
+  const updateSelectedNode = useCallback(async (updates: Partial<Node['data']>) => {
     if (!selectedNode) return;
     
-    // Verify the entity still exists before updating
-    const entity = dataStore.getEntityById(selectedNode.id);
-    if (!entity) {
-      console.warn('⚠️ Cannot update node - entity no longer exists:', selectedNode.id);
-      setSelectedNode(null);
-      setSidebarOpen(false);
-      return;
+    try {
+      const repository = await getUnifiedRepository('ENTERPRISE');
+      
+      // Verify the entity still exists before updating
+      const entity = await repository.getEntity(selectedNode.id);
+      if (!entity) {
+        console.warn('⚠️ Cannot update node - entity no longer exists:', selectedNode.id);
+        setSelectedNode(null);
+        setSidebarOpen(false);
+        return;
+      }
+      
+      console.log('📝 Updating selected node via unified repository:', selectedNode.id, updates);
+      
+      // Update in unified repository
+      await repository.updateEntity(selectedNode.id, updates, 'user', 'Updated entity from canvas');
+      
+      // Update local selected node state
+      const updatedNode = { 
+        ...selectedNode, 
+        data: { ...selectedNode.data, ...updates } 
+      };
+      setSelectedNode(updatedNode);
+      
+      console.log('✅ Entity updated successfully via unified repository');
+    } catch (error) {
+      console.error('❌ Error updating entity via unified repository:', error);
     }
-    
-    console.log('📝 Updating selected node:', selectedNode.id, updates);
-    // Update in data store (this will auto-save and sync)
-    updateEntityFromChart(selectedNode.id, updates);
-    
-    // Update local selected node state - create updated node directly
-    const updatedNode = { 
-      ...selectedNode, 
-      data: { ...selectedNode.data, ...updates } 
-    };
-    setSelectedNode(updatedNode);
   }, [selectedNode, setSelectedNode, setSidebarOpen]);
 
   return {

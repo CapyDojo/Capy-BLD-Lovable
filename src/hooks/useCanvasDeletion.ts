@@ -1,8 +1,7 @@
 
 import { useCallback } from 'react';
 import { Node } from '@xyflow/react';
-import { deleteEntityFromChart } from '@/services/capTableSync';
-import { dataStore } from '@/services/dataStore';
+import { getUnifiedRepository } from '@/services/repositories/unified';
 
 export const useCanvasDeletion = (
   selectedNode: Node | null,
@@ -24,32 +23,45 @@ export const useCanvasDeletion = (
     setSelectedNode(null);
     
     try {
+      const repository = await getUnifiedRepository('ENTERPRISE');
+      
       // Handle different node types
       if (selectedNode.type === 'entity') {
-        // Delete entity
-        console.log('🗑️ Deleting entity node:', selectedNode.id);
-        deleteEntityFromChart(selectedNode.id);
+        // Validate deletion first
+        const validationResult = await repository.validateEntityDeletion(selectedNode.id);
+        
+        if (!validationResult.isValid) {
+          console.warn('⚠️ Entity deletion validation failed:', validationResult.errors);
+          // You might want to show a user-friendly error message here
+          const errorMessages = validationResult.errors.map(e => e.message).join(', ');
+          console.error('❌ Cannot delete entity:', errorMessages);
+          return;
+        }
+        
+        // Delete entity via unified repository
+        console.log('🗑️ Deleting entity node via unified repository:', selectedNode.id);
+        await repository.deleteEntity(selectedNode.id, 'user', 'Deleted entity from canvas');
+        
       } else if (selectedNode.type === 'shareholder') {
-        // Delete stakeholder - extract entity ID and stakeholder ID from the node ID
+        // Delete ownership relationship - extract entity ID and ownership ID from the node ID
         console.log('🗑️ Deleting stakeholder node:', selectedNode.id);
         
-        // Stakeholder node IDs are in format: stakeholder-{investmentId}-of-{entityId}
+        // Stakeholder node IDs are in format: stakeholder-{ownershipId}-of-{entityId}
         const match = selectedNode.id.match(/^stakeholder-(.+)-of-(.+)$/);
         if (match) {
-          const [, stakeholderId, entityId] = match;
-          console.log('🗑️ Extracted stakeholder ID:', stakeholderId, 'entity ID:', entityId);
+          const [, ownershipId, entityId] = match;
+          console.log('🗑️ Extracted ownership ID:', ownershipId, 'entity ID:', entityId);
           
-          // Use the data store's deleteStakeholder method
-          dataStore.deleteStakeholder(entityId, stakeholderId);
+          // Delete ownership via unified repository
+          await repository.deleteOwnership(ownershipId, 'user', 'Deleted ownership from canvas');
         } else {
           console.error('❌ Could not parse stakeholder node ID:', selectedNode.id);
         }
       }
       
-      // Wait a short moment for the deletion to persist to localStorage
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      console.log('✅ useCanvasDeletion: Deletion completed, allowing data store notifications');
+      console.log('✅ useCanvasDeletion: Deletion completed via unified repository');
+    } catch (error) {
+      console.error('❌ useCanvasDeletion: Error during deletion:', error);
     } finally {
       // Clear deletion flag to allow normal operations
       setIsDeleting(false);
