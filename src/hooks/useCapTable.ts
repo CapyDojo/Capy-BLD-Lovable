@@ -1,4 +1,3 @@
-
 import { useMemo, useState, useEffect } from 'react';
 import { dataStore } from '@/services/dataStore';
 
@@ -13,20 +12,20 @@ export interface CapTableData {
 }
 
 export const useCapTable = (entityId: string): CapTableData | null => {
-  const [, forceUpdate] = useState({});
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
 
-  // Simple subscription to dataStore - no complex refresh logic
+  // Enhanced subscription to dataStore with forced refresh
   useEffect(() => {
     console.log('🔗 useCapTable: Subscribing to dataStore for entity:', entityId);
     const unsubscribe = dataStore.subscribe(() => {
-      console.log('📡 useCapTable: DataStore updated, refreshing');
-      forceUpdate({});
+      console.log('📡 useCapTable: DataStore updated, forcing refresh for entity:', entityId);
+      setRefreshTrigger(prev => prev + 1);
     });
     return unsubscribe;
   }, [entityId]);
 
   return useMemo(() => {
-    console.log('🔄 useCapTable: Computing data for entity:', entityId);
+    console.log('🔄 useCapTable: Computing data for entity:', entityId, 'refresh trigger:', refreshTrigger);
     
     const entity = dataStore.getEntityById(entityId);
     if (!entity) {
@@ -43,6 +42,18 @@ export const useCapTable = (entityId: string): CapTableData | null => {
     // Get fresh data directly from dataStore
     const allShareholders = dataStore.getShareholders();
     const allShareClasses = dataStore.getShareClasses();
+
+    console.log('🔍 DEBUG: Cap table for', entity.name, 'has', capTable.investments.length, 'investments');
+    console.log('🔍 DEBUG: All shareholders count:', allShareholders.length);
+    capTable.investments.forEach((inv, index) => {
+      const shareholder = allShareholders.find(s => s.id === inv.shareholderId);
+      console.log(`  Investment ${index + 1}:`, {
+        investmentId: inv.id,
+        shareholderId: inv.shareholderId,
+        shareholderName: shareholder?.name || 'UNKNOWN',
+        sharesOwned: inv.sharesOwned
+      });
+    });
 
     const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
     const availableShares = capTable.authorizedShares - totalShares;
@@ -99,6 +110,7 @@ export const useCapTable = (entityId: string): CapTableData | null => {
     }
 
     console.log('✅ Cap table data computed for:', entity.name, 'with', tableData.length, 'stakeholders');
+    console.log('📊 Final table data:', tableData.map(t => ({ name: t.name, shares: t.sharesOwned })));
 
     return {
       entity,
@@ -114,7 +126,7 @@ export const useCapTable = (entityId: string): CapTableData | null => {
       chartData,
       tableData,
     };
-  }, [entityId]);
+  }, [entityId, refreshTrigger]);
 };
 
 // Simplified mutation functions that just use dataStore directly
