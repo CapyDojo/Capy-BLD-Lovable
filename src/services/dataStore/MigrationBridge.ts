@@ -91,22 +91,26 @@ class MigrationBridge {
         }
       },
       
-      updateEntity: async (id: string, updates: any, updatedBy?: string, reason?: string) => {
+      // Overloaded updateEntity to handle both signatures
+      updateEntity: ((id: string, updates: any, updatedBy?: string, reason?: string) => {
         // Update in legacy store first (for immediate UI updates)
         legacyDataStore.updateEntity(id, updates);
         
-        try {
-          // Then update in enterprise store if migration is enabled
-          if (updatedBy && reason) {
-            await this.enterpriseStore.updateEntity(id, updates, updatedBy, reason);
-          } else {
-            // Provide default values for enterprise store
-            await this.enterpriseStore.updateEntity(id, updates, 'user', 'Entity updated');
-          }
-        } catch (error) {
+        // Then update in enterprise store if migration is enabled
+        const enterprisePromise = this.enterpriseStore.updateEntity(
+          id, 
+          updates, 
+          updatedBy || 'user', 
+          reason || 'Entity updated'
+        );
+        
+        enterprisePromise.catch(error => {
           console.warn('⚠️ Enterprise store update failed:', error);
-        }
-      },
+        });
+
+        // Return promise for compatibility with async callers
+        return enterprisePromise;
+      }) as any,
       
       subscribe: (callback: () => void) => {
         // Subscribe to both stores during migration
