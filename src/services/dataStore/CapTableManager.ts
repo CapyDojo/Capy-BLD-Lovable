@@ -253,12 +253,4 @@ export class CapTableManager {
     console.log('✅ Direct shareholder update completed:', this.shareholders[shareholderIndex]);
     this.notifyChange();
   }
-
-  // Helper method to access entity data (will be injected by DataStore)
-  private getEntityById?: (id: string) => any;
-
-  // Method to inject entity accessor
-  setEntityAccessor(accessor: (id: string) => any) {
-    this.getEntityById = accessor;
-  }
 }
