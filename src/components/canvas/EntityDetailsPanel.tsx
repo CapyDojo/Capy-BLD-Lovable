@@ -19,6 +19,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
 }) => {
   const [entityData, setEntityData] = useState(selectedNode?.data || {});
   const [refreshKey, setRefreshKey] = useState(0);
+  const [localName, setLocalName] = useState(String(selectedNode?.data?.name || ''));
 
   // Subscribe to data store changes
   useEffect(() => {
@@ -35,12 +36,14 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
           return;
         } else {
           console.log('📝 Updating entity data in panel');
-          setEntityData({
+          const newEntityData = {
             name: currentEntity.name,
             type: currentEntity.type,
             jurisdiction: currentEntity.jurisdiction,
             ...selectedNode.data
-          });
+          };
+          setEntityData(newEntityData);
+          setLocalName(String(currentEntity.name || ''));
         }
       }
       
@@ -54,12 +57,14 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
     if (selectedNode) {
       const entity = dataStore.getEntityById(selectedNode.id);
       if (entity) {
-        setEntityData({
+        const newEntityData = {
           name: entity.name,
           type: entity.type,
           jurisdiction: entity.jurisdiction,
           ...selectedNode.data
-        });
+        };
+        setEntityData(newEntityData);
+        setLocalName(String(entity.name || ''));
       } else {
         // Entity no longer exists, close panel
         console.log('🚪 Entity no longer exists in panel effect, closing');
@@ -86,6 +91,25 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
     onUpdateNode(updates);
   };
 
+  const handleNameChange = (value: string) => {
+    setLocalName(value);
+  };
+
+  const handleNameBlur = () => {
+    if (localName !== entityData.name) {
+      handleUpdateField('name', localName);
+    }
+  };
+
+  const handleNameKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      if (localName !== entityData.name) {
+        handleUpdateField('name', localName);
+      }
+      e.currentTarget.blur();
+    }
+  };
+
   return (
     <div className="w-80 bg-white border-l border-gray-200 p-6 overflow-y-auto">
       <div className="flex items-center justify-between mb-6">
@@ -105,9 +129,11 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
           </label>
           <input
             type="text"
-            value={String(entityData.name || '')}
+            value={localName}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            onChange={(e) => handleUpdateField('name', e.target.value)}
+            onChange={(e) => handleNameChange(e.target.value)}
+            onBlur={handleNameBlur}
+            onKeyPress={handleNameKeyPress}
           />
         </div>
         
