@@ -37,12 +37,12 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
   // Subscribe to data store changes
   useEffect(() => {
     console.log('🔗 EntityDetailsPanel subscribing to data store changes');
-    const unsubscribe = dataStore.subscribe(() => {
+    const unsubscribe = dataStore.subscribe(async () => {
       console.log('📡 EntityDetailsPanel received data store update');
       
       // Check if selected entity still exists
       if (selectedNode) {
-        const currentEntity = dataStore.getEntityById(selectedNode.id);
+        const currentEntity = await dataStore.getEntity(selectedNode.id);
         
         if (!currentEntity) {
           console.log('🚪 Selected entity was deleted, closing panel');
@@ -68,24 +68,28 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
 
   // Update local data when selectedNode changes
   useEffect(() => {
-    if (selectedNode) {
-      const entity = dataStore.getEntityById(selectedNode.id);
-      
-      if (entity) {
-        const newEntityData = {
-          name: entity.name,
-          type: entity.type,
-          jurisdiction: entity.jurisdiction,
-          ...selectedNode.data
-        };
-        setEntityData(newEntityData);
-        setLocalName(String(entity.name || ''));
-      } else {
-        // Entity no longer exists, close panel
-        console.log('🚪 Entity no longer exists in panel effect, closing');
-        onClose();
+    const updateEntityData = async () => {
+      if (selectedNode) {
+        const entity = await dataStore.getEntity(selectedNode.id);
+        
+        if (entity) {
+          const newEntityData = {
+            name: entity.name,
+            type: entity.type,
+            jurisdiction: entity.jurisdiction,
+            ...selectedNode.data
+          };
+          setEntityData(newEntityData);
+          setLocalName(String(entity.name || ''));
+        } else {
+          // Entity no longer exists, close panel
+          console.log('🚪 Entity no longer exists in panel effect, closing');
+          onClose();
+        }
       }
-    }
+    };
+
+    updateEntityData();
   }, [selectedNode, refreshKey, onClose, dataStore]);
 
   // Don't render if entity doesn't exist
@@ -93,12 +97,16 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
     return null;
   }
 
-  // Double-check entity exists before rendering
-  const entityExists = dataStore.getEntityById(selectedNode.id);
-  if (!entityExists) {
-    onClose();
-    return null;
-  }
+  // Double-check entity exists before rendering - use async check
+  useEffect(() => {
+    const checkEntityExists = async () => {
+      const entityExists = await dataStore.getEntity(selectedNode.id);
+      if (!entityExists) {
+        onClose();
+      }
+    };
+    checkEntityExists();
+  }, [selectedNode.id, dataStore, onClose]);
 
   const handleUpdateField = async (field: string, value: string) => {
     console.log('📝 EntityDetailsPanel updating field:', field, value);
