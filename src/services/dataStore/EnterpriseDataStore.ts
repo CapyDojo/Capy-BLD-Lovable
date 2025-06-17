@@ -747,7 +747,7 @@ export class EnterpriseDataStore implements IEnterpriseDataStore {
     return { isValid: true, errors: [], warnings: [] };
   }
 
-  private async validateEntityUpdate(id: string, updates: Partial<Entity>): ValidationResult {
+  private async validateEntityUpdate(id: string, updates: Partial<Entity>): Promise<ValidationResult> {
     if (updates.name !== undefined && !updates.name?.trim()) {
       return {
         isValid: false,
