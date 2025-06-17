@@ -1,3 +1,4 @@
+
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 
@@ -181,4 +182,73 @@ export const generateSyncedCanvasStructure = () => {
 export const invalidateCanvasCache = () => {
   console.log('🗑️ Invalidating canvas structure cache');
   canvasStructureCache = null;
+};
+
+// Missing functions that other components depend on
+export const syncCapTableData = (entityId: string) => {
+  console.log('🔄 syncCapTableData called for entity:', entityId);
+  const entity = dataStore.getEntityById(entityId);
+  if (!entity) return null;
+
+  const capTable = dataStore.getCapTableByEntityId(entityId);
+  if (!capTable) return null;
+
+  const allShareholders = dataStore.getShareholders();
+  const allShareClasses = dataStore.getShareClasses();
+
+  // Create lookup maps for better performance
+  const shareholderMap = new Map(allShareholders.map(s => [s.id, s]));
+  const shareClassMap = new Map(allShareClasses.map(sc => [sc.id, sc]));
+
+  const totalShares = capTable.investments.reduce((sum, inv) => sum + inv.sharesOwned, 0);
+
+  // Build stakeholder data
+  const stakeholders = capTable.investments.map((investment) => {
+    const shareholder = shareholderMap.get(investment.shareholderId);
+    const shareClass = shareClassMap.get(investment.shareClassId);
+    const ownershipPercentage = totalShares > 0 ? (investment.sharesOwned / totalShares) * 100 : 0;
+
+    return {
+      id: investment.id,
+      name: shareholder?.name || 'Unknown',
+      type: shareholder?.type || 'Individual',
+      entityId: shareholder?.entityId,
+      sharesOwned: investment.sharesOwned,
+      shareClass: shareClass?.name || 'Unknown',
+      ownershipPercentage,
+      pricePerShare: investment.pricePerShare,
+      investmentAmount: investment.investmentAmount,
+    };
+  });
+
+  return {
+    entity,
+    capTable,
+    totalShares,
+    stakeholders,
+  };
+};
+
+export const deleteEntityFromChart = (entityId: string) => {
+  console.log('🗑️ deleteEntityFromChart called for entity:', entityId);
+  dataStore.deleteEntity(entityId);
+  invalidateCanvasCache();
+};
+
+export const updateOwnershipFromChart = (sourceEntityId: string, targetEntityId: string, ownershipPercentage: number) => {
+  console.log('🔗 updateOwnershipFromChart called:', { sourceEntityId, targetEntityId, ownershipPercentage });
+  dataStore.updateOwnership(sourceEntityId, targetEntityId, ownershipPercentage);
+  invalidateCanvasCache();
+};
+
+export const addEntityFromChart = (entity: any) => {
+  console.log('➕ addEntityFromChart called:', entity);
+  dataStore.addEntity(entity);
+  invalidateCanvasCache();
+};
+
+export const updateEntityFromChart = (entityId: string, updates: any) => {
+  console.log('📝 updateEntityFromChart called:', { entityId, updates });
+  dataStore.updateEntity(entityId, updates);
+  invalidateCanvasCache();
 };
