@@ -14,13 +14,8 @@ import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import NotFound from "./pages/NotFound";
 
-// Import and initialize validation suite to make console functions available
-import { migrationValidator } from "@/services/dataStore/MigrationValidation";
-
-// Make validation functions globally available
-(window as any).runMigrationTests = () => migrationValidator.runAllTests();
-(window as any).runMigrationTest = (testName: string) => migrationValidator.runSingleTest(testName);
-(window as any).getMigrationTestNames = () => migrationValidator.getTestNames();
+// Import validation suite to make console functions available
+import "@/services/dataStore/MigrationValidation";
 
 const queryClient = new QueryClient();
 
