@@ -1,5 +1,4 @@
-
-import { EnterpriseDataStore } from './EnterpriseDataStore';
+import { EnterpriseDataStore } from './enterprise/EnterpriseDataStore';
 import { IEnterpriseDataStore, EnterpriseDataStoreConfig } from '@/types/enterprise';
 import { 
   unifiedMockEntities, 
