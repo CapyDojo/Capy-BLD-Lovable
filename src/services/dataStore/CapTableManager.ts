@@ -1,4 +1,3 @@
-
 import { EntityCapTable, Shareholder, ShareClass, Investment } from '@/types/capTable';
 
 export class CapTableManager {
@@ -36,14 +35,16 @@ export class CapTableManager {
   }
 
   updateOwnership(sourceEntityId: string, targetEntityId: string, ownershipPercentage: number): void {
-    console.log('📊 Updating ownership:', sourceEntityId, '->', targetEntityId, ownershipPercentage + '%');
+    console.log('📊 CapTableManager: Updating ownership:', sourceEntityId, '->', targetEntityId, ownershipPercentage + '%');
     
     // Find or create shareholder record for the source entity
     let shareholder = this.shareholders.find(s => s.entityId === sourceEntityId);
     if (!shareholder) {
+      // Get the source entity name from dataStore for better naming
+      const sourceEntity = this.getEntityById?.(sourceEntityId);
       shareholder = {
         id: `shareholder-${sourceEntityId}`,
-        name: `Entity ${sourceEntityId}`,
+        name: sourceEntity?.name || `Entity ${sourceEntityId}`,
         type: 'Entity',
         entityId: sourceEntityId
       };
@@ -83,21 +84,25 @@ export class CapTableManager {
       capTable.investments.push(investment);
     }
 
+    console.log('✅ CapTableManager: Ownership updated, notifying changes');
     this.notifyChange();
   }
 
   removeOwnership(sourceEntityId: string, targetEntityId: string): void {
+    console.log('🗑️ CapTableManager: Removing ownership:', sourceEntityId, '->', targetEntityId);
     const capTable = this.getCapTableByEntityId(targetEntityId);
     if (capTable) {
       const shareholder = this.shareholders.find(s => s.entityId === sourceEntityId);
       if (shareholder) {
         capTable.investments = capTable.investments.filter(inv => inv.shareholderId !== shareholder.id);
+        console.log('✅ CapTableManager: Ownership removed, notifying changes');
         this.notifyChange();
       }
     }
   }
 
   addStakeholder(entityId: string, stakeholder: { name: string; shareClass: string; sharesOwned: number; type?: 'Individual' | 'Entity' | 'Pool' }): void {
+    console.log('➕ CapTableManager: Adding stakeholder to entity:', entityId, stakeholder);
     const capTable = this.getCapTableByEntityId(entityId);
     if (!capTable) return;
 
@@ -122,15 +127,17 @@ export class CapTableManager {
     this.shareholders.push(newShareholder);
     capTable.investments.push(newInvestment);
 
+    console.log('✅ CapTableManager: Stakeholder added, notifying changes');
     this.notifyChange();
   }
 
   updateStakeholder(entityId: string, stakeholderId: string, updates: { name?: string; shareClass?: string; sharesOwned?: number }): void {
+    console.log('📝 CapTableManager: Updating stakeholder:', stakeholderId, 'in entity:', entityId, updates);
     const capTable = this.getCapTableByEntityId(entityId);
     if (!capTable) return;
 
-    const investment = capTable.investments.find(inv => inv.shareholderId === stakeholderId);
-    const shareholder = this.shareholders.find(s => s.id === stakeholderId);
+    const investment = capTable.investments.find(inv => inv.shareholderId === stakeholderId || inv.id === stakeholderId);
+    const shareholder = this.shareholders.find(s => s.id === stakeholderId || s.id === investment?.shareholderId);
 
     if (investment && shareholder) {
       if (updates.name) {
@@ -149,6 +156,7 @@ export class CapTableManager {
         investment.investmentAmount = updates.sharesOwned * investment.pricePerShare;
       }
 
+      console.log('✅ CapTableManager: Stakeholder updated, notifying changes');
       this.notifyChange();
     }
   }
@@ -191,7 +199,7 @@ export class CapTableManager {
       }
     });
 
-    console.log('✅ Stakeholder deletion completed');
+    console.log('✅ CapTableManager: Stakeholder deleted, notifying changes');
     this.notifyChange();
   }
 
@@ -219,5 +227,13 @@ export class CapTableManager {
     this.capTables = [...newCapTables];
     this.shareholders = [...newShareholders];
     this.shareClasses = [...newShareClasses];
+  }
+
+  // Helper method to access entity data (will be injected by DataStore)
+  private getEntityById?: (id: string) => any;
+
+  // Method to inject entity accessor
+  setEntityAccessor(accessor: (id: string) => any) {
+    this.getEntityById = accessor;
   }
 }

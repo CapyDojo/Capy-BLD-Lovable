@@ -18,9 +18,9 @@ export const useCapTable = (entityId: string): CapTableData | null => {
   const [entityExists, setEntityExists] = useState(true);
 
   useEffect(() => {
-    console.log('🔗 useCapTable subscribing to data store for entity:', entityId);
+    console.log('🔗 useCapTable: Enhanced subscription to data store for entity:', entityId);
     const unsubscribe = dataStore.subscribe(() => {
-      console.log('📡 useCapTable received data store update for entity:', entityId);
+      console.log('📡 useCapTable: Enhanced data store update received for entity:', entityId);
       
       // Check if entity still exists
       const entity = dataStore.getEntityById(entityId);
@@ -28,7 +28,7 @@ export const useCapTable = (entityId: string): CapTableData | null => {
         console.log('⚠️ Entity no longer exists:', entityId);
         setEntityExists(false);
       } else {
-        console.log('✅ Entity still exists, triggering refresh');
+        console.log('✅ Entity still exists, triggering enhanced refresh');
         setEntityExists(true);
         setRefreshKey(prev => prev + 1);
       }
@@ -37,7 +37,7 @@ export const useCapTable = (entityId: string): CapTableData | null => {
   }, [entityId]);
 
   return useMemo(() => {
-    console.log('🔄 useCapTable computing data for entity:', entityId, 'refreshKey:', refreshKey);
+    console.log('🔄 useCapTable: Enhanced data computation for entity:', entityId, 'refreshKey:', refreshKey);
     
     if (!entityExists) {
       console.log('❌ Entity does not exist, returning null');
@@ -52,7 +52,7 @@ export const useCapTable = (entityId: string): CapTableData | null => {
       return null;
     }
 
-    console.log('✅ Computing cap table data for:', entity.name);
+    console.log('✅ Computing enhanced cap table data for:', entity.name);
 
     const totalInvestment = syncedData.stakeholders.reduce((sum, stakeholder) => sum + stakeholder.investmentAmount, 0);
 
@@ -85,10 +85,11 @@ export const useCapTable = (entityId: string): CapTableData | null => {
       });
     }
 
-    console.log('📊 Cap table data computed:', {
+    console.log('📊 Enhanced cap table data computed:', {
       totalShares: syncedData.totalShares,
       stakeholders: syncedData.stakeholders.length,
-      chartItems: chartData.length
+      chartItems: chartData.length,
+      entityName: entity.name
     });
 
     return {
@@ -126,18 +127,18 @@ export const useCapTable = (entityId: string): CapTableData | null => {
   }, [entityId, refreshKey, entityExists]);
 };
 
-// Export functions for cap table mutations
+// Enhanced export functions for cap table mutations
 export const addStakeholder = (entityId: string, stakeholder: { name: string; shareClass: string; sharesOwned: number; type?: 'Individual' | 'Entity' | 'Pool' }) => {
-  console.log('➕ Adding stakeholder to entity:', entityId, stakeholder);
+  console.log('➕ Enhanced stakeholder addition to entity:', entityId, stakeholder);
   dataStore.addStakeholder(entityId, stakeholder);
 };
 
 export const updateStakeholder = (entityId: string, stakeholderId: string, updates: { name?: string; shareClass?: string; sharesOwned?: number }) => {
-  console.log('📝 Updating stakeholder:', stakeholderId, 'in entity:', entityId, updates);
+  console.log('📝 Enhanced stakeholder update:', stakeholderId, 'in entity:', entityId, updates);
   dataStore.updateStakeholder(entityId, stakeholderId, updates);
 };
 
 export const deleteStakeholder = (entityId: string, stakeholderId: string) => {
-  console.log('🗑️ Deleting stakeholder:', stakeholderId, 'from entity:', entityId);
+  console.log('🗑️ Enhanced stakeholder deletion:', stakeholderId, 'from entity:', entityId);
   dataStore.deleteStakeholder(entityId, stakeholderId);
 };

@@ -1,3 +1,4 @@
+
 import { Entity } from '@/types/entity';
 import { EntityCapTable, Shareholder, ShareClass } from '@/types/capTable';
 import { EntityManager } from './EntityManager';
@@ -29,7 +30,10 @@ export class DataStore {
       notifyChange
     );
 
-    console.log('🏪 DataStore initialized with:', {
+    // Inject entity accessor into CapTableManager for better entity-stakeholder naming
+    this.capTableManager.setEntityAccessor((id: string) => this.entityManager.getById(id));
+
+    console.log('🏪 DataStore initialized with enhanced cross-component sync:', {
       entities: initialEntities.length,
       capTables: initialCapTables.length,
       shareholders: initialShareholders.length,
@@ -132,17 +136,31 @@ export class DataStore {
   }
 
   addEntity(entity: Entity) {
-    console.log('➕ Adding entity:', entity.name, entity.id);
+    console.log('➕ Adding entity with enhanced sync:', entity.name, entity.id);
     this.entityManager.add(entity);
   }
 
   updateEntity(id: string, updates: Partial<Entity>) {
-    console.log('📝 Updating entity:', id, updates);
+    console.log('📝 Updating entity with enhanced sync:', id, updates);
     this.entityManager.update(id, updates);
+    
+    // If entity name was updated, update corresponding shareholder names
+    if (updates.name) {
+      const shareholders = this.capTableManager.getShareholders();
+      const entityShareholder = shareholders.find(s => s.entityId === id);
+      if (entityShareholder) {
+        // Update shareholder name to match entity name
+        this.capTableManager.updateStakeholder(
+          entityShareholder.entityId || '', 
+          entityShareholder.id, 
+          { name: updates.name }
+        );
+      }
+    }
   }
 
   deleteEntity(id: string) {
-    console.log('🗑️ Starting entity deletion process for:', id);
+    console.log('🗑️ Starting enhanced entity deletion process for:', id);
     
     // Verify entity exists before deletion
     const entityExists = this.entityManager.getById(id);
@@ -151,7 +169,7 @@ export class DataStore {
       return;
     }
     
-    console.log('🗑️ Entity found, proceeding with deletion');
+    console.log('🗑️ Entity found, proceeding with enhanced deletion');
     
     // First clean up all cap table data for this entity
     this.capTableManager.cleanupEntityData(id);
@@ -160,17 +178,17 @@ export class DataStore {
     this.entityManager.delete(id);
     
     // Force immediate save and wait for it to complete
-    console.log('💾 Force saving after entity deletion');
+    console.log('💾 Force saving after enhanced entity deletion');
     this.forceSave();
     
-    // Synchronously verify deletion was persisted
+    // Enhanced verification
     const savedData = this.storageService.load();
     const stillInStorage = savedData?.entities?.find((e: Entity) => e.id === id);
     
     if (stillInStorage) {
       console.error('❌ Entity deletion failed - still in localStorage:', id);
     } else {
-      console.log('✅ Entity deletion confirmed in localStorage');
+      console.log('✅ Enhanced entity deletion confirmed in localStorage');
     }
     
     // Verify deletion in memory
@@ -180,7 +198,7 @@ export class DataStore {
     if (stillExists) {
       console.error('❌ Entity deletion failed - entity still exists in memory:', id);
     } else {
-      console.log('✅ Entity deletion confirmed in memory, remaining entities:', remainingEntities.length);
+      console.log('✅ Enhanced entity deletion confirmed in memory, remaining entities:', remainingEntities.length);
     }
   }
 
@@ -202,23 +220,27 @@ export class DataStore {
   }
 
   updateOwnership(sourceEntityId: string, targetEntityId: string, ownershipPercentage: number) {
+    console.log('📊 DataStore: Enhanced ownership update:', sourceEntityId, '->', targetEntityId, ownershipPercentage + '%');
     this.capTableManager.updateOwnership(sourceEntityId, targetEntityId, ownershipPercentage);
   }
 
   removeOwnership(sourceEntityId: string, targetEntityId: string) {
+    console.log('🗑️ DataStore: Enhanced ownership removal:', sourceEntityId, '->', targetEntityId);
     this.capTableManager.removeOwnership(sourceEntityId, targetEntityId);
   }
 
   addStakeholder(entityId: string, stakeholder: { name: string; shareClass: string; sharesOwned: number; type?: 'Individual' | 'Entity' | 'Pool' }) {
+    console.log('➕ DataStore: Enhanced stakeholder addition to entity:', entityId, stakeholder);
     this.capTableManager.addStakeholder(entityId, stakeholder);
   }
 
   updateStakeholder(entityId: string, stakeholderId: string, updates: { name?: string; shareClass?: string; sharesOwned?: number }) {
+    console.log('📝 DataStore: Enhanced stakeholder update:', stakeholderId, 'in entity:', entityId, updates);
     this.capTableManager.updateStakeholder(entityId, stakeholderId, updates);
   }
 
   deleteStakeholder(entityId: string, stakeholderId: string) {
-    console.log('🗑️ DataStore: Starting stakeholder deletion process');
+    console.log('🗑️ DataStore: Enhanced stakeholder deletion process');
     console.log('🗑️ Entity ID:', entityId);
     console.log('🗑️ Stakeholder ID:', stakeholderId);
     
@@ -238,16 +260,16 @@ export class DataStore {
       return;
     }
 
-    console.log('🔍 Found stakeholder to delete:', existingInvestment);
+    console.log('🔍 Found stakeholder to delete with enhanced sync:', existingInvestment);
 
     // Perform the deletion
     this.capTableManager.deleteStakeholder(entityId, stakeholderId);
     
     // Force immediate save
-    console.log('💾 Force saving after stakeholder deletion');
+    console.log('💾 Force saving after enhanced stakeholder deletion');
     this.forceSave();
     
-    // Verify the deletion persisted immediately
+    // Enhanced verification
     const verifyCapTable = this.capTableManager.getCapTableByEntityId(entityId);
     const stillExists = verifyCapTable?.investments.find(inv => 
       inv.id === stakeholderId || inv.shareholderId === stakeholderId
@@ -257,15 +279,15 @@ export class DataStore {
     const stillInGlobal = globalShareholders.find(s => s.id === stakeholderId);
     
     if (stillExists) {
-      console.error('❌ CRITICAL: Stakeholder still exists in cap table after deletion!', stillExists);
+      console.error('❌ CRITICAL: Stakeholder still exists in cap table after enhanced deletion!', stillExists);
     }
     
     if (stillInGlobal) {
-      console.error('❌ CRITICAL: Stakeholder still exists in global array after deletion!', stillInGlobal);
+      console.error('❌ CRITICAL: Stakeholder still exists in global array after enhanced deletion!', stillInGlobal);
     }
     
     if (!stillExists && !stillInGlobal) {
-      console.log('✅ Stakeholder deletion verified in memory');
+      console.log('✅ Enhanced stakeholder deletion verified in memory');
     }
     
     // Verify localStorage persistence
@@ -276,11 +298,11 @@ export class DataStore {
     );
     
     if (stillInStorage) {
-      console.error('❌ CRITICAL: Stakeholder still exists in localStorage!', stillInStorage);
+      console.error('❌ CRITICAL: Stakeholder still exists in localStorage after enhanced deletion!', stillInStorage);
     } else {
-      console.log('✅ Stakeholder deletion verified in localStorage');
+      console.log('✅ Enhanced stakeholder deletion verified in localStorage');
     }
     
-    console.log('✅ DataStore: Stakeholder deletion process completed');
+    console.log('✅ DataStore: Enhanced stakeholder deletion process completed');
   }
 }
