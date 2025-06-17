@@ -5,6 +5,9 @@ export { EnterpriseRepositoryAdapter } from './EnterpriseRepositoryAdapter';
 export { LegacyRepositoryAdapter } from './LegacyRepositoryAdapter';
 export { UnifiedRepositoryFactory } from './UnifiedRepositoryFactory';
 
+// Import the factory class to create an instance
+import { UnifiedRepositoryFactory } from './UnifiedRepositoryFactory';
+
 // Create and export the factory instance
 const unifiedRepositoryFactory = new UnifiedRepositoryFactory();
 export { unifiedRepositoryFactory };
