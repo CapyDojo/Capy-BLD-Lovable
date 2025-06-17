@@ -1,3 +1,4 @@
+
 import { Node, Edge } from '@xyflow/react';
 import { dataStore } from './dataStore';
 
@@ -284,38 +285,69 @@ export const generateSyncedCanvasStructure = () => {
     });
   });
   
-  // Create ALL ownership edges (entity-to-entity AND individual-to-entity)
+  // Create ownership edges with improved shareholder matching
   allEntities.forEach((entity) => {
     const syncedData = syncCapTableData(entity.id);
     if (!syncedData || syncedData.totalShares === 0) return;
 
-    // Create edges for ALL stakeholders with ownership > 0
+    // Create edges for stakeholders with ownership > 0
     syncedData.stakeholders.forEach((stakeholder) => {
       if (stakeholder.sharesOwned <= 0) return;
       
       let sourceNodeId: string | null = null;
       
       if (stakeholder.type === 'Entity' && stakeholder.entityId) {
-        // Entity stakeholder - use entity ID
+        // Entity stakeholder - use the entityId directly (this is reliable)
         sourceNodeId = stakeholder.entityId;
+        console.log(`🔗 DEBUG: Entity stakeholder found: ${stakeholder.name} -> ${entity.name} (using entityId: ${stakeholder.entityId})`);
       } else if (stakeholder.type === 'Individual') {
-        // Individual stakeholder - find corresponding entity node
-        const individualEntity = allEntities.find(e => e.name === stakeholder.name && e.type === 'Individual');
+        // Individual stakeholder - improved matching logic
+        // First try to find by exact name match
+        let individualEntity = allEntities.find(e => e.name === stakeholder.name && e.type === 'Individual');
+        
+        // If not found by exact name, try to find individual shareholders that might represent the same person
+        if (!individualEntity) {
+          // Find the shareholder record to get more context
+          const shareholderRecord = allShareholders.find(s => s.id === stakeholder.id || s.name === stakeholder.name);
+          
+          if (shareholderRecord && shareholderRecord.entityId) {
+            // If shareholder has an entityId, use that
+            individualEntity = allEntities.find(e => e.id === shareholderRecord.entityId);
+            console.log(`🔗 DEBUG: Individual stakeholder matched via entityId: ${stakeholder.name} -> ${individualEntity?.name}`);
+          } else {
+            // Try fuzzy matching for individuals (handle name changes)
+            individualEntity = allEntities.find(e => 
+              e.type === 'Individual' && 
+              (e.name.toLowerCase().includes(stakeholder.name.toLowerCase()) || 
+               stakeholder.name.toLowerCase().includes(e.name.toLowerCase()))
+            );
+            console.log(`🔗 DEBUG: Individual stakeholder fuzzy matched: ${stakeholder.name} -> ${individualEntity?.name}`);
+          }
+        }
+        
         if (individualEntity) {
           sourceNodeId = individualEntity.id;
+          console.log(`🔗 DEBUG: Individual stakeholder edge: ${stakeholder.name} (${sourceNodeId}) -> ${entity.name} (${entity.id})`);
+        } else {
+          console.log(`⚠️ DEBUG: No matching entity found for individual stakeholder: ${stakeholder.name}`);
         }
       }
       // Skip Pool type stakeholders for edges
       
       if (sourceNodeId && nodeIds.has(sourceNodeId) && sourceNodeId !== entity.id) {
+        const edgeId = `e-${sourceNodeId}-${entity.id}`;
+        console.log(`✅ DEBUG: Creating edge: ${edgeId} with ${stakeholder.ownershipPercentage.toFixed(1)}% ownership`);
+        
         edges.push({
-          id: `e-${sourceNodeId}-${entity.id}`,
+          id: edgeId,
           source: sourceNodeId,
           target: entity.id,
           label: `${stakeholder.ownershipPercentage.toFixed(1)}%`,
           style: { stroke: '#3b82f6', strokeWidth: 2 },
           labelStyle: { fill: '#3b82f6', fontWeight: 600 },
         });
+      } else if (sourceNodeId) {
+        console.log(`⚠️ DEBUG: Edge not created - source not in nodes or self-reference: ${sourceNodeId} -> ${entity.id}`);
       }
     });
   });
