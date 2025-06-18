@@ -126,9 +126,10 @@ export const useCanvasEvents = (
         return;
       }
 
+      // Calculate exact drop position without arbitrary offsets
       const position = {
-        x: event.clientX - reactFlowBounds.left - 100,
-        y: event.clientY - reactFlowBounds.top - 50,
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
       };
 
       console.log('🎯 Calculated drop position:', position);
