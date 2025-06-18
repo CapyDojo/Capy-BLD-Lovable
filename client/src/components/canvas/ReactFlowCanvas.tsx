@@ -10,7 +10,7 @@ import {
   OnNodeDrag
 } from '@xyflow/react';
 import { EntityNode } from './EntityNode';
-import { useNavigate } from 'react-router-dom';
+import { useLocation } from 'wouter';
 
 const nodeTypes = {
   entity: EntityNode,
@@ -43,11 +43,11 @@ export const ReactFlowCanvas: React.FC<ReactFlowCanvasProps> = ({
   onNodeDrag,
   onNodeDragStop,
 }) => {
-  const navigate = useNavigate();
+  const [, setLocation] = useLocation();
 
   const onNodeDoubleClick = useCallback((event: React.MouseEvent, node: Node) => {
-    navigate(`/cap-table?entityId=${node.id}`);
-  }, [navigate]);
+    setLocation(`/cap-table?entityId=${node.id}`);
+  }, [setLocation]);
 
   return (
     <ReactFlow
