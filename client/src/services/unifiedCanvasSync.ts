@@ -38,10 +38,16 @@ export const generateUnifiedCanvasStructure = async () => {
         const entity = allEntities.find(e => e.id === entityId);
         if (!entity) return;
         
-        const x = startX + (index * (NODE_WIDTH + NODE_SPACING));
-        const finalPosition = { x, y };
-        
-        console.log(`🎯 Entity ${entity.name} positioned at:`, finalPosition);
+        // Use entity's stored position if available, otherwise use hierarchy layout
+        let finalPosition;
+        if (entity.position && entity.position.x !== undefined && entity.position.y !== undefined) {
+          finalPosition = entity.position;
+          console.log(`🎯 Entity ${entity.name} using stored position:`, finalPosition);
+        } else {
+          const x = startX + (index * (NODE_WIDTH + NODE_SPACING));
+          finalPosition = { x, y };
+          console.log(`🎯 Entity ${entity.name} positioned at hierarchy level:`, finalPosition);
+        }
         
         nodes.push({
           id: entity.id,
@@ -51,7 +57,7 @@ export const generateUnifiedCanvasStructure = async () => {
             name: entity.name,
             type: entity.type,
             jurisdiction: entity.jurisdiction,
-            basePosition: { x, y },
+            basePosition: finalPosition,
             hierarchyLevel: level,
           },
         });
