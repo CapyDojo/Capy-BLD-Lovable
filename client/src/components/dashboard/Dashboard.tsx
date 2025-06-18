@@ -4,8 +4,6 @@ import { StatsGrid } from './StatsGrid';
 import { RecentActivity } from './RecentActivity';
 import { ComplianceAlerts } from './ComplianceAlerts';
 import { QuickActions } from './QuickActions';
-import { TestRunner } from '../testing/TestRunner';
-import { ArchitecturalAudit } from '../testing/ArchitecturalAudit';
 
 export const Dashboard: React.FC = () => {
   return (
@@ -17,20 +15,7 @@ export const Dashboard: React.FC = () => {
 
       <StatsGrid />
       
-      {/* Enterprise Architecture Section */}
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-blue-900 mb-4">Enterprise Architecture</h2>
-        <p className="text-blue-700 mb-4">
-          Phase 4: Implementation Integration & Testing - Comprehensive architectural audit and migration readiness validation
-        </p>
-        <ArchitecturalAudit />
-      </div>
-      
-      {/* Development Tools Section */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <h2 className="text-lg font-semibold text-blue-900 mb-3">Development Tools</h2>
-        <TestRunner />
-      </div>
+
       
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <div className="lg:col-span-2 space-y-6">
