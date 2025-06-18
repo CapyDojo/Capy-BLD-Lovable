@@ -1,6 +1,6 @@
 
 import { useCallback, useRef } from 'react';
-import { Node, Connection } from '@xyflow/react';
+import { Node, Connection, useReactFlow } from '@xyflow/react';
 import { getUnifiedRepository } from '@/services/repositories/unified';
 import { EntityTypes } from '@/types/entity';
 
@@ -126,10 +126,10 @@ export const useCanvasEvents = (
         return;
       }
 
-      // Calculate exact drop position without arbitrary offsets
+      // Calculate exact drop position accounting for node center offset
       const position = {
-        x: event.clientX - reactFlowBounds.left,
-        y: event.clientY - reactFlowBounds.top,
+        x: event.clientX - reactFlowBounds.left - 100, // Center the node horizontally
+        y: event.clientY - reactFlowBounds.top - 34,   // Center the node vertically (half of node height)
       };
 
       console.log('🎯 Calculated drop position:', position);
