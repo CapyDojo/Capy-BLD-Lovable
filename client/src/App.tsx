@@ -14,6 +14,7 @@ import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
 import { MigrationAuditPage } from "@/pages/MigrationAudit";
 import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
+import StressTest from "@/pages/StressTest";
 import NotFound from "./pages/NotFound";
 
 // Import the simple test runner and expose functions manually
@@ -96,6 +97,11 @@ const App = () => {
           <Route path="/database">
             <MainLayout>
               <Database />
+            </MainLayout>
+          </Route>
+          <Route path="/stress-test">
+            <MainLayout>
+              <StressTest />
             </MainLayout>
           </Route>
           <Route>
