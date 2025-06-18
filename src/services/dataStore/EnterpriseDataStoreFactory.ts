@@ -1,9 +1,10 @@
+
 import { EnterpriseDataStore } from './enterprise/EnterpriseDataStore';
 import { IEnterpriseDataStore, EnterpriseDataStoreConfig } from '@/types/enterprise';
 import { 
-  unifiedMockEntities, 
-  unifiedMockShareClasses, 
-  unifiedMockOwnerships 
+  mockEntities, 
+  mockShareClasses, 
+  mockOwnerships 
 } from '@/data/unifiedMockData';
 
 export class EnterpriseDataStoreFactory {
@@ -29,7 +30,7 @@ export class EnterpriseDataStoreFactory {
       console.log('🌱 Initializing enterprise store with unified mock data...');
       
       // Load entities first
-      for (const entity of unifiedMockEntities) {
+      for (const entity of mockEntities) {
         try {
           await store.createEntity({
             name: entity.name,
@@ -47,7 +48,7 @@ export class EnterpriseDataStoreFactory {
       }
       
       // Load share classes second
-      for (const shareClass of unifiedMockShareClasses) {
+      for (const shareClass of mockShareClasses) {
         try {
           await store.createShareClass({
             entityId: shareClass.entityId,
@@ -63,7 +64,7 @@ export class EnterpriseDataStoreFactory {
       }
       
       // Load ownerships last (requires entities and share classes to exist)
-      for (const ownership of unifiedMockOwnerships) {
+      for (const ownership of mockOwnerships) {
         try {
           await store.createOwnership({
             ownerEntityId: ownership.ownerEntityId,
