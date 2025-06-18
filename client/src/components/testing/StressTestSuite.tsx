@@ -388,15 +388,38 @@ export const StressTestSuite: React.FC = () => {
     const startTime = performance.now();
 
     try {
-      // Run all test categories
+      // Initialize the comprehensive validator
+      const validator = new DataArchitectureValidator();
+      setCurrentTest('Initializing comprehensive validator...');
+      
+      // Run comprehensive validation tests
+      setCurrentTest('Running comprehensive data architecture validation...');
+      const validationResults = await validator.runComprehensiveTests();
+      
+      // Convert validation results to our format
+      validationResults.forEach(result => {
+        addTestResult({
+          testName: result.testName,
+          category: result.testName.includes('Performance') ? 'performance' : 
+                   result.testName.includes('Integrity') ? 'data-integrity' : 
+                   result.testName.includes('Concurrency') ? 'concurrency' : 'edge-cases',
+          status: result.passed ? 'passed' : 'failed',
+          duration: result.duration,
+          details: result.details
+        });
+      });
+      
+      setProgress(40);
+      
+      // Run original stress tests
       await runStructureChartStressTests();
-      setProgress(25);
+      setProgress(60);
       
       await runCapTableStressTests();
-      setProgress(50);
+      setProgress(80);
       
       await runDataIntegrityTests();
-      setProgress(75);
+      setProgress(90);
       
       await runEdgeCaseTests();
       setProgress(100);
@@ -404,22 +427,39 @@ export const StressTestSuite: React.FC = () => {
       const endTime = performance.now();
       const totalDuration = endTime - startTime;
 
-      // Calculate metrics
-      const passedTests = results.filter(r => r.status === 'passed').length;
-      const failedTests = results.filter(r => r.status === 'failed').length;
-      const avgResponseTime = results.reduce((sum, r) => sum + (r.duration || 0), 0) / results.length;
+      // Calculate final metrics
+      setTimeout(() => {
+        const finalResults = results.length > 0 ? results : 
+          validationResults.map(r => ({
+            testName: r.testName,
+            category: 'performance' as const,
+            status: r.passed ? 'passed' as const : 'failed' as const,
+            duration: r.duration,
+            details: r.details
+          }));
+          
+        const passedTests = finalResults.filter(r => r.status === 'passed').length;
+        const failedTests = finalResults.filter(r => r.status === 'failed').length;
+        const avgResponseTime = finalResults.reduce((sum, r) => sum + (r.duration || 0), 0) / finalResults.length;
 
-      setMetrics({
-        totalTests: results.length,
-        passed: passedTests,
-        failed: failedTests,
-        avgResponseTime,
-        memoryUsage: (performance as any).memory?.usedJSHeapSize || 0,
-        dataIntegrityScore: Math.round((passedTests / results.length) * 100)
-      });
+        setMetrics({
+          totalTests: finalResults.length,
+          passed: passedTests,
+          failed: failedTests,
+          avgResponseTime,
+          memoryUsage: (performance as any).memory?.usedJSHeapSize || 0,
+          dataIntegrityScore: Math.round((passedTests / finalResults.length) * 100)
+        });
+      }, 500);
 
     } catch (error) {
       console.error('Stress test suite failed:', error);
+      addTestResult({
+        testName: 'Comprehensive Test Suite',
+        category: 'performance',
+        status: 'failed',
+        details: `Suite failed: ${error}`
+      });
     } finally {
       setIsRunning(false);
       setCurrentTest('');

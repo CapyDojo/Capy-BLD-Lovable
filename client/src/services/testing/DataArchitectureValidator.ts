@@ -95,7 +95,7 @@ export class DataArchitectureValidator {
       
       // Verify data consistency
       const updatedEntities = await this.repository.getAllEntities();
-      const testEntities = updatedEntities.filter(e => e.metadata?.testEntity);
+      const testEntities = updatedEntities.filter((e: Entity) => e.metadata?.testEntity);
       
       const duration = performance.now() - startTime;
       
@@ -232,8 +232,8 @@ export class DataArchitectureValidator {
       
       // Verify consistency
       const finalEntities = await this.repository.getAllEntities();
-      const integrityTestEntities = finalEntities.filter(e => e.metadata?.integrityTest);
-      const updatedEntities = integrityTestEntities.filter(e => e.metadata?.updated);
+      const integrityTestEntities = finalEntities.filter((e: any) => e.metadata?.integrityTest);
+      const updatedEntities = integrityTestEntities.filter((e: any) => e.metadata?.updated);
       
       const duration = performance.now() - startTime;
       
@@ -347,7 +347,7 @@ export class DataArchitectureValidator {
     
     try {
       const allEntities = await this.repository.getAllEntities();
-      const testEntities = allEntities.filter(e => 
+      const testEntities = allEntities.filter((e: any) => 
         e.metadata?.testEntity || 
         e.metadata?.integrityTest || 
         e.name?.includes('StressTest') ||
