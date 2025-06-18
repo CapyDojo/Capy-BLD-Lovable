@@ -1,0 +1,75 @@
+# 🎯 **Bump & Connect: Revolutionary Drag Interaction System**
+
+## **Core Concept**
+
+**"Bump & Connect"** is a magnetic drag interaction that transforms boring corporate entity relationship building into an intuitive, delightful, gamified experience. Instead of complex menus or manual connection tools, users simply drag entities close to each other and they "bump" together to create connections automatically.
+
+## **The Magic Interaction Flow**
+
+### **1. Grab & Drag** 🖱️
+
+- User drags any entity (company, person, trust, etc.)
+- All other entities immediately become "magnetic targets"
+- Visual magnetic fields appear around potential connection points - the top connector of an owned entity and the bottom connector of an owner entity
+
+### **2. Magnetic Detection Zones** 🎯
+
+**Three progressive zones with distinct visual feedback:**
+
+- **🔍 Detection Zone (90px radius)**: Subtle white pulsing rings appear
+- **⚡ Strong Pull Zone (60px radius)**: Bright gold rings with faster pulse, target entity "breathes" with golden glow
+- **🎯 Snap Zone (30px radius)**: Bright green rings with rapid pulse, animated connection preview line appears
+
+### **3. Auto-Bump Connection** ✨
+
+- When dragged entity enters 30px snap zone: **automatic connection creation**
+- New ownership relationship appears instantly (before the user releases the entity node) with default percentage (100%), with clickable alternatives for 25%, 50%, 75%, and custom field for user defined %
+- Success celebration animation (green pulse effect)
+- No clicking, no menus, no manual connection drawing required
+
+### **4. Smart Interaction Logic** 🧠
+
+- **Duplicate prevention**: Won't create duplicate connections
+- Entity nodes should have a "solidity"" to them - they should act as if solid objects in real life and should not be able to overlap each other
+- **Visual feedback**: Real-time status updates ("Searching..." → "In Field" → "Ready to Connect!")
+- **Smooth performance**: 60fps calculations with optimized distance detection
+- **Touch optimized**: Works perfectly on mobile with finger dragging
+
+## **Why This is Revolutionary for Legal Tech**
+
+### **🎪 Transforms Boring into Delightful**
+
+- **Traditional**: Click source → click target → choose relationship type → set percentage
+- **Bump & Connect**: Drag → bump → done! Feels like a game, not work
+
+### **⚡ Reduces Cognitive Load**
+
+- **No complex UI to learn** - dragging is universal human interaction
+- **Visual magnetic fields** show exactly what will happen before it happens
+- **Progressive feedback** guides users naturally through the interaction
+
+### **🎯 Perfect for Complex Entity Structures**
+
+- **Fast iteration**: Quickly try different ownership structures
+- **Visual clarity**: See relationships forming in real-time
+- **Error prevention**: Smart logic prevents impossible connections
+
+## **Technical Implementation Notes**
+
+- **Distance calculations**: Real-time Pythagorean theorem for proximity detection
+- **Visual effects**: CSS animations with magnetic field rings and breathing targets
+- **State management**: Clean separation between drag state and connection logic
+- **Performance**: Optimized for smooth 60fps interactions even with many entities
+
+## **User Experience Goals**
+
+- **Intuitive**: Works exactly like users expect from physical world experience
+- **Satisfying**: Each successful connection feels rewarding and accomplished
+- **Professional**: Sophisticated enough for legal professionals, delightful enough to love
+- **Efficient**: Dramatically faster than traditional relationship building tools
+
+## **The "Aha!" Moment**
+
+When users first drag an entity and see the magnetic fields appear, then experience the smooth progression from detection → pull → snap → connection, they immediately understand this isn't just another boring enterprise tool. It's a **lovable, huggable interface** that makes complex legal work feel approachable and even fun.
+
+**This is the signature interaction that will make Capy unforgettable and beloved by legal professionals worldwide.** 🎯⚡✨
