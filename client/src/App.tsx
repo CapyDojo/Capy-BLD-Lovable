@@ -66,7 +66,10 @@ const App = () => {
           </Route>
           <Route path="/structure">
             <MainLayout>
-              <EntityCanvas />
+              <div className="p-8">
+                <h1 className="text-2xl font-bold text-gray-900 mb-4">Structure Chart - Under Reconstruction</h1>
+                <p className="text-gray-600">Building clean foundation for revolutionary magnetic system...</p>
+              </div>
             </MainLayout>
           </Route>
           <Route path="/cap-table">
