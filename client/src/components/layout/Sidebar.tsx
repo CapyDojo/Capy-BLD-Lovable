@@ -9,7 +9,8 @@ import {
   Settings,
   ChevronLeft,
   ChevronRight,
-  Database
+  Database,
+  Zap
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +25,7 @@ const navigation = [
   { name: 'Cap Table', href: '/cap-table', icon: PieChart },
   { name: 'Data Structure', href: '/data-structure', icon: Database },
   { name: 'Database', href: '/database', icon: Database },
+  { name: 'Stress Test', href: '/stress-test', icon: Zap },
   { name: 'Documents', href: '/documents', icon: Folder },
   { name: 'Compliance', href: '/compliance', icon: Calendar },
   { name: 'Settings', href: '/settings', icon: Settings },
