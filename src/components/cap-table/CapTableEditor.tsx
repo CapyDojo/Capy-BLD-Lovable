@@ -1,23 +1,27 @@
 
 import React, { useState, useEffect } from 'react';
 import { Building2, FileText, BarChart3, Download } from 'lucide-react';
-import { useCapTable } from '@/hooks/useCapTable';
-import { CapTableView } from './CapTableView';
-import { OwnershipChart } from './OwnershipChart';
 import { getUnifiedRepository } from '@/services/repositories/unified';
 import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
+import { CapTableView } from './CapTableView';
+import { OwnershipChart } from './OwnershipChart';
 
 export const CapTableEditor: React.FC = () => {
   const [selectedEntityId, setSelectedEntityId] = useState<string>('');
   const [activeTab, setActiveTab] = useState<'table' | 'chart'>('table');
   const [entities, setEntities] = useState<any[]>([]);
   const [repository, setRepository] = useState<IUnifiedEntityRepository | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // Initialize unified repository
   useEffect(() => {
     const initRepository = async () => {
       try {
         console.log('🔄 CapTableEditor: Initializing unified repository...');
+        setLoading(true);
+        setError(null);
+        
         const repo = await getUnifiedRepository('ENTERPRISE');
         setRepository(repo);
         
@@ -31,15 +35,47 @@ export const CapTableEditor: React.FC = () => {
         console.log('✅ CapTableEditor: Unified repository initialized');
       } catch (error) {
         console.error('❌ CapTableEditor: Failed to initialize repository:', error);
+        setError('Failed to initialize cap table system');
+      } finally {
+        setLoading(false);
       }
     };
 
     initRepository();
   }, []);
 
-  const capTableData = useCapTable(selectedEntityId);
-
   const selectedEntity = entities.find(e => e.id === selectedEntityId);
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-500">Loading cap table system...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="text-center">
+            <p className="text-red-600 mb-2">Error: {error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
