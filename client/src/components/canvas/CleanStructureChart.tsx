@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -15,6 +15,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Building2, Shield, Users, Briefcase, User } from 'lucide-react';
+import { getUnifiedRepository } from '@/services/repositories/unified';
 
 // Clean entity node component with proper typing
 interface EntityNodeData {
@@ -29,62 +30,48 @@ interface EntityNodeProps {
 }
 
 const CleanEntityNode: React.FC<EntityNodeProps> = ({ data, selected }) => {
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'Corporation': return Building2;
-      case 'LLC': return Shield;
-      case 'Partnership': return Users;
-      case 'Trust': return Briefcase;
-      case 'Individual': return User;
-      default: return Building2;
+  const getIcon = () => {
+    switch (data.type) {
+      case 'Corporation':
+        return <Building2 className="w-5 h-5 text-blue-600" />;
+      case 'LLC':
+        return <Shield className="w-5 h-5 text-green-600" />;
+      case 'Partnership':
+        return <Users className="w-5 h-5 text-purple-600" />;
+      case 'Trust':
+        return <Briefcase className="w-5 h-5 text-orange-600" />;
+      case 'Individual':
+        return <User className="w-5 h-5 text-gray-600" />;
+      default:
+        return <Building2 className="w-5 h-5 text-blue-600" />;
     }
   };
-
-  const getColor = (type: string) => {
-    switch (type) {
-      case 'Corporation': return 'bg-blue-50 border-blue-200 text-blue-700';
-      case 'LLC': return 'bg-green-50 border-green-200 text-green-700';
-      case 'Partnership': return 'bg-purple-50 border-purple-200 text-purple-700';
-      case 'Trust': return 'bg-orange-50 border-orange-200 text-orange-700';
-      case 'Individual': return 'bg-gray-50 border-gray-200 text-gray-700';
-      default: return 'bg-gray-50 border-gray-200 text-gray-700';
-    }
-  };
-
-  const Icon = getIcon(data.type);
-  const colorClass = getColor(data.type);
 
   return (
-    <div className={`
-      relative min-w-[200px] px-4 py-3 rounded-lg border-2 shadow-sm transition-all duration-200
-      ${colorClass}
-      ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
-      hover:shadow-md cursor-pointer
-    `}>
-      <Handle 
-        type="target" 
-        position={Position.Top} 
-        className="w-3 h-3 !bg-blue-600 !border-2 !border-white"
+    <div
+      className={`px-4 py-3 shadow-lg rounded-lg bg-white border-2 ${
+        selected ? 'border-blue-500' : 'border-gray-200'
+      } min-w-[180px]`}
+    >
+      <Handle
+        type="target"
+        position={Position.Top}
+        className="w-3 h-3 !bg-blue-500"
       />
       
-      <div className="flex items-start space-x-3">
-        <div className="flex-shrink-0">
-          <Icon className="h-5 w-5 mt-0.5" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-semibold truncate">
-            {data.name}
-          </h3>
-          <p className="text-xs opacity-75 mt-1">
-            {data.type} {data.jurisdiction !== 'Individual' ? `• ${data.jurisdiction}` : ''}
-          </p>
+      <div className="flex items-center space-x-3">
+        {getIcon()}
+        <div>
+          <div className="font-semibold text-gray-900 text-sm">{data.name}</div>
+          <div className="text-xs text-gray-500">{data.type}</div>
+          <div className="text-xs text-gray-400">{data.jurisdiction}</div>
         </div>
       </div>
 
-      <Handle 
-        type="source" 
-        position={Position.Bottom} 
-        className="w-3 h-3 !bg-blue-600 !border-2 !border-white"
+      <Handle
+        type="source"
+        position={Position.Bottom}
+        className="w-3 h-3 !bg-green-500"
       />
     </div>
   );
@@ -94,56 +81,135 @@ const nodeTypes = {
   entity: CleanEntityNode as any,
 };
 
-// Test data with clean structure
-const initialNodes: Node[] = [
-  {
-    id: 'sarah',
+// Helper functions
+const entitiesToNodes = (entities: any[]): Node[] => {
+  return entities.map((entity, index) => ({
+    id: entity.id,
     type: 'entity',
-    position: { x: 100, y: 100 },
-    data: { name: 'Sarah Williams', type: 'Individual', jurisdiction: 'Individual' },
-  },
-  {
-    id: 'mike',
-    type: 'entity',
-    position: { x: 300, y: 100 },
-    data: { name: 'Mike Rodriguez', type: 'Individual', jurisdiction: 'Individual' },
-  },
-  {
-    id: 'nexus',
-    type: 'entity',
-    position: { x: 200, y: 300 },
-    data: { name: 'NexusCorp Inc', type: 'Corporation', jurisdiction: 'Delaware' },
-  },
-];
+    position: entity.position || { 
+      x: 100 + (index % 3) * 300, 
+      y: 100 + Math.floor(index / 3) * 200 
+    },
+    data: {
+      name: entity.name,
+      type: entity.type,
+      jurisdiction: entity.jurisdiction || entity.type,
+    },
+  }));
+};
 
-const initialEdges: Edge[] = [
-  {
-    id: 'sarah-nexus',
-    source: 'sarah',
-    target: 'nexus',
+const ownershipsToEdges = (ownerships: any[]): Edge[] => {
+  return ownerships.map((ownership) => ({
+    id: ownership.id,
+    source: ownership.ownerEntityId,
+    target: ownership.ownedEntityId,
     type: 'default',
-    label: '44.4%',
-  },
-];
+    label: `${(ownership.shares / 10).toFixed(1)}%`,
+  }));
+};
 
-// Main clean structure chart component
+// Main component
 const CleanStructureChartInner: React.FC = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Load repository data
+  useEffect(() => {
+    const loadData = async () => {
+      try {
+        console.log('🔄 Loading unified repository data...');
+        const repository = await getUnifiedRepository('ENTERPRISE');
+        
+        const entities = await repository.getAllEntities();
+        console.log('📊 Loaded entities:', entities?.length || 0);
+        
+        // Get ownerships for each entity
+        const allOwnerships = [];
+        for (const entity of entities || []) {
+          try {
+            const entityOwnerships = await repository.getOwnershipsByEntity(entity.id);
+            allOwnerships.push(...(entityOwnerships || []));
+          } catch (err) {
+            console.log('⚠️ Error loading ownerships for entity:', entity.id);
+          }
+        }
+        console.log('📊 Loaded ownerships:', allOwnerships.length);
+        
+        // Convert to ReactFlow format
+        const flowNodes = entitiesToNodes(entities || []);
+        const flowEdges = ownershipsToEdges(allOwnerships);
+        
+        setNodes(flowNodes);
+        setEdges(flowEdges);
+        setLoading(false);
+        
+        console.log('✅ Repository integration complete');
+      } catch (error) {
+        console.error('❌ Repository loading failed:', error);
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, []);
 
   const onConnect = useCallback(
-    (params: Connection) => {
-      console.log('🔗 Clean edge connection:', params);
+    async (params: Connection) => {
+      console.log('🔗 Creating ownership:', params);
+      
+      try {
+        const repository = await getUnifiedRepository('ENTERPRISE');
+        
+        // Get or create share class for target entity
+        let shareClasses = await repository.getShareClassesByEntity(params.target!);
+        let shareClassId = shareClasses?.length > 0 ? shareClasses[0].id : null;
+
+        if (!shareClassId) {
+          const shareClass = await repository.createShareClass({
+            entityId: params.target!,
+            name: 'Common Stock',
+            type: 'Common Stock' as const,
+            totalAuthorizedShares: 10000,
+            votingRights: true
+          }, 'user');
+          shareClassId = shareClass.id;
+        }
+
+        // Create ownership relationship
+        await repository.createOwnership({
+          ownerEntityId: params.source!,
+          ownedEntityId: params.target!,
+          shares: 1000,
+          shareClassId: shareClassId!,
+          effectiveDate: new Date(),
+          createdBy: 'user',
+          updatedBy: 'user'
+        }, 'user');
+
+        console.log('✅ Ownership created successfully');
+      } catch (error) {
+        console.log('⚠️ Ownership creation failed, adding visual edge:', error);
+      }
+
+      // Always add visual edge for immediate feedback
       const newEdge = {
         ...params,
         type: 'default',
-        label: '100%',
+        label: '10.0%',
       };
       setEdges((eds) => addEdge(newEdge, eds));
-      console.log('✅ Edge created immediately');
     },
     [setEdges]
   );
+
+  if (loading) {
+    return (
+      <div className="w-full h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-gray-600">Loading repository data...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-screen bg-gray-50">
@@ -156,16 +222,19 @@ const CleanStructureChartInner: React.FC = () => {
           onConnect={onConnect}
           nodeTypes={nodeTypes}
           fitView
-          attributionPosition="bottom-left"
+          fitViewOptions={{
+            padding: 0.2,
+          }}
         >
           <Controls />
-          <Background />
+          <Background variant="dots" gap={12} size={1} />
         </ReactFlow>
       </div>
     </div>
   );
 };
 
+// Wrapped component with ReactFlowProvider
 export const CleanStructureChart: React.FC = () => {
   return (
     <ReactFlowProvider>
@@ -173,3 +242,5 @@ export const CleanStructureChart: React.FC = () => {
     </ReactFlowProvider>
   );
 };
+
+export default CleanStructureChart;
