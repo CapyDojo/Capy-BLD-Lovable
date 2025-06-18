@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { Node } from '@xyflow/react';
 import { getUnifiedRepository } from '@/services/repositories/unified';
@@ -25,14 +24,11 @@ export const useEntityDetailsPanel = ({
     const initRepository = async () => {
       try {
         console.log('🔄 EntityDetailsPanel: Initializing unified repository...');
-        const repo = await getUnifiedRepository('ENTERPRISE'); // Use enterprise by default
+        const repo = await getUnifiedRepository('ENTERPRISE');
         setRepository(repo);
         console.log('✅ EntityDetailsPanel: Unified repository initialized');
       } catch (error) {
         console.error('❌ EntityDetailsPanel: Failed to initialize repository:', error);
-        // Fallback to legacy if needed
-        const fallbackRepo = await getUnifiedRepository('LEGACY');
-        setRepository(fallbackRepo);
       }
     };
 
