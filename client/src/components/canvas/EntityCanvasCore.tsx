@@ -12,6 +12,7 @@ import { CanvasTipDisplay } from './CanvasTipDisplay';
 import { MagneticOverlays } from './MagneticOverlays';
 import { OwnershipPercentageModal } from './OwnershipPercentageModal';
 import { useMagneticConnection } from '@/hooks/useMagneticConnection';
+import { useReactFlowDrop } from '@/hooks/useReactFlowDrop';
 
 interface EntityCanvasCoreProps {
   nodes: Node[];
@@ -33,11 +34,14 @@ const ReactFlowCanvasContainer: React.FC<EntityCanvasCoreProps> = ({
   onEdgesChange,
   onConnect,
   onNodeClick,
-  onDrop,
-  onDragOver,
-  reactFlowWrapper,
+  onDrop: externalOnDrop,
+  onDragOver: externalOnDragOver,
+  reactFlowWrapper: externalReactFlowWrapper,
 }) => {
   console.log('🎯 ReactFlowCanvasContainer rendering with nodes:', nodes.length, 'edges:', edges.length);
+  
+  // Use React Flow native drop handling (with proper coordinate transformation)
+  const { onDrop, onDragOver, reactFlowWrapper } = useReactFlowDrop();
   
   // Initialize magnetic connection system (now inside ReactFlowProvider)
   const {
