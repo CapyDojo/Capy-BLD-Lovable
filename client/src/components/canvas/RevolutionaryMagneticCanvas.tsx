@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef } from 'react';
-import { Node, Edge, OnNodeDrag, useReactFlow } from '@xyflow/react';
+import { Node, Edge, OnNodeDrag } from '@xyflow/react';
 import { useMagneticDragEngine } from '@/hooks/useMagneticDragEngine';
 import { useCollisionPhysics } from '@/hooks/useCollisionPhysics';
 import { MagneticFieldRenderer } from './MagneticFieldRenderer';
