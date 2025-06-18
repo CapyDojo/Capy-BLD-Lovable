@@ -117,7 +117,7 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
               {capTableData.shareClasses.map((shareClass) => (
                 <tr key={shareClass.id}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {shareClass.className}
+                    {shareClass.name || shareClass.className || 'Unnamed Class'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {shareClass.authorizedShares.toLocaleString()}
@@ -126,7 +126,7 @@ export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
                     {shareClass.issuedShares.toLocaleString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    ${shareClass.pricePerShare.toFixed(2)}
+                    ${(shareClass.pricePerShare || shareClass.price || 1).toFixed(2)}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                     <button className="text-blue-600 hover:text-blue-900">

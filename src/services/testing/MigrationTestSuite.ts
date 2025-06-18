@@ -1,3 +1,4 @@
+
 import { createUnifiedRepository } from '@/services/repositories/unified/UnifiedRepositoryFactory';
 import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
 
@@ -39,7 +40,7 @@ export class MigrationTestSuite {
         metadata: {}
       };
 
-      const createdEntity = await this.repository.createEntity(testEntity, 'test-user', 'Test entity creation');
+      const createdEntity = await this.repository.createEntity(testEntity, 'test-user');
       
       if (!createdEntity || !createdEntity.id) {
         return { success: false, message: 'Failed to create entity' };
@@ -52,7 +53,7 @@ export class MigrationTestSuite {
       }
 
       // Cleanup
-      await this.repository.deleteEntity(createdEntity.id, 'test-user', 'Test cleanup');
+      await this.repository.deleteEntity(createdEntity.id, 'test-user');
       
       return { success: true, message: 'Entity operations working correctly' };
     } catch (error) {
@@ -71,7 +72,7 @@ export class MigrationTestSuite {
         type: 'Corporation' as const,
         jurisdiction: 'Delaware',
         metadata: {}
-      }, 'test-user', 'Test entity 1');
+      }, 'test-user');
 
       if (!entity1 || !entity1.id) {
         return { success: false, message: 'Failed to create entity 1' };
@@ -82,7 +83,7 @@ export class MigrationTestSuite {
         type: 'LLC' as const,
         jurisdiction: 'Nevada',
         metadata: {}
-      }, 'test-user', 'Test entity 2');
+      }, 'test-user');
 
       if (!entity2 || !entity2.id) {
         return { success: false, message: 'Failed to create entity 2' };
@@ -93,7 +94,7 @@ export class MigrationTestSuite {
         className: 'Common',
         authorizedShares: 1000,
         pricePerShare: 1.00,
-      }, 'test-user', 'Test share class');
+      }, 'test-user');
 
       if (!shareClass1 || !shareClass1.id) {
         return { success: false, message: 'Failed to create share class' };
@@ -109,7 +110,7 @@ export class MigrationTestSuite {
         ownerType: 'Entity' as const
       };
 
-      await this.repository.createOwnership(ownershipData, 'test-user', 'Test ownership creation');
+      await this.repository.createOwnership(ownershipData, 'test-user');
 
       // Verify ownership
       const capTable = await this.repository.getCapTableView(entity1.id);
@@ -123,10 +124,10 @@ export class MigrationTestSuite {
       }
 
       // Cleanup
-      await this.repository.deleteOwnership(ownership.ownershipId, 'test-user', 'Test ownership deletion');
-      await this.repository.deleteShareClass(shareClass1.id, 'test-user', 'Test share class deletion');
-      await this.repository.deleteEntity(entity1.id, 'test-user', 'Test entity 1 deletion');
-      await this.repository.deleteEntity(entity2.id, 'test-user', 'Test entity 2 deletion');
+      await this.repository.deleteOwnership(ownership.ownershipId, 'test-user');
+      await this.repository.deleteShareClass(shareClass1.id, 'test-user');
+      await this.repository.deleteEntity(entity1.id, 'test-user');
+      await this.repository.deleteEntity(entity2.id, 'test-user');
 
       return { success: true, message: 'Ownership operations working correctly' };
     } catch (error) {

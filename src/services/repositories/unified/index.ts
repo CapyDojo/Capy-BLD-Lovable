@@ -2,8 +2,7 @@
 // Unified Repository exports
 export type { IUnifiedEntityRepository, IUnifiedRepositoryFactory, RepositoryEvent, RepositoryType } from './IUnifiedRepository';
 export { EnterpriseRepositoryAdapter } from './EnterpriseRepositoryAdapter';
-export { LegacyRepositoryAdapter } from './LegacyRepositoryAdapter';
-export { UnifiedRepositoryFactory } from './UnifiedRepositoryFactory';
+export { UnifiedRepositoryFactory, createUnifiedRepository } from './UnifiedRepositoryFactory';
 
 // Import the factory class to create an instance
 import { UnifiedRepositoryFactory } from './UnifiedRepositoryFactory';

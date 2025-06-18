@@ -10,6 +10,7 @@ export interface CapTableData {
   availableShares: number;
   chartData: any[];
   tableData: any[];
+  refreshCapTable: () => void;
 }
 
 export const useCapTable = (entityId: string) => {
@@ -85,8 +86,8 @@ export const useCapTable = (entityId: string) => {
         ownerName: ownershipData.ownerName,
         shares: ownershipData.shares,
         shareClassId: ownershipData.shareClassId,
-        ownerType: ownershipData.ownerEntityId ? 'Entity' : 'Individual' // Fixed type mapping
-      }, 'user', 'Created via useCapTable hook');
+        ownerType: ownershipData.ownerEntityId ? 'Entity' : 'Individual'
+      }, 'user');
 
       console.log('✅ Ownership creation completed via unified repository');
       setRefreshTrigger(prev => prev + 1);
@@ -94,6 +95,10 @@ export const useCapTable = (entityId: string) => {
       console.error('❌ Error creating ownership via unified repository:', error);
       throw error;
     }
+  };
+
+  const refreshCapTable = () => {
+    setRefreshTrigger(prev => prev + 1);
   };
 
   return useMemo(() => {
@@ -109,12 +114,12 @@ export const useCapTable = (entityId: string) => {
 
     // Build table data from ownership summary
     const tableData = capTableView.ownershipSummary.map((ownership) => {
-      const totalInvestmentAmount = ownership.shares * (ownership.pricePerShare || 1); // Fallback price
+      const totalInvestmentAmount = ownership.shares * (ownership.pricePerShare || 1);
 
       return {
         id: ownership.ownershipId,
         name: ownership.ownerName,
-        type: 'Individual', // Default type from unified view
+        type: 'Individual',
         entityId: ownership.ownerEntityId,
         sharesOwned: ownership.shares,
         shareClass: ownership.shareClassName,
@@ -167,6 +172,7 @@ export const useCapTable = (entityId: string) => {
       availableShares,
       chartData,
       tableData,
+      refreshCapTable,
     };
   }, [entity, capTableView, refreshTrigger]);
 };

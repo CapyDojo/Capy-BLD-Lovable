@@ -21,6 +21,7 @@ export const EntityCanvas: React.FC = () => {
     onDragOver,
     onDrop,
     updateSelectedNode,
+    deleteSelectedNode,
   } = useEntityCanvas();
 
   return (
@@ -46,6 +47,7 @@ export const EntityCanvas: React.FC = () => {
           selectedNode={selectedNode}
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
+          onDelete={deleteSelectedNode}
           onUpdateNode={updateSelectedNode}
         />
       )}
