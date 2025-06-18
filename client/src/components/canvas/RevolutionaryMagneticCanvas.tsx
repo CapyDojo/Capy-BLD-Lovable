@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useCallback } from 'react';
 import {
   ReactFlow,
   Controls,
@@ -7,10 +7,13 @@ import {
   Node,
   Edge,
   OnConnect,
+  Connection,
+  addEdge,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
 import { EntityNode } from './EntityNode';
+import { getUnifiedRepository } from '@/services/repositories/unified';
 
 const nodeTypes = {
   entity: EntityNode,
@@ -42,6 +45,17 @@ const ReactFlowCanvasContainer: React.FC<RevolutionaryMagneticCanvasProps> = ({
   
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
+  // Simple visual edge creation for testing clean canvas
+  const handleConnect = useCallback((params: Connection) => {
+    console.log('🔗 Visual edge connection for testing:', params);
+    
+    // For clean canvas testing, just create visual edge
+    // Revolutionary system will handle proper ownership creation later
+    onConnect(params);
+    
+    console.log('✅ Visual edge created - ready for revolutionary system rebuild');
+  }, [onConnect]);
+
   return (
     <div ref={reactFlowWrapper} style={{ width: '100%', height: '100%', position: 'relative' }}>
       <ReactFlow
@@ -49,7 +63,7 @@ const ReactFlowCanvasContainer: React.FC<RevolutionaryMagneticCanvasProps> = ({
         edges={edges}
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
-        onConnect={onConnect}
+        onConnect={handleConnect}
         onNodeClick={onNodeClick}
         onDrop={onDrop}
         onDragOver={onDragOver}
