@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation } from 'wouter';
 import { 
   Building2, 
   PieChart, 
@@ -30,7 +30,7 @@ const navigation = [
 ];
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
-  const location = useLocation();
+  const [location] = useLocation();
 
   return (
     <div className={cn(

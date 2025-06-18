@@ -1,7 +1,7 @@
 
 import React from 'react';
 import { Plus, Upload, Download, Settings } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link } from 'wouter';
 
 const actions = [
   {
@@ -38,7 +38,7 @@ export const QuickActions: React.FC = () => {
           {actions.map((action) => (
             <Link
               key={action.title}
-              to={action.href}
+              href={action.href}
               className={`${action.color} text-white rounded-lg p-4 block hover:shadow-md transition-all duration-200`}
             >
               <div className="flex items-center space-x-3">
