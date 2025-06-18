@@ -102,7 +102,9 @@ const nodeTypes = {
 
 // Enhanced edge with magnetic connection animation
 const createMagneticEdge = (connection: Connection, percentage: string): Edge => ({
-  ...connection,
+  id: `${connection.source}-${connection.target}`,
+  source: connection.source!,
+  target: connection.target!,
   type: 'default',
   label: percentage,
   animated: true,
