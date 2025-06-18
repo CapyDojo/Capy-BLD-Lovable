@@ -90,10 +90,12 @@ export class MigrationTestSuite {
       }
 
       // Create a share class for entity1
-      const shareClass1 = await this.repository.createShareClass(entity1.id, {
-        className: 'Common',
-        authorizedShares: 1000,
-        pricePerShare: 1.00,
+      const shareClass1 = await this.repository.createShareClass({
+        entityId: entity1.id,
+        name: 'Common',
+        type: 'Common Stock',
+        totalAuthorizedShares: 1000,
+        votingRights: true
       }, 'test-user');
 
       if (!shareClass1 || !shareClass1.id) {
@@ -104,10 +106,11 @@ export class MigrationTestSuite {
       const ownershipData = {
         ownedEntityId: entity1.id,
         ownerEntityId: entity2.id,
-        ownerName: entity2.name,
         shares: 100,
         shareClassId: shareClass1.id,
-        ownerType: 'Entity' as const
+        effectiveDate: new Date(),
+        createdBy: 'test-user',
+        updatedBy: 'test-user'
       };
 
       await this.repository.createOwnership(ownershipData, 'test-user');

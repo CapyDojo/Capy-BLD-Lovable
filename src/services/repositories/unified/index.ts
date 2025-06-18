@@ -11,11 +11,7 @@ import { UnifiedRepositoryFactory } from './UnifiedRepositoryFactory';
 const unifiedRepositoryFactory = new UnifiedRepositoryFactory();
 export { unifiedRepositoryFactory };
 
-// Convenience function to get the appropriate repository
-export async function getUnifiedRepository(type?: import('./IUnifiedRepository').RepositoryType) {
-  if (type) {
-    return unifiedRepositoryFactory.createRepository(type);
-  }
-  
-  return unifiedRepositoryFactory.getActiveRepository();
+// Convenience function to get the appropriate repository (only Enterprise now)
+export async function getUnifiedRepository(type: 'ENTERPRISE' = 'ENTERPRISE') {
+  return unifiedRepositoryFactory.createRepository(type);
 }

@@ -23,7 +23,7 @@ export class UnifiedRepositoryFactory {
 
   async getActiveRepository(): Promise<IUnifiedEntityRepository> {
     if (!this.activeRepository) {
-      this.activeRepository = await this.createRepository();
+      this.activeRepository = await this.createRepository('ENTERPRISE');
     }
     return this.activeRepository;
   }

@@ -1,3 +1,4 @@
+
 import { useMemo, useState, useEffect } from 'react';
 import { getUnifiedRepository } from '@/services/repositories/unified';
 import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
@@ -82,11 +83,12 @@ export const useCapTable = (entityId: string) => {
       
       await repository.createOwnership({
         ownedEntityId: entityId,
-        ownerEntityId: ownershipData.ownerEntityId || null,
-        ownerName: ownershipData.ownerName,
+        ownerEntityId: ownershipData.ownerEntityId || '',
         shares: ownershipData.shares,
         shareClassId: ownershipData.shareClassId,
-        ownerType: ownershipData.ownerEntityId ? 'Entity' : 'Individual'
+        effectiveDate: new Date(),
+        createdBy: 'user',
+        updatedBy: 'user'
       }, 'user');
 
       console.log('✅ Ownership creation completed via unified repository');
@@ -178,7 +180,7 @@ export const useCapTable = (entityId: string) => {
 };
 
 // Unified mutation functions using the unified repository
-export const addStakeholder = async (entityId: string, stakeholder: { name: string; shareClass: string; sharesOwned: number; type?: 'Individual' | 'Entity' | 'Pool' }) => {
+export const addStakeholder = async (entityId: string, stakeholder: { name: string; shareClass: string; sharesOwned: number; type?: 'Individual' | 'Corporation' | 'LLC' }) => {
   console.log('➕ Adding stakeholder to entity via unified repository:', entityId, stakeholder);
   
   try {
@@ -191,8 +193,9 @@ export const addStakeholder = async (entityId: string, stakeholder: { name: stri
     if (!existingOwner) {
       await repository.createEntity({
         name: stakeholder.name,
-        type: stakeholder.type || 'Individual',
+        type: (stakeholder.type || 'Individual') as any,
         jurisdiction: stakeholder.type === 'Individual' ? undefined : 'Delaware',
+        metadata: {}
       }, 'user', 'Created from stakeholder addition');
     }
     

@@ -81,10 +81,13 @@ export interface BusinessRuleViolation {
 export interface ShareClassSummary {
   id: string;
   name: string;
+  className?: string; // Alternative name field
   type: string;
   authorizedShares: number;
   issuedShares: number;
   votingRights: boolean;
+  pricePerShare?: number; // Price information
+  price?: number; // Alternative price field
 }
 
 export interface OwnershipSummary {
@@ -95,12 +98,14 @@ export interface OwnershipSummary {
   shareClassName: string;
   effectiveDate: Date;
   percentage: number;
+  pricePerShare?: number; // Add price information
 }
 
 export interface CapTableView {
   entityId: string;
   entityName: string;
   totalShares: number;
+  authorizedShares?: number; // Add authorized shares
   ownershipSummary: OwnershipSummary[];
   shareClasses: ShareClassSummary[];
   lastUpdated: Date;
