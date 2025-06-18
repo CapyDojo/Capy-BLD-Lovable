@@ -110,8 +110,8 @@ const ownershipsToEdges = (ownerships: any[]): Edge[] => {
 
 // Main component
 const CleanStructureChartInner: React.FC = () => {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState([] as Node[]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([] as Edge[]);
   const [loading, setLoading] = useState(true);
 
   // Load repository data
