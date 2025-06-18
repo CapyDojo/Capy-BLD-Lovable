@@ -55,17 +55,16 @@ export const useReactFlowDrop = () => {
         return;
       }
 
-      // Use React Flow's native coordinate transformation
-      // This accounts for zoom, pan, and viewport transformations automatically
-      const position = screenToFlowPosition({
-        x: event.clientX,
-        y: event.clientY,
-      });
+      // Simple screen position for drop
+      const position = {
+        x: event.clientX - 100,
+        y: event.clientY - 50,
+      };
 
-      console.log('🎯 Transformed flow position:', position);
+      console.log('🎯 Drop position:', position);
       createNode(type, position);
     },
-    [screenToFlowPosition, createNode]
+    [createNode]
   );
 
   return {
