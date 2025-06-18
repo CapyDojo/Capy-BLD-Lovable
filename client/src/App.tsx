@@ -11,14 +11,13 @@ import { CapTableEditor } from "@/components/cap-table/CapTableEditor";
 import { EntityCanvas } from "@/components/canvas/EntityCanvas";
 import { DocumentRepository } from "@/components/documents/DocumentRepository";
 import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
-import { MigrationAuditPage } from "@/pages/MigrationAudit";
+
 import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import StressTest from "@/pages/StressTest";
 import NotFound from "./pages/NotFound";
 
-// Import the simple test runner and expose functions manually
-import './services/testing/SimpleTestRunner';
+
 
 // Manually expose test functions to global scope
 if (typeof window !== 'undefined') {
@@ -84,11 +83,7 @@ const App = () => {
               <ComplianceTimeline />
             </MainLayout>
           </Route>
-          <Route path="/migration-audit">
-            <MainLayout>
-              <MigrationAuditPage />
-            </MainLayout>
-          </Route>
+
           <Route path="/data-structure">
             <MainLayout>
               <DataStructure />
