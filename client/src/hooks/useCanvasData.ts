@@ -84,14 +84,32 @@ export const useCanvasData = (refreshKey: number, isDeleting: boolean, selectedN
     }
   }, [initialData, isLoading, setNodes, setEdges]);
 
-  // Enhanced onNodesChange to track position changes
-  const enhancedOnNodesChange = (changes: any) => {
+  // Enhanced onNodesChange to track and persist position changes
+  const enhancedOnNodesChange = async (changes: any) => {
+    const positionChanges = [];
+    
     changes.forEach((change: any) => {
-      if (change.type === 'position' && change.position && change.id) {
+      if (change.type === 'position' && change.position && change.id && !change.dragging) {
+        // Save position locally for immediate UI update
         positionsRef.current[change.id] = change.position;
+        positionChanges.push({ entityId: change.id, position: change.position });
       }
     });
+    
+    // Update UI immediately
     onNodesChange(changes);
+    
+    // Persist position changes to database
+    if (repository && positionChanges.length > 0) {
+      positionChanges.forEach(async ({ entityId, position }) => {
+        try {
+          await repository.updateEntity(entityId, { position }, 'user', 'Updated entity position');
+          console.log('✅ Position saved for entity:', entityId, position);
+        } catch (error) {
+          console.error('❌ Failed to save position for entity:', entityId, error);
+        }
+      });
+    }
   };
 
   // Subscribe to unified repository changes for auto-sync
