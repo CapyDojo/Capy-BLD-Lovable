@@ -7,10 +7,6 @@ import {
   OnNodeDrag
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { ReactFlowCanvas } from './ReactFlowCanvas';
-import { CanvasTipDisplay } from './CanvasTipDisplay';
-import { MagneticOverlays } from './MagneticOverlays';
-import { OwnershipPercentageModal } from './OwnershipPercentageModal';
 import { RevolutionaryMagneticCanvas } from './RevolutionaryMagneticCanvas';
 import { useReactFlowDrop } from '@/hooks/useReactFlowDrop';
 

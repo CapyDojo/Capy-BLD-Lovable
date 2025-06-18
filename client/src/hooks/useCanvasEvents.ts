@@ -26,12 +26,34 @@ export const useCanvasEvents = (
 
         console.log('🔗 Creating ownership with shares:', shares);
 
+        // Get the target entity to find its share classes
+        const targetEntity = await repository.getEntity(params.target);
+        if (!targetEntity) {
+          throw new Error(`Target entity ${params.target} not found`);
+        }
+
+        // Get share classes for the target entity
+        const shareClasses = await repository.getShareClassesByEntity(params.target);
+        let shareClassId = shareClasses.length > 0 ? shareClasses[0].id : null;
+
+        // If no share class exists, create a default one
+        if (!shareClassId) {
+          const defaultShareClass = await repository.createShareClass({
+            entityId: params.target,
+            name: 'Common Stock',
+            type: 'Common Stock' as const,
+            totalAuthorizedShares: 10000,
+            votingRights: true
+          }, 'user');
+          shareClassId = defaultShareClass.id;
+        }
+
         // Create ownership in unified repository
         await repository.createOwnership({
           ownerEntityId: params.source,
           ownedEntityId: params.target,
           shares,
-          shareClassId: 'default-common', // Default share class
+          shareClassId: shareClassId!,
           effectiveDate: new Date(),
           createdBy: 'user',
           updatedBy: 'user'

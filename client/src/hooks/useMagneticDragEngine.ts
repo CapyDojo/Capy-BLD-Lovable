@@ -216,12 +216,60 @@ export const useMagneticDragEngine = (
     }
   }, [state.isDragging, state.draggedNodeId, nodes, updateMagneticZones]);
 
-  const handleDragEnd = useCallback(() => {
+  const handleDragEnd = useCallback(async () => {
     // Auto-connect if in snap zone
     if (state.connectionPreview) {
       const { sourceId, targetId, percentage } = state.connectionPreview;
       
-      // Create connection
+      // Create connection with proper share class handling
+      console.log('🎯 Revolutionary magnetic connection creating:', { sourceId, targetId, percentage });
+      
+      try {
+        const { getUnifiedRepository } = await import('@/services/repositories/unified');
+        const repository = await getUnifiedRepository('ENTERPRISE');
+        
+        // Get the target entity to find its share classes
+        const targetEntity = await repository.getEntity(targetId);
+        if (!targetEntity) {
+          throw new Error(`Target entity ${targetId} not found`);
+        }
+
+        // Get share classes for the target entity
+        const shareClasses = await repository.getShareClassesByEntity(targetId);
+        let shareClassId = shareClasses.length > 0 ? shareClasses[0].id : null;
+
+        // If no share class exists, create a default one
+        if (!shareClassId) {
+          const defaultShareClass = await repository.createShareClass({
+            entityId: targetId,
+            name: 'Common Stock',
+            type: 'Common Stock' as const,
+            totalAuthorizedShares: 10000,
+            votingRights: true
+          }, 'user');
+          shareClassId = defaultShareClass.id;
+        }
+
+        // Calculate shares from percentage
+        const shares = (percentage / 100) * 1000; // Convert percentage to shares
+
+        // Create ownership in unified repository
+        await repository.createOwnership({
+          ownerEntityId: sourceId,
+          ownedEntityId: targetId,
+          shares,
+          shareClassId: shareClassId!,
+          effectiveDate: new Date(),
+          createdBy: 'user',
+          updatedBy: 'user'
+        }, 'user');
+
+        console.log('✅ Revolutionary magnetic connection created successfully');
+      } catch (error) {
+        console.error('❌ Error creating revolutionary magnetic connection:', error);
+      }
+      
+      // Also call the original onConnection for UI updates
       onConnection({ source: sourceId, target: targetId, percentage });
       
       // Add magnetic fatigue
