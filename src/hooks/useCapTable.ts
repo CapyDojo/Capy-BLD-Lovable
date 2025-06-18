@@ -1,4 +1,3 @@
-
 import { useMemo, useState, useEffect } from 'react';
 import { getUnifiedRepository } from '@/services/repositories/unified';
 import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
@@ -13,7 +12,7 @@ export interface CapTableData {
   tableData: any[];
 }
 
-export const useCapTable = (entityId: string): CapTableData | null => {
+export const useCapTable = (entityId: string) => {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [capTableView, setCapTableView] = useState(null);
   const [entity, setEntity] = useState(null);
@@ -68,6 +67,34 @@ export const useCapTable = (entityId: string): CapTableData | null => {
 
     return unsubscribe;
   }, [repository, entityId, refreshTrigger]);
+
+  const createOwnership = async (ownershipData: {
+    ownerEntityId?: string;
+    ownerName: string;
+    shares: number;
+    shareClassId: string;
+  }) => {
+    if (!repository || !entityId) return;
+
+    try {
+      console.log('🔄 Creating ownership via unified repository:', ownershipData);
+      
+      await repository.createOwnership({
+        ownedEntityId: entityId,
+        ownerEntityId: ownershipData.ownerEntityId || null,
+        ownerName: ownershipData.ownerName,
+        shares: ownershipData.shares,
+        shareClassId: ownershipData.shareClassId,
+        ownerType: ownershipData.ownerEntityId ? 'Entity' : 'Individual' // Fixed type mapping
+      }, 'user', 'Created via useCapTable hook');
+
+      console.log('✅ Ownership creation completed via unified repository');
+      setRefreshTrigger(prev => prev + 1);
+    } catch (error) {
+      console.error('❌ Error creating ownership via unified repository:', error);
+      throw error;
+    }
+  };
 
   return useMemo(() => {
     if (!entity || !capTableView) {

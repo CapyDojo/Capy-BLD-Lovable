@@ -1,256 +1,218 @@
+
 import React, { useState, useEffect } from 'react';
-import { Building2, User, Users, Edit, Check, X } from 'lucide-react';
-import { useCapTable } from '@/hooks/useCapTable';
-import { dataStore } from '@/services/dataStore';
-import { Input } from '@/components/ui/input';
+import { Plus, Edit, Trash2 } from 'lucide-react';
+import { getUnifiedRepository } from '@/services/repositories/unified';
+import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
+import { CapTableView as CapTableViewType } from '@/types/unified';
 
 interface CapTableViewProps {
   entityId: string;
 }
 
 export const CapTableView: React.FC<CapTableViewProps> = ({ entityId }) => {
-  const capTableData = useCapTable(entityId);
-  const [editingRow, setEditingRow] = useState<string | null>(null);
-  const [editData, setEditData] = useState<any>({});
+  const [capTableData, setCapTableData] = useState<CapTableViewType | null>(null);
+  const [repository, setRepository] = useState<IUnifiedEntityRepository | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
-  // Subscribe to data store changes to force re-render
+  // Initialize unified repository
   useEffect(() => {
-    console.log('🔗 CapTableView subscribing to data store for entity:', entityId);
-    const unsubscribe = dataStore.subscribe(() => {
-      console.log('📡 CapTableView received data store update for entity:', entityId);
-      setRefreshKey(prev => prev + 1);
+    const initRepository = async () => {
+      try {
+        console.log('🔄 CapTableView: Initializing unified repository for entity:', entityId);
+        const repo = await getUnifiedRepository('ENTERPRISE');
+        setRepository(repo);
+        console.log('✅ CapTableView: Unified repository initialized');
+      } catch (error) {
+        console.error('❌ CapTableView: Failed to initialize repository:', error);
+      }
+    };
+
+    initRepository();
+  }, []);
+
+  // Load data when repository is ready
+  useEffect(() => {
+    if (!repository) return;
+
+    const loadData = async () => {
+      try {
+        console.log('🔄 CapTableView: Loading cap table for entity:', entityId);
+        const capTable = await repository.getCapTableView(entityId);
+        setCapTableData(capTable);
+        console.log('✅ CapTableView: Cap table loaded');
+      } catch (error) {
+        console.error('❌ CapTableView: Error loading cap table:', error);
+        setCapTableData(null);
+      }
+    };
+
+    loadData();
+
+    // Subscribe to repository changes
+    const unsubscribe = repository.subscribe((event) => {
+      console.log('📡 CapTableView: Received repository event:', event.type, event.entityId);
+      if (event.entityId === entityId) {
+        setRefreshKey(prev => prev + 1);
+        loadData();
+      }
     });
+
     return unsubscribe;
-  }, [entityId]);
+  }, [repository, entityId, refreshKey]);
 
   if (!capTableData) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-6">
-        <div className="text-center text-gray-500">
-          <p>No cap table data found for this entity.</p>
-        </div>
+      <div className="text-center py-8">
+        <p className="text-gray-500">Loading cap table data...</p>
       </div>
     );
   }
 
-  const { entity, capTable, totalShares, totalInvestment, availableShares, tableData } = capTableData;
-
-  const startEditing = (itemId: string, item: any) => {
-    setEditingRow(itemId);
-    setEditData({
-      name: item.name,
-      sharesOwned: item.sharesOwned,
-      pricePerShare: item.pricePerShare,
-      investmentAmount: item.investmentAmount
-    });
-  };
-
-  const cancelEditing = () => {
-    setEditingRow(null);
-    setEditData({});
-  };
-
-  const saveChanges = (itemId: string) => {
-    try {
-      dataStore.updateStakeholder(entityId, itemId, {
-        name: editData.name,
-        sharesOwned: parseInt(editData.sharesOwned) || 0
-      });
-      setEditingRow(null);
-      setEditData({});
-    } catch (error) {
-      console.error('Error updating stakeholder:', error);
-    }
-  };
-
-  const deleteStakeholder = (itemId: string, itemName: string) => {
-    if (confirm(`Are you sure you want to delete ${itemName}?`)) {
-      dataStore.deleteStakeholder(entityId, itemId);
-    }
-  };
-
-  // Add icons to table data
-  const enhancedTableData = tableData.map(item => ({
-    ...item,
-    icon: item.type === 'Individual' ? User : item.type === 'Pool' ? Users : Building2,
-  }));
+  if (capTableData.totalShares === 0) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-gray-500">No cap table data found for this entity.</p>
+        <button className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2 mx-auto">
+          <Plus className="h-4 w-4" />
+          <span>Add Share Class</span>
+        </button>
+      </div>
+    );
+  }
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden" key={`table-${refreshKey}`}>
-      <div className="px-6 py-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h3 className="text-lg font-medium text-gray-900">
-            Capitalization Table - {entity.name}
-          </h3>
-          <div className="text-sm text-gray-600 space-x-4">
-            <span>Total Investment: <span className="font-medium">${totalInvestment.toLocaleString()}</span></span>
-            <span>Outstanding Shares: <span className="font-medium">{totalShares.toLocaleString()}</span></span>
-          </div>
+    <div className="space-y-6" key={`cap-table-${refreshKey}`}>
+      {/* Share Classes Table */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Share Classes</h3>
+          <button className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2">
+            <Plus className="h-4 w-4" />
+            <span>Add Share Class</span>
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Class Name
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Shares
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Issued Shares
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Price per Share
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {capTableData.shareClasses.map((shareClass) => (
+                <tr key={shareClass.id}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {shareClass.className}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {shareClass.authorizedShares.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {shareClass.issuedShares.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    ${shareClass.pricePerShare.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button className="text-blue-600 hover:text-blue-900">
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button className="text-red-600 hover:text-red-900">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
-      
-      <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Stakeholder
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Security Type
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Shares
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Price/Share
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Investment
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Basic %
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Fully Diluted %
-              </th>
-              <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Actions
-              </th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {enhancedTableData.map((item) => (
-              <tr key={`${item.id}-${refreshKey}`} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="flex items-center">
-                    <div className="flex-shrink-0">
-                      <div className="h-8 w-8 bg-blue-50 rounded-full flex items-center justify-center">
-                        <item.icon className="h-4 w-4 text-blue-600" />
-                      </div>
-                    </div>
-                    <div className="ml-3">
-                      {editingRow === item.id ? (
-                        <Input
-                          value={editData.name}
-                          onChange={(e) => setEditData({...editData, name: e.target.value})}
-                          className="text-sm font-medium w-full"
-                        />
-                      ) : (
-                        <>
-                          <div className="text-sm font-medium text-gray-900">{item.name}</div>
-                          <div className="text-sm text-gray-500">{item.type}</div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                    item.shareClass.includes('Common') ? 'bg-green-100 text-green-800' :
-                    item.shareClass.includes('Preferred') ? 'bg-purple-100 text-purple-800' :
-                    item.shareClass.includes('Options') ? 'bg-yellow-100 text-yellow-800' :
-                    'bg-blue-100 text-blue-800'
-                  }`}>
-                    {item.shareClass}
-                  </span>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
-                  {editingRow === item.id ? (
-                    <Input
-                      type="number"
-                      value={editData.sharesOwned}
-                      onChange={(e) => setEditData({...editData, sharesOwned: e.target.value})}
-                      className="text-right w-24"
-                    />
-                  ) : (
-                    item.sharesOwned > 0 ? item.sharesOwned.toLocaleString() : '-'
-                  )}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                  ${item.pricePerShare.toFixed(3)}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium text-gray-900">
-                  ${item.investmentAmount.toLocaleString()}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                  {item.ownershipPercentage.toFixed(1)}%
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm text-gray-900">
-                  {item.fullyDiluted.toFixed(1)}%
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                  {editingRow === item.id ? (
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => saveChanges(item.id)}
-                        className="text-green-600 hover:text-green-900"
-                      >
-                        <Check className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={cancelEditing}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center space-x-2">
-                      <button
-                        onClick={() => startEditing(item.id, item)}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => deleteStakeholder(item.id, item.name)}
-                        className="text-red-600 hover:text-red-900"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  )}
-                </td>
+
+      {/* Ownership Summary Table */}
+      <div>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900">Ownership Summary</h3>
+          <button className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2">
+            <Plus className="h-4 w-4" />
+            <span>Add Shareholder</span>
+          </button>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Shareholder
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Shares
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Percentage
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
-            ))}
-          </tbody>
-          <tfoot className="bg-gray-50">
-            <tr>
-              <td className="px-6 py-3 text-sm font-medium text-gray-900" colSpan={2}>
-                Total Outstanding
-              </td>
-              <td className="px-6 py-3 text-right text-sm font-medium text-gray-900">
-                {totalShares.toLocaleString()}
-              </td>
-              <td className="px-6 py-3 text-right text-sm text-gray-500">
-                -
-              </td>
-              <td className="px-6 py-3 text-right text-sm font-medium text-gray-900">
-                ${totalInvestment.toLocaleString()}
-              </td>
-              <td className="px-6 py-3 text-right text-sm font-medium text-gray-900">
-                100.0%
-              </td>
-              <td className="px-6 py-3 text-right text-sm font-medium text-gray-900">
-                {((totalShares / capTable.authorizedShares) * 100).toFixed(1)}%
-              </td>
-              <td className="px-6 py-3"></td>
-            </tr>
-            <tr>
-              <td className="px-6 py-3 text-sm text-gray-600" colSpan={2}>
-                Available for Issuance
-              </td>
-              <td className="px-6 py-3 text-right text-sm text-gray-600">
-                {availableShares.toLocaleString()}
-              </td>
-              <td className="px-6 py-3 text-right text-sm text-gray-500" colSpan={5}>
-                Authorized: {capTable.authorizedShares.toLocaleString()} shares
-              </td>
-            </tr>
-          </tfoot>
-        </table>
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-200">
+              {capTableData.ownershipSummary.map((ownership) => (
+                <tr key={ownership.ownershipId}>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {ownership.ownerName}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {ownership.shares.toLocaleString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {ownership.percentage.toFixed(2)}%
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                    <button className="text-blue-600 hover:text-blue-900">
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button className="text-red-600 hover:text-red-900">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-gray-50 p-4 rounded-lg">
+        <div className="text-sm text-gray-600 space-y-1">
+          <div className="flex justify-between">
+            <span>Total Shares:</span>
+            <span className="font-medium">{capTableData.totalShares.toLocaleString()}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Share Classes:</span>
+            <span className="font-medium">{capTableData.shareClasses.length}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Shareholders:</span>
+            <span className="font-medium">{capTableData.ownershipSummary.length}</span>
+          </div>
+        </div>
       </div>
     </div>
   );

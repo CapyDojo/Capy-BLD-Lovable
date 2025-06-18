@@ -79,7 +79,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
               Entity Type
             </label>
             <select
-              value={entityData.type || ''}
+              value={String(entityData.type || '')}
               onChange={(e) => handleUpdateField('type', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
@@ -98,7 +98,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
             </label>
             <input
               type="text"
-              value={entityData.jurisdiction || ''}
+              value={String(entityData.jurisdiction || '')}
               onChange={(e) => handleUpdateField('jurisdiction', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="e.g., Delaware, California"
@@ -111,7 +111,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
             </label>
             <input
               type="text"
-              value={entityData.registrationNumber || ''}
+              value={String(entityData.registrationNumber || '')}
               onChange={(e) => handleUpdateField('registrationNumber', e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="e.g., C123456789"
@@ -123,7 +123,7 @@ export const EntityDetailsPanel: React.FC<EntityDetailsPanelProps> = ({
               Address
             </label>
             <textarea
-              value={entityData.address || ''}
+              value={String(entityData.address || '')}
               onChange={(e) => handleUpdateField('address', e.target.value)}
               rows={3}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"

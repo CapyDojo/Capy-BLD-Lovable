@@ -1,40 +1,76 @@
 
-import { useMemo } from 'react';
-import { getAllEntities, getCapTableByEntityId } from '@/data/mockData';
-import { useComplianceData } from './useComplianceData';
+import { useState, useEffect } from 'react';
+import { getUnifiedRepository } from '@/services/repositories/unified';
+import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
 
 export const usePortfolioStats = () => {
-  const { alerts } = useComplianceData();
-  
-  const stats = useMemo(() => {
-    const allEntities = getAllEntities();
-    
-    // 1. Total Entities
-    const totalEntities = allEntities.length;
+  const [stats, setStats] = useState({
+    totalEntities: 0,
+    totalAssets: 0,
+    complianceScore: 85,
+    pendingTasks: 3,
+  });
+  const [repository, setRepository] = useState<IUnifiedEntityRepository | null>(null);
 
-    // 2. Total Stakeholders from cap table investments
-    const stakeholderIds = new Set<string>();
-    allEntities.forEach(entity => {
-      const capTable = getCapTableByEntityId(entity.id);
-      capTable?.investments.forEach(inv => stakeholderIds.add(inv.shareholderId));
-    });
-    const totalStakeholders = stakeholderIds.size;
-
-    // 3. Active Compliance Items
-    const activeComplianceItems = alerts.filter(
-      (alert) => alert.status === 'pending'
-    ).length;
-    
-    // 4. Documents (keeping it static as no data source)
-    const totalDocuments = 156;
-
-    return {
-      totalEntities,
-      totalStakeholders,
-      activeComplianceItems,
-      totalDocuments,
+  useEffect(() => {
+    const initRepository = async () => {
+      try {
+        console.log('🔄 usePortfolioStats: Initializing unified repository...');
+        const repo = await getUnifiedRepository('ENTERPRISE');
+        setRepository(repo);
+        console.log('✅ usePortfolioStats: Unified repository initialized');
+      } catch (error) {
+        console.error('❌ usePortfolioStats: Failed to initialize repository:', error);
+      }
     };
-  }, [alerts]);
+
+    initRepository();
+  }, []);
+
+  useEffect(() => {
+    if (!repository) return;
+
+    const loadStats = async () => {
+      try {
+        console.log('🔄 usePortfolioStats: Loading stats from unified repository');
+        
+        const entities = await repository.getAllEntities();
+        const totalEntities = entities.length;
+        
+        // Calculate total assets based on entity valuations (simplified)
+        let totalAssets = 0;
+        for (const entity of entities) {
+          const capTable = await repository.getCapTableView(entity.id);
+          if (capTable && capTable.shareClasses.length > 0) {
+            const entityValue = capTable.shareClasses.reduce((sum, sc) => 
+              sum + (sc.issuedShares * sc.pricePerShare), 0
+            );
+            totalAssets += entityValue;
+          }
+        }
+
+        setStats({
+          totalEntities,
+          totalAssets,
+          complianceScore: 85, // Static for now
+          pendingTasks: 3, // Static for now
+        });
+
+        console.log('✅ usePortfolioStats: Stats loaded successfully');
+      } catch (error) {
+        console.error('❌ usePortfolioStats: Error loading stats:', error);
+      }
+    };
+
+    loadStats();
+
+    // Subscribe to repository changes
+    const unsubscribe = repository.subscribe(() => {
+      loadStats();
+    });
+
+    return unsubscribe;
+  }, [repository]);
 
   return stats;
 };

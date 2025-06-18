@@ -1,216 +1,124 @@
 
 import React, { useState, useEffect } from 'react';
+import { Building2, FileText, BarChart3, Download } from 'lucide-react';
+import { useCapTable } from '@/hooks/useCapTable';
 import { CapTableView } from './CapTableView';
 import { OwnershipChart } from './OwnershipChart';
-import { Plus, Download, Upload, Building2 } from 'lucide-react';
-import { useSearchParams } from 'react-router-dom';
-import { dataStore } from '@/services/dataStore';
+import { getUnifiedRepository } from '@/services/repositories/unified';
+import { IUnifiedEntityRepository } from '@/services/repositories/unified/IUnifiedRepository';
 
 export const CapTableEditor: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const entityIdFromUrl = searchParams.get('entityId');
-  
-  const [entities, setEntities] = useState(() => dataStore.getEntities());
   const [selectedEntityId, setSelectedEntityId] = useState<string>('');
-  const [view, setView] = useState<'table' | 'chart'>('table');
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [activeTab, setActiveTab] = useState<'table' | 'chart'>('table');
+  const [entities, setEntities] = useState<any[]>([]);
+  const [repository, setRepository] = useState<IUnifiedEntityRepository | null>(null);
 
-  // Initialize selectedEntityId only with valid entities
+  // Initialize unified repository
   useEffect(() => {
-    const validEntities = dataStore.getEntities();
-    const requestedEntity = entityIdFromUrl && validEntities.find(e => e.id === entityIdFromUrl);
-    
-    if (requestedEntity) {
-      setSelectedEntityId(entityIdFromUrl);
-    } else if (validEntities.length > 0) {
-      const firstEntityId = validEntities[0].id;
-      setSelectedEntityId(firstEntityId);
-      setSearchParams({ entityId: firstEntityId });
-    } else {
-      setSelectedEntityId('');
-      setSearchParams({});
-    }
-  }, [entityIdFromUrl, setSearchParams]);
-
-  // Subscribe to data store changes to update entities list
-  useEffect(() => {
-    console.log('🔗 CapTableEditor subscribing to data store changes');
-    const unsubscribe = dataStore.subscribe(() => {
-      console.log('📡 CapTableEditor received data store update');
-      const updatedEntities = dataStore.getEntities();
-      setEntities(updatedEntities);
-      
-      // Always check if selected entity still exists after any data change
-      if (selectedEntityId) {
-        const entityStillExists = updatedEntities.find(e => e.id === selectedEntityId);
-        if (!entityStillExists) {
-          console.log('⚠️ Selected entity was deleted, selecting first available or clearing');
-          if (updatedEntities.length > 0) {
-            const firstEntity = updatedEntities[0];
-            setSelectedEntityId(firstEntity.id);
-            setSearchParams({ entityId: firstEntity.id });
-          } else {
-            setSelectedEntityId('');
-            setSearchParams({});
-          }
+    const initRepository = async () => {
+      try {
+        console.log('🔄 CapTableEditor: Initializing unified repository...');
+        const repo = await getUnifiedRepository('ENTERPRISE');
+        setRepository(repo);
+        
+        const allEntities = await repo.getAllEntities();
+        setEntities(allEntities);
+        
+        if (allEntities.length > 0 && !selectedEntityId) {
+          setSelectedEntityId(allEntities[0].id);
         }
+        
+        console.log('✅ CapTableEditor: Unified repository initialized');
+      } catch (error) {
+        console.error('❌ CapTableEditor: Failed to initialize repository:', error);
       }
-      
-      setRefreshKey(prev => prev + 1);
-    });
-    return unsubscribe;
-  }, [selectedEntityId, setSearchParams]);
+    };
+
+    initRepository();
+  }, []);
+
+  const { refreshCapTable } = useCapTable(selectedEntityId);
 
   const selectedEntity = entities.find(e => e.id === selectedEntityId);
-
-  const handleEntityChange = (entityId: string) => {
-    console.log('🔄 CapTableEditor changing entity to:', entityId);
-    // Verify the entity exists before setting it
-    const entityExists = entities.find(e => e.id === entityId);
-    if (entityExists) {
-      setSelectedEntityId(entityId);
-      setSearchParams({ entityId });
-    }
-  };
-
-  // Robust date formatting function
-  const formatIncorporationDate = (dateValue: any): string => {
-    if (!dateValue) return 'N/A';
-    
-    try {
-      // If it's already a Date object
-      if (dateValue instanceof Date && !isNaN(dateValue.getTime())) {
-        return dateValue.toLocaleDateString();
-      }
-      
-      // If it's a string, try to parse it
-      if (typeof dateValue === 'string') {
-        const parsedDate = new Date(dateValue);
-        if (!isNaN(parsedDate.getTime())) {
-          return parsedDate.toLocaleDateString();
-        }
-      }
-      
-      // If it's a number (timestamp), convert it
-      if (typeof dateValue === 'number') {
-        const parsedDate = new Date(dateValue);
-        if (!isNaN(parsedDate.getTime())) {
-          return parsedDate.toLocaleDateString();
-        }
-      }
-      
-      console.warn('Unable to format date:', dateValue, typeof dateValue);
-      return 'Invalid Date';
-    } catch (error) {
-      console.error('Error formatting incorporation date:', error, 'Value:', dateValue);
-      return 'Invalid Date';
-    }
-  };
-
-  if (entities.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Cap Table</h1>
-            <p className="text-gray-600">No entities available. Please create entities first.</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render if selected entity doesn't exist
-  if (selectedEntityId && !selectedEntity) {
-    return (
-      <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Cap Table</h1>
-            <p className="text-gray-600">Selected entity no longer exists. Loading...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Cap Table</h1>
-          <p className="text-gray-600">Manage ownership structure and equity distribution</p>
+          <h1 className="text-2xl font-bold text-gray-900">Cap Table Management</h1>
+          <p className="text-gray-600">Manage ownership and equity distribution</p>
         </div>
-        
-        <div className="flex items-center space-x-3">
-          <div className="flex items-center bg-gray-100 rounded-lg p-1">
-            <button
-              onClick={() => setView('table')}
-              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                view === 'table' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-              }`}
-            >
-              Table View
-            </button>
-            <button
-              onClick={() => setView('chart')}
-              className={`px-3 py-1 text-sm font-medium rounded-md transition-colors ${
-                view === 'chart' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600'
-              }`}
-            >
-              Chart View
-            </button>
-          </div>
-          
-          <button className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-            <Plus className="h-4 w-4" />
-            <span>Add Stakeholder</span>
-          </button>
-          
-          <button className="flex items-center space-x-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors">
+        <div className="flex items-center space-x-2">
+          <button className="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2">
             <Download className="h-4 w-4" />
             <span>Export</span>
           </button>
         </div>
       </div>
 
-      {/* Entity Selector */}
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
-        <div className="flex items-center space-x-4">
-          <Building2 className="h-5 w-5 text-gray-400" />
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Select Entity
-            </label>
-            <select
-              value={selectedEntityId}
-              onChange={(e) => handleEntityChange(e.target.value)}
-              className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              {entities.map((entity) => (
-                <option key={entity.id} value={entity.id}>
-                  {entity.name} ({entity.type} • {entity.jurisdiction})
-                </option>
-              ))}
-            </select>
-          </div>
-          {selectedEntity && (
-            <div className="text-sm text-gray-600">
-              <div>Registration: {selectedEntity.registrationNumber || 'N/A'}</div>
-              <div>Incorporated: {formatIncorporationDate(selectedEntity.incorporationDate)}</div>
-            </div>
-          )}
+      <div className="bg-white rounded-lg border border-gray-200 p-6">
+        <div className="mb-6">
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Select Entity
+          </label>
+          <select
+            value={selectedEntityId}
+            onChange={(e) => setSelectedEntityId(e.target.value)}
+            className="w-full max-w-md px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">Select an entity</option>
+            {entities.map((entity) => (
+              <option key={entity.id} value={entity.id}>
+                {entity.name} ({entity.type})
+              </option>
+            ))}
+          </select>
         </div>
-      </div>
 
-      {selectedEntityId && selectedEntity && (
-        <div key={`${selectedEntityId}-${refreshKey}`}>
-          {view === 'table' ? 
-            <CapTableView entityId={selectedEntityId} /> : 
-            <OwnershipChart entityId={selectedEntityId} />
-          }
-        </div>
-      )}
+        {selectedEntityId && (
+          <>
+            <div className="flex space-x-1 mb-6 border-b border-gray-200">
+              <button
+                onClick={() => setActiveTab('table')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'table'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <FileText className="h-4 w-4 inline mr-2" />
+                Table View
+              </button>
+              <button
+                onClick={() => setActiveTab('chart')}
+                className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+                  activeTab === 'chart'
+                    ? 'border-blue-500 text-blue-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                }`}
+              >
+                <BarChart3 className="h-4 w-4 inline mr-2" />
+                Chart View
+              </button>
+            </div>
+
+            {activeTab === 'table' && (
+              <CapTableView entityId={selectedEntityId} />
+            )}
+
+            {activeTab === 'chart' && (
+              <OwnershipChart entityId={selectedEntityId} />
+            )}
+          </>
+        )}
+
+        {!selectedEntityId && (
+          <div className="text-center py-12 text-gray-500">
+            <Building2 className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+            <p>Select an entity to view its cap table</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

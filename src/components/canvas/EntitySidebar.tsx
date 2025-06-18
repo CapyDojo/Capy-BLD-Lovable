@@ -1,8 +1,7 @@
 
 import React from 'react';
-import { Building2, Users, Briefcase, Scale, RotateCcw } from 'lucide-react';
+import { Building2, Users, Briefcase, Scale } from 'lucide-react';
 import { EntityTypes } from '@/types/entity';
-import { mockEntities, mockCapTables, mockShareholders, mockShareClasses } from '@/data/mockData';
 
 type DraggableNodeType = EntityTypes | 'Individual';
 
@@ -49,38 +48,6 @@ export const EntitySidebar: React.FC<EntitySidebarProps> = ({ onCreateNode }) =>
     event.dataTransfer.effectAllowed = 'move';
   };
 
-  const handleResetData = () => {
-    console.log('🔄 Resetting to original mock data...');
-    
-    // Clear localStorage completely using the correct key from StorageService
-    localStorage.removeItem('entity-data');
-    
-    // Prepare the complete original mock data in the exact format expected by StorageService
-    const originalData = {
-      entities: mockEntities,
-      capTables: mockCapTables,
-      shareholders: mockShareholders,
-      shareClasses: mockShareClasses,
-      lastSaved: Date.now(),
-      version: '1.0'
-    };
-    
-    console.log('💾 Saving complete original mock data:', {
-      entities: originalData.entities.length,
-      capTables: originalData.capTables.length,
-      shareholders: originalData.shareholders.length,
-      shareClasses: originalData.shareClasses.length
-    });
-    
-    // Save using the correct storage key that matches StorageService
-    localStorage.setItem('entity-data', JSON.stringify(originalData));
-    
-    // Reload the page to reinitialize with the complete original data
-    location.reload();
-    
-    console.log('✅ Data reset to complete original mock data');
-  };
-
   return (
     <div className="h-full flex flex-col">
       <div className="p-4 border-b border-gray-200">
@@ -105,13 +72,9 @@ export const EntitySidebar: React.FC<EntitySidebarProps> = ({ onCreateNode }) =>
       </div>
 
       <div className="p-4 border-t border-gray-200">
-        <button
-          onClick={handleResetData}
-          className="w-full flex items-center justify-center space-x-2 px-4 py-2 bg-red-100 text-red-700 border border-red-200 rounded-lg hover:bg-red-200 transition-colors"
-        >
-          <RotateCcw className="h-4 w-4" />
-          <span className="text-sm font-medium">Reset to Mock Data</span>
-        </button>
+        <div className="text-xs text-green-600">
+          ✅ Using Unified Repository Architecture
+        </div>
       </div>
     </div>
   );
