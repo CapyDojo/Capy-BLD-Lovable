@@ -56,11 +56,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       {/* Navigation */}
       <nav className="flex-1 p-4 space-y-2">
         {navigation.map((item) => {
-          const isActive = location.pathname === item.href;
+          const isActive = location === item.href;
           return (
             <Link
               key={item.name}
-              to={item.href}
+              href={item.href}
               className={cn(
                 "flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors",
                 isActive
