@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useState, useEffect } from 'react';
 import { Node } from '@xyflow/react';
 
 interface CollisionSettings {
