@@ -37,7 +37,7 @@ export const CapTableEditor: React.FC = () => {
     initRepository();
   }, []);
 
-  const { refreshCapTable } = useCapTable(selectedEntityId);
+  const capTableData = useCapTable(selectedEntityId);
 
   const selectedEntity = entities.find(e => e.id === selectedEntityId);
 
