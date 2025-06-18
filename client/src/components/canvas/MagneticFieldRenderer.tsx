@@ -27,8 +27,8 @@ const MagneticField: React.FC<MagneticFieldProps> = ({ zone, isPreview = false }
 
     return {
       position: 'absolute' as const,
-      left: zone.targetPoint.x - baseRadius,
-      top: zone.targetPoint.y - baseRadius,
+      left: zone.connectionPoint.x,
+      top: zone.connectionPoint.y,
       width: baseRadius * 2,
       height: baseRadius * 2,
       borderRadius: '50%',
@@ -37,6 +37,7 @@ const MagneticField: React.FC<MagneticFieldProps> = ({ zone, isPreview = false }
       animation: animations[zone.zone],
       pointerEvents: 'none' as const,
       zIndex: zone.zone === 'snap' ? 1000 : zone.zone === 'strongPull' ? 999 : 998,
+      transform: 'translate(-50%, -50%)',
     };
   };
 

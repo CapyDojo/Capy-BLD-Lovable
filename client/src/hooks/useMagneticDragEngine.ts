@@ -115,7 +115,7 @@ export const useMagneticDragEngine = (
             nodeId: targetNode.id,
             zone: ownerZone,
             distance: ownerDistance,
-            connectionPoint: draggedPoints.bottom,
+            connectionPoint: targetPoints.top, // Use target's connection point for rendering
             targetPoint: targetPoints.top,
             validConnection: true,
           });
@@ -141,7 +141,7 @@ export const useMagneticDragEngine = (
             nodeId: targetNode.id,
             zone: ownedZone,
             distance: ownedDistance,
-            connectionPoint: draggedPoints.top,
+            connectionPoint: targetPoints.bottom, // Use target's connection point for rendering
             targetPoint: targetPoints.bottom,
             validConnection: true,
           });
