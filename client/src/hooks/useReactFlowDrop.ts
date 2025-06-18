@@ -1,12 +1,10 @@
 import { useCallback, useRef } from 'react';
-import { useReactFlow } from '@xyflow/react';
 import { getUnifiedRepository } from '@/services/repositories/unified';
 import { EntityTypes } from '@/types/entity';
 
 type DraggableNodeType = EntityTypes;
 
 export const useReactFlowDrop = () => {
-  const { screenToFlowPosition } = useReactFlow();
   const reactFlowWrapper = useRef<HTMLDivElement>(null);
 
   const createNode = useCallback(async (type: DraggableNodeType, position: { x: number; y: number }) => {
