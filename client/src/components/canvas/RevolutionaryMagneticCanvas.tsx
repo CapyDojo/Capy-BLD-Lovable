@@ -154,9 +154,8 @@ export const RevolutionaryMagneticCanvas: React.FC<RevolutionaryMagneticCanvasPr
     };
   });
 
-  // Magnetic zones are already in flow coordinates, no transformation needed
+  // Use magnetic zones directly in flow coordinates
   const screenMagneticZones = magneticZones;
-
   const screenConnectionPreview = connectionPreview;
 
   // Cleanup on unmount
@@ -177,7 +176,9 @@ export const RevolutionaryMagneticCanvas: React.FC<RevolutionaryMagneticCanvasPr
         onDrop={onDrop}
         onDragOver={onDragOver}
         onNodeDragStart={handleNodeDragStartEnhanced}
-        onNodeDrag={handleNodeDragWithPhysics}
+        onNodeDrag={(event, node, nodes) => {
+          handleNodeDragWithPhysics(event, node, nodes);
+        }}
         onNodeDragStop={handleNodeDragEndEnhanced}
       />
 

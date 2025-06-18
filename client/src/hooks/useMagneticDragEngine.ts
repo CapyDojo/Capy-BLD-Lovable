@@ -51,12 +51,15 @@ export const useMagneticDragEngine = (
     recentConnections: [],
   });
 
-  // Calculate connection points for an entity (top for owned, bottom for owner)
+  // Calculate connection points for an entity using flow coordinates
   const getConnectionPoints = useCallback((node: Node) => {
-    const nodeCenter = { x: node.position.x + 100, y: node.position.y + 34 }; // Node center
+    const nodeWidth = 200;
+    const nodeHeight = 68;
+    const centerX = node.position.x + nodeWidth / 2;
+    
     return {
-      top: { x: nodeCenter.x, y: node.position.y }, // Owned entity connection
-      bottom: { x: nodeCenter.x, y: node.position.y + 68 }, // Owner entity connection
+      top: { x: centerX, y: node.position.y }, // Top center for owned entity connections
+      bottom: { x: centerX, y: node.position.y + nodeHeight }, // Bottom center for owner connections
     };
   }, []);
 
