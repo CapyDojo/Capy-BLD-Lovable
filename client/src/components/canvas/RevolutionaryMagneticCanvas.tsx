@@ -147,18 +147,10 @@ export const RevolutionaryMagneticCanvas: React.FC<RevolutionaryMagneticCanvasPr
     };
   });
 
-  // Convert magnetic zones to screen coordinates for rendering
-  const screenMagneticZones = magneticZones.map(zone => ({
-    ...zone,
-    targetPoint: flowToScreenPosition(zone.targetPoint),
-    connectionPoint: flowToScreenPosition(zone.connectionPoint),
-  }));
+  // Magnetic zones are already in flow coordinates, no transformation needed
+  const screenMagneticZones = magneticZones;
 
-  const screenConnectionPreview = connectionPreview ? {
-    sourcePoint: flowToScreenPosition(connectionPreview.sourcePoint),
-    targetPoint: flowToScreenPosition(connectionPreview.targetPoint),
-    percentage: connectionPreview.percentage,
-  } : null;
+  const screenConnectionPreview = connectionPreview;
 
   // Cleanup on unmount
   useEffect(() => {
