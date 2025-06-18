@@ -101,6 +101,7 @@ export const mockShareClasses: Omit<ShareClass, 'createdAt' | 'updatedAt'>[] = [
 ];
 
 export const mockOwnerships: Omit<UnifiedOwnership, 'createdAt' | 'updatedAt' | 'version'>[] = [
+  // Sarah Williams owns 40% of NexusCorp (4M shares out of 10M total)
   {
     id: generateId('ownership', 'sarah-nexus'),
     ownerEntityId: generateId('entity', 'sarah-williams'),
@@ -111,6 +112,7 @@ export const mockOwnerships: Omit<UnifiedOwnership, 'createdAt' | 'updatedAt' | 
     createdBy: 'system',
     updatedBy: 'system'
   },
+  // Mike Rodriguez owns 30% of NexusCorp (3M shares out of 10M total)
   {
     id: generateId('ownership', 'mike-nexus'),
     ownerEntityId: generateId('entity', 'mike-rodriguez'),
@@ -121,16 +123,18 @@ export const mockOwnerships: Omit<UnifiedOwnership, 'createdAt' | 'updatedAt' | 
     createdBy: 'system',
     updatedBy: 'system'
   },
+  // Vertex Capital owns 20% of NexusCorp through Preferred Series A (2M shares out of 10M total)
   {
     id: generateId('ownership', 'vertex-nexus'),
     ownerEntityId: generateId('entity', 'vertex-capital'),
     ownedEntityId: generateId('entity', 'nexus-corp'),
     shares: 2000000,
-    shareClassId: generateId('shareclass', 'nexus-seed'),
+    shareClassId: generateId('shareclass', 'nexus-series-a'),
     effectiveDate: new Date('2023-06-01'),
     createdBy: 'system',
     updatedBy: 'system'
   },
+  // NexusCorp owns 80% of AI Division (800K shares out of 1M total)
   {
     id: generateId('ownership', 'nexus-ai'),
     ownerEntityId: generateId('entity', 'nexus-corp'),
@@ -141,6 +145,7 @@ export const mockOwnerships: Omit<UnifiedOwnership, 'createdAt' | 'updatedAt' | 
     createdBy: 'system',
     updatedBy: 'system'
   },
+  // NexusCorp owns 60% of Data Systems (3M shares out of 5M total)
   {
     id: generateId('ownership', 'nexus-data'),
     ownerEntityId: generateId('entity', 'nexus-corp'),

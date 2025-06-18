@@ -98,14 +98,27 @@ const entitiesToNodes = (entities: any[]): Node[] => {
   }));
 };
 
-const ownershipsToEdges = (ownerships: any[]): Edge[] => {
-  return ownerships.map((ownership) => ({
-    id: ownership.id,
-    source: ownership.ownerEntityId,
-    target: ownership.ownedEntityId,
-    type: 'default',
-    label: `${(ownership.shares / 10).toFixed(1)}%`,
-  }));
+const ownershipsToEdges = (ownerships: any[], entities: any[], shareClasses: any[]): Edge[] => {
+  return ownerships.map((ownership) => {
+    // Find the target entity and its share class to calculate percentage
+    const targetEntity = entities.find(e => e.id === ownership.ownedEntityId);
+    const shareClass = shareClasses.find(sc => sc.id === ownership.shareClassId);
+    
+    let percentage = '10.0%'; // Default fallback
+    
+    if (shareClass && shareClass.totalAuthorizedShares > 0) {
+      const percent = (ownership.shares / shareClass.totalAuthorizedShares) * 100;
+      percentage = `${percent.toFixed(1)}%`;
+    }
+
+    return {
+      id: ownership.id,
+      source: ownership.ownerEntityId,
+      target: ownership.ownedEntityId,
+      type: 'default',
+      label: percentage,
+    };
+  });
 };
 
 // Main component
@@ -124,6 +137,18 @@ const CleanStructureChartInner: React.FC = () => {
         const entities = await repository.getAllEntities();
         console.log('📊 Loaded entities:', entities?.length || 0);
         
+        // Get all share classes
+        const allShareClasses = [];
+        for (const entity of entities || []) {
+          try {
+            const entityShareClasses = await repository.getShareClassesByEntity(entity.id);
+            allShareClasses.push(...(entityShareClasses || []));
+          } catch (err) {
+            console.log('⚠️ Error loading share classes for entity:', entity.id);
+          }
+        }
+        console.log('📊 Loaded share classes:', allShareClasses.length);
+        
         // Get ownerships for each entity
         const allOwnerships = [];
         for (const entity of entities || []) {
@@ -136,15 +161,15 @@ const CleanStructureChartInner: React.FC = () => {
         }
         console.log('📊 Loaded ownerships:', allOwnerships.length);
         
-        // Convert to ReactFlow format
+        // Convert to ReactFlow format with proper percentage calculation
         const flowNodes = entitiesToNodes(entities || []);
-        const flowEdges = ownershipsToEdges(allOwnerships);
+        const flowEdges = ownershipsToEdges(allOwnerships, entities || [], allShareClasses);
         
         setNodes(flowNodes);
         setEdges(flowEdges);
         setLoading(false);
         
-        console.log('✅ Repository integration complete');
+        console.log('✅ Repository integration complete with proper percentages');
       } catch (error) {
         console.error('❌ Repository loading failed:', error);
         setLoading(false);

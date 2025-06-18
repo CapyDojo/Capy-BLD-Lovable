@@ -8,7 +8,7 @@ import { Route, Switch } from "wouter";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { CapTableEditor } from "@/components/cap-table/CapTableEditor";
-import { CleanStructureChart } from "@/components/canvas/CleanStructureChart";
+import { MagneticStructureChart } from "@/components/canvas/MagneticStructureChart";
 import { DocumentRepository } from "@/components/documents/DocumentRepository";
 import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
 
@@ -66,7 +66,7 @@ const App = () => {
           </Route>
           <Route path="/structure">
             <MainLayout>
-              <CleanStructureChart />
+              <MagneticStructureChart />
             </MainLayout>
           </Route>
           <Route path="/cap-table">
