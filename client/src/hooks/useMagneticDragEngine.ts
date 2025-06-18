@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
-import { Node, useReactFlow } from '@xyflow/react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
+import { Node } from '@xyflow/react';
 
 // Core magnetic configuration
 const MAGNETIC_CONFIG = {
@@ -39,7 +39,7 @@ export const useMagneticDragEngine = (
   nodes: Node[],
   onConnection: (connection: { source: string; target: string; percentage: number }) => void
 ) => {
-  const { screenToFlowPosition, flowToScreenPosition } = useReactFlow();
+  // Removed useReactFlow - using flow coordinates directly
   const animationFrameRef = useRef<number>();
   
   const [state, setState] = useState<MagneticDragState>({

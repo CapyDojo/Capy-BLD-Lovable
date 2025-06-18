@@ -27,7 +27,7 @@ export const RevolutionaryMagneticCanvas: React.FC<RevolutionaryMagneticCanvasPr
   onDrop,
   onDragOver,
 }) => {
-  const { screenToFlowPosition, flowToScreenPosition } = useReactFlow();
+  // Removed useReactFlow - using flow coordinates directly
   const successConnectionsRef = useRef<Array<{
     sourcePoint: { x: number; y: number };
     targetPoint: { x: number; y: number };
@@ -46,22 +46,22 @@ export const RevolutionaryMagneticCanvas: React.FC<RevolutionaryMagneticCanvasPr
     const targetNode = nodes.find(n => n.id === connection.target);
     
     if (sourceNode && targetNode) {
-      // Convert node positions to screen coordinates for animation
-      const sourceScreenPos = flowToScreenPosition({
+      // Use flow coordinates directly for animation
+      const sourceFlowPos = {
         x: sourceNode.position.x + 100,
         y: sourceNode.position.y + 68,
-      });
-      const targetScreenPos = flowToScreenPosition({
+      };
+      const targetFlowPos = {
         x: targetNode.position.x + 100,
         y: targetNode.position.y,
-      });
+      };
 
       // Add success animation
       successConnectionsRef.current = [
         ...successConnectionsRef.current,
         {
-          sourcePoint: sourceScreenPos,
-          targetPoint: targetScreenPos,
+          sourcePoint: sourceFlowPos,
+          targetPoint: targetFlowPos,
           timestamp: Date.now(),
         }
       ];
@@ -76,7 +76,7 @@ export const RevolutionaryMagneticCanvas: React.FC<RevolutionaryMagneticCanvasPr
 
     // Create the actual connection
     onConnect(connection);
-  }, [nodes, flowToScreenPosition, onConnect]);
+  }, [nodes, onConnect]);
 
   // Initialize revolutionary magnetic drag engine
   const {
@@ -95,25 +95,24 @@ export const RevolutionaryMagneticCanvas: React.FC<RevolutionaryMagneticCanvasPr
 
   // Enhanced node drag handler with collision physics
   const handleNodeDragWithPhysics: OnNodeDrag = useCallback((event, node, nodes) => {
-    // Get the actual drag position from the event
-    const newPosition = { x: node.position.x, y: node.position.y };
+    console.log('🎯 Physics drag handler called for:', node.id, 'at position:', node.position);
     
     // Apply collision physics to prevent overlap
-    const resolvedPosition = resolveCollision(node, newPosition, nodes);
+    const resolvedPosition = resolveCollision(node, node.position, nodes);
+    
+    console.log('🎯 Physics resolved position:', resolvedPosition, 'collision settings:', collisionSettings);
     
     // Update magnetic zones with resolved position
     handleDrag(node.id, resolvedPosition);
     
-    // Only apply position changes if physics resolved differently
-    if (resolvedPosition.x !== newPosition.x || resolvedPosition.y !== newPosition.y) {
-      onNodesChange([{ 
-        id: node.id, 
-        type: 'position', 
-        position: resolvedPosition,
-        dragging: true 
-      }]);
-    }
-  }, [resolveCollision, handleDrag, onNodesChange]);
+    // Always call onNodesChange to ensure React Flow updates
+    onNodesChange([{ 
+      id: node.id, 
+      type: 'position', 
+      position: resolvedPosition,
+      dragging: true 
+    }]);
+  }, [resolveCollision, handleDrag, onNodesChange, collisionSettings]);
 
   // Enhanced drag start handler
   const handleNodeDragStartEnhanced: OnNodeDrag = useCallback((event, node) => {
