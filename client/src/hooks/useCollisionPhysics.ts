@@ -22,6 +22,35 @@ export const useCollisionPhysics = () => {
     },
   });
 
+  // Listen for settings updates from Settings page
+  useEffect(() => {
+    const handleSettingsUpdate = (event: CustomEvent) => {
+      const { physicsSettings } = event.detail;
+      if (physicsSettings) {
+        setState(prev => ({
+          ...prev,
+          settings: physicsSettings,
+        }));
+      }
+    };
+
+    window.addEventListener('settingsUpdated', handleSettingsUpdate as EventListener);
+    
+    // Load saved settings on mount
+    const savedSettings = localStorage.getItem('physicsSettings');
+    if (savedSettings) {
+      const physicsSettings = JSON.parse(savedSettings);
+      setState(prev => ({
+        ...prev,
+        settings: physicsSettings,
+      }));
+    }
+
+    return () => {
+      window.removeEventListener('settingsUpdated', handleSettingsUpdate as EventListener);
+    };
+  }, []);
+
   // Check if two nodes would overlap at given positions
   const checkCollision = useCallback((
     nodeA: { position: { x: number; y: number }; id: string },
