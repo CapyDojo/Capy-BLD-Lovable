@@ -15,6 +15,7 @@ import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
 import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import StressTest from "@/pages/StressTest";
+import Settings from "@/pages/Settings";
 import NotFound from "./pages/NotFound";
 
 
@@ -97,6 +98,11 @@ const App = () => {
           <Route path="/stress-test">
             <MainLayout>
               <StressTest />
+            </MainLayout>
+          </Route>
+          <Route path="/settings">
+            <MainLayout>
+              <Settings />
             </MainLayout>
           </Route>
           <Route>

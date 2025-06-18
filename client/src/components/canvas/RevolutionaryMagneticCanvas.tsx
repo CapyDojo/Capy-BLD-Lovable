@@ -95,17 +95,24 @@ export const RevolutionaryMagneticCanvas: React.FC<RevolutionaryMagneticCanvasPr
 
   // Enhanced node drag handler with collision physics
   const handleNodeDragWithPhysics: OnNodeDrag = useCallback((event, node, nodes) => {
+    // Get the actual drag position from the event
     const newPosition = { x: node.position.x, y: node.position.y };
     
-    // Apply collision physics
+    // Apply collision physics to prevent overlap
     const resolvedPosition = resolveCollision(node, newPosition, nodes);
     
-    // Update magnetic zones
+    // Update magnetic zones with resolved position
     handleDrag(node.id, resolvedPosition);
     
-    // Apply position changes
-    const updatedNode = { ...node, position: resolvedPosition };
-    onNodesChange([{ id: node.id, type: 'position', position: resolvedPosition }]);
+    // Only apply position changes if physics resolved differently
+    if (resolvedPosition.x !== newPosition.x || resolvedPosition.y !== newPosition.y) {
+      onNodesChange([{ 
+        id: node.id, 
+        type: 'position', 
+        position: resolvedPosition,
+        dragging: true 
+      }]);
+    }
   }, [resolveCollision, handleDrag, onNodesChange]);
 
   // Enhanced drag start handler
