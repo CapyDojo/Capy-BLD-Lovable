@@ -36,31 +36,51 @@ export class SimpleTestRunner {
   }
 
   private exposeGlobalFunctions() {
-    // Expose functions directly on window with immediate assignment
-    (window as any).testFunction = () => {
-      console.log('✅ Global testFunction called successfully!');
-      return this.test();
-    };
+    // Use Object.defineProperty for more reliable global exposure
+    try {
+      Object.defineProperty(window, 'testFunction', {
+        value: () => {
+          console.log('✅ Global testFunction called successfully!');
+          return this.test();
+        },
+        writable: false,
+        configurable: true
+      });
 
-    (window as any).runAllTests = () => {
-      console.log('🧪 Global runAllTests called!');
-      return this.runAllTests();
-    };
+      Object.defineProperty(window, 'runAllTests', {
+        value: () => {
+          console.log('🧪 Global runAllTests called!');
+          return this.runAllTests();
+        },
+        writable: false,
+        configurable: true
+      });
 
-    (window as any).getTestNames = () => {
-      console.log('📋 Global getTestNames called!');
-      return this.getTestNames();
-    };
+      Object.defineProperty(window, 'getTestNames', {
+        value: () => {
+          console.log('📋 Global getTestNames called!');
+          return this.getTestNames();
+        },
+        writable: false,
+        configurable: true
+      });
 
-    (window as any).simpleTestRunner = this;
+      Object.defineProperty(window, 'simpleTestRunner', {
+        value: this,
+        writable: false,
+        configurable: true
+      });
 
-    // Verify they were set
-    console.log('🔧 Functions exposed on window:', {
-      testFunction: typeof (window as any).testFunction,
-      runAllTests: typeof (window as any).runAllTests,
-      getTestNames: typeof (window as any).getTestNames,
-      simpleTestRunner: typeof (window as any).simpleTestRunner
-    });
+      // Verify they were set
+      console.log('🔧 Functions exposed on window:', {
+        testFunction: typeof (window as any).testFunction,
+        runAllTests: typeof (window as any).runAllTests,
+        getTestNames: typeof (window as any).getTestNames,
+        simpleTestRunner: typeof (window as any).simpleTestRunner
+      });
+    } catch (error) {
+      console.error('❌ Failed to expose global functions:', error);
+    }
   }
 
   async runAllTests() {
