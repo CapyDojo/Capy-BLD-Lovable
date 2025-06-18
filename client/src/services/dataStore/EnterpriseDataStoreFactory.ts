@@ -29,10 +29,14 @@ export class EnterpriseDataStoreFactory {
     if (environment === 'development') {
       console.log('🌱 Initializing enterprise store with unified mock data...');
       
+      // Track ID mappings from mock data to actual created entities
+      const entityIdMap = new Map<string, string>();
+      const shareClassIdMap = new Map<string, string>();
+      
       // Load entities first
       for (const entity of mockEntities) {
         try {
-          await store.createEntity({
+          const createdEntity = await store.createEntity({
             name: entity.name,
             type: entity.type,
             jurisdiction: entity.jurisdiction,
@@ -42,35 +46,56 @@ export class EnterpriseDataStoreFactory {
             position: entity.position,
             metadata: entity.metadata || {}
           }, 'unified-mock-data', 'Initial mock data load');
+          
+          // Map the mock ID to the actual created ID
+          entityIdMap.set(entity.id, createdEntity.id);
         } catch (error) {
           console.log(`📝 Entity ${entity.name} creation issue:`, error);
         }
       }
       
-      // Load share classes second
+      // Load share classes second, using actual entity IDs
       for (const shareClass of mockShareClasses) {
         try {
-          await store.createShareClass({
-            entityId: shareClass.entityId,
+          const actualEntityId = entityIdMap.get(shareClass.entityId);
+          if (!actualEntityId) {
+            console.log(`📝 Cannot create share class ${shareClass.name}: entity ${shareClass.entityId} not found`);
+            continue;
+          }
+          
+          const createdShareClass = await store.createShareClass({
+            entityId: actualEntityId,
             name: shareClass.name,
             type: shareClass.type,
             totalAuthorizedShares: shareClass.totalAuthorizedShares,
             votingRights: shareClass.votingRights,
             liquidationPreference: shareClass.liquidationPreference
           }, 'unified-mock-data');
+          
+          // Map the mock ID to the actual created ID
+          shareClassIdMap.set(shareClass.id, createdShareClass.id);
         } catch (error) {
           console.log(`📝 Share class ${shareClass.name} creation issue:`, error);
         }
       }
       
-      // Load ownerships last (requires entities and share classes to exist)
+      // Load ownerships last, using actual entity and share class IDs
       for (const ownership of mockOwnerships) {
         try {
+          const actualOwnerEntityId = entityIdMap.get(ownership.ownerEntityId);
+          const actualOwnedEntityId = entityIdMap.get(ownership.ownedEntityId);
+          const actualShareClassId = shareClassIdMap.get(ownership.shareClassId);
+          
+          if (!actualOwnerEntityId || !actualOwnedEntityId || !actualShareClassId) {
+            console.log(`📝 Cannot create ownership ${ownership.id}: missing dependencies`);
+            continue;
+          }
+          
           await store.createOwnership({
-            ownerEntityId: ownership.ownerEntityId,
-            ownedEntityId: ownership.ownedEntityId,
+            ownerEntityId: actualOwnerEntityId,
+            ownedEntityId: actualOwnedEntityId,
             shares: ownership.shares,
-            shareClassId: ownership.shareClassId,
+            shareClassId: actualShareClassId,
             effectiveDate: ownership.effectiveDate,
             changeReason: ownership.changeReason,
             createdBy: ownership.createdBy || 'unified-mock-data',

@@ -19,19 +19,22 @@ import NotFound from "./pages/NotFound";
 // Import the simple test runner - this will automatically expose global functions
 import { simpleTestRunner } from '@/services/testing/SimpleTestRunner';
 
-console.log('🎯 App.tsx loaded, test functions should be available!');
-console.log('🔍 Verifying global functions:');
-console.log('  - testFunction:', typeof (window as any).testFunction);
-console.log('  - runAllTests:', typeof (window as any).runAllTests);
-console.log('  - getTestNames:', typeof (window as any).getTestNames);
-console.log('  - simpleTestRunner:', typeof (window as any).simpleTestRunner);
+// Ensure functions are available after a brief delay for module initialization
+setTimeout(() => {
+  console.log('🎯 App.tsx loaded, test functions should be available!');
+  console.log('🔍 Verifying global functions:');
+  console.log('  - testFunction:', typeof (window as any).testFunction);
+  console.log('  - runAllTests:', typeof (window as any).runAllTests);
+  console.log('  - getTestNames:', typeof (window as any).getTestNames);
+  console.log('  - simpleTestRunner:', typeof (window as any).simpleTestRunner);
 
-// Double-check by calling one
-if (typeof (window as any).testFunction === 'function') {
-  console.log('✅ testFunction is ready to use!');
-} else {
-  console.error('❌ testFunction is not available');
-}
+  // Double-check by calling one
+  if (typeof (window as any).testFunction === 'function') {
+    console.log('✅ testFunction is ready to use!');
+  } else {
+    console.error('❌ testFunction is not available');
+  }
+}, 100);
 
 const queryClient = new QueryClient();
 
