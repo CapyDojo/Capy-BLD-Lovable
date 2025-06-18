@@ -7,8 +7,6 @@ interface EntityNodeData {
   name: string;
   type: string;
   jurisdiction: string;
-  isInMagneticField?: boolean;
-  magneticZone?: 'detection' | 'strongPull' | 'snap';
 }
 
 interface EntityNodeProps {
@@ -47,18 +45,7 @@ const getEntityColor = (type: string) => {
   }
 };
 
-const getMagneticGlow = (zone?: 'detection' | 'strongPull' | 'snap') => {
-  switch (zone) {
-    case 'detection':
-      return 'ring-2 ring-white ring-opacity-50';
-    case 'strongPull':
-      return 'ring-4 ring-yellow-400 ring-opacity-75 animate-pulse';
-    case 'snap':
-      return 'ring-4 ring-green-500 ring-opacity-90 animate-pulse';
-    default:
-      return '';
-  }
-};
+// Removed magnetic glow function
 
 export const EntityNode: React.FC<EntityNodeProps> = ({ 
   data, 
@@ -67,7 +54,6 @@ export const EntityNode: React.FC<EntityNodeProps> = ({
 }) => {
   const Icon = getEntityIcon(data.type);
   const colorClass = getEntityColor(data.type);
-  const magneticGlow = getMagneticGlow(data.magneticZone);
 
   return (
     <div 
@@ -75,14 +61,13 @@ export const EntityNode: React.FC<EntityNodeProps> = ({
         relative min-w-[200px] px-4 py-3 rounded-lg border-2 shadow-sm transition-all duration-200
         ${colorClass}
         ${selected ? 'ring-2 ring-blue-500 ring-offset-2' : ''}
-        ${magneticGlow}
         hover:shadow-md cursor-pointer
       `}
     >
       <Handle 
         type="target" 
         position={Position.Top} 
-        className="w-3 h-3 !bg-blue-600 !border-2 !border-white magnetic-handle"
+        className="w-3 h-3 !bg-blue-600 !border-2 !border-white"
       />
       
       <div className="flex items-start space-x-3">
