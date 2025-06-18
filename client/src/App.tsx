@@ -8,7 +8,7 @@ import { Route, Switch } from "wouter";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { CapTableEditor } from "@/components/cap-table/CapTableEditor";
-import { EntityCanvas } from "@/components/canvas/EntityCanvas";
+import { CleanStructureChart } from "@/components/canvas/CleanStructureChart";
 import { DocumentRepository } from "@/components/documents/DocumentRepository";
 import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
 
@@ -66,10 +66,7 @@ const App = () => {
           </Route>
           <Route path="/structure">
             <MainLayout>
-              <div className="p-8">
-                <h1 className="text-2xl font-bold text-gray-900 mb-4">Structure Chart - Under Reconstruction</h1>
-                <p className="text-gray-600">Building clean foundation for revolutionary magnetic system...</p>
-              </div>
+              <CleanStructureChart />
             </MainLayout>
           </Route>
           <Route path="/cap-table">
