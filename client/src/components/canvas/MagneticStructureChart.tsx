@@ -62,7 +62,10 @@ const MagneticEntityNode: React.FC<EntityNodeProps> = ({ data, selected }) => {
     >
       {/* Magnetic field visualization */}
       {data.isMagnetic && (
-        <div className="absolute -inset-2 bg-gradient-radial from-blue-400/20 via-blue-300/10 to-transparent rounded-xl pointer-events-none animate-pulse" />
+        <div className="absolute -inset-4 bg-blue-400/20 rounded-full pointer-events-none animate-ping" />
+      )}
+      {data.isMagnetic && (
+        <div className="absolute -inset-2 bg-blue-400/30 rounded-full pointer-events-none animate-pulse" />
       )}
       
       <Handle
@@ -336,6 +339,11 @@ const MagneticStructureChartInner: React.FC = () => {
     async (params: Connection) => {
       console.log('🔗 Creating magnetic ownership connection:', params);
       
+      // Add visual edge immediately for instant feedback
+      const magneticEdge = createMagneticEdge(params, '10.0%');
+      setEdges((eds) => addEdge(magneticEdge, eds));
+      console.log('⚡ Magnetic connection established visually');
+      
       try {
         const repository = await getUnifiedRepository('ENTERPRISE');
         
@@ -365,16 +373,10 @@ const MagneticStructureChartInner: React.FC = () => {
           updatedBy: 'user'
         }, 'user');
 
-        console.log('✅ Magnetic ownership connection created');
+        console.log('✅ Repository ownership connection created');
       } catch (error) {
-        console.log('⚠️ Ownership creation failed, adding visual connection:', error);
+        console.log('⚠️ Repository creation failed, visual connection maintained:', error);
       }
-
-      // Add magnetic edge with animation
-      const magneticEdge = createMagneticEdge(params, '10.0%');
-      setEdges((eds) => addEdge(magneticEdge, eds));
-      
-      console.log('⚡ Magnetic connection established');
     },
     [setEdges]
   );
