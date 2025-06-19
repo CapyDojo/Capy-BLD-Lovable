@@ -251,34 +251,26 @@ export default function WorkingBumpConnect() {
       console.log(`🎯 Proximity detected: ${activeZones} zones active`);
     }
     
+    // Instant connection creation when green zone is triggered
     if (connectionReady) {
       console.log(`🔗 Connection ready!`);
-    }
-  }, [draggingNode]);
-  
-  // Handle drag stop
-  const onNodeDragStop = useCallback((event: any, node: Node) => {
-    console.log(`🎯 Seeker deactivated: ${node.data.name}`);
-    setDraggingNode(null);
-    
-    // Check for auto-connections before clearing proximity
-    const connectableNodes = nodes.filter(n => {
-      if (n.id === node.id) return false;
-      const distance = calculateDistance(node, n);
-      return distance <= 80; // CONNECTION zone
-    });
-    
-    if (connectableNodes.length > 0) {
+      
+      // Find nodes in CONNECTION zone and create edges immediately
+      const connectableNodes = otherNodes.filter(n => {
+        const distance = calculateDistance(draggedNode, n);
+        return distance <= 120; // CONNECTION zone
+      });
+      
       connectableNodes.forEach(targetNode => {
         const existingEdge = edges.find(e => 
-          (e.source === node.id && e.target === targetNode.id) ||
-          (e.source === targetNode.id && e.target === node.id)
+          (e.source === draggedNode.id && e.target === targetNode.id) ||
+          (e.source === targetNode.id && e.target === draggedNode.id)
         );
         
         if (!existingEdge) {
           // Determine connection direction based on relative positions
-          const dx = targetNode.position.x - node.position.x;
-          const dy = targetNode.position.y - node.position.y;
+          const dx = targetNode.position.x - draggedNode.position.x;
+          const dy = targetNode.position.y - draggedNode.position.y;
           
           // Use only vertical connections for entity relationships
           let sourceHandle, targetHandle;
@@ -293,30 +285,40 @@ export default function WorkingBumpConnect() {
           }
           
           const newEdge = {
-            id: `bump-${node.id}-${targetNode.id}`,
-            source: node.id,
+            id: `${draggedNode.id}-${targetNode.id}`,
+            source: draggedNode.id,
             target: targetNode.id,
             sourceHandle,
             targetHandle,
-            type: 'smoothstep',
+            type: 'smoothstep', 
             animated: true,
             label: '25%',
-            style: { 
-              strokeWidth: 3, 
-              stroke: '#10b981' 
-            },
-            labelStyle: { 
-              fontSize: 12, 
-              fontWeight: 'bold', 
-              fill: '#10b981' 
-            },
+            style: { strokeWidth: 2, stroke: '#10b981' },
+            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#10b981' }
           };
           
+          console.log(`✨ Bump Connect: ${draggedNode.data.name} → ${targetNode.data.name}`);
+          
           setEdges(currentEdges => [...currentEdges, newEdge]);
-          console.log(`✨ Bump Connect: ${node.data.name} → ${targetNode.data.name}`);
+          
+          // Create ownership relationship
+          unifiedEntityService.createOwnership(
+            draggedNode.id,
+            targetNode.id,
+            25,
+            'Common Stock'
+          ).catch(error => {
+            console.error('Failed to create ownership:', error);
+          });
         }
       });
     }
+  }, [draggingNode]);
+  
+  // Handle drag stop
+  const onNodeDragStop = useCallback((event: any, node: Node) => {
+    console.log(`🎯 Seeker deactivated: ${node.data.name}`);
+    setDraggingNode(null);
     
     // Clear all proximity states
     setNodes(currentNodes => 
