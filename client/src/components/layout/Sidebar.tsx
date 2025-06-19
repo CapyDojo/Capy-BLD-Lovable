@@ -22,6 +22,7 @@ interface SidebarProps {
 const navigation = [
   { name: 'Dashboard', href: '/', icon: PieChart },
   { name: 'Structure Chart', href: '/structure', icon: Building2 },
+  { name: 'Bump Connect', href: '/working-bump', icon: Zap },
   { name: 'Cap Table', href: '/cap-table', icon: PieChart },
   { name: 'Data Architecture', href: '/data-structure', icon: Database },
   { name: 'Database', href: '/database', icon: Database },
