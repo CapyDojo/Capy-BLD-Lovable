@@ -185,20 +185,32 @@ export default function PureBumpConnect() {
       
       connectableZones.forEach(zone => {
         const targetNode = nodes.find(n => 
-          n.position.x === zone.targetPos.x && n.position.y === zone.targetPos.y
+          Math.abs(n.position.x - zone.targetPos.x) < 10 && 
+          Math.abs(n.position.y - zone.targetPos.y) < 10
         );
         
-        if (targetNode) {
-          // Create new ownership relationship
+        if (targetNode && targetNode.id !== node.id) {
+          // Create new ownership relationship with proper edge structure
           const newEdge = {
             id: `auto-${Date.now()}-${Math.random()}`,
             source: node.id,
             target: targetNode.id,
-            type: 'default',
-            label: '25%', // Default percentage
-            style: { strokeWidth: 3, stroke: '#10b981', strokeDasharray: '5,5' },
-            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#10b981' },
-            labelBgStyle: { fill: 'white', fillOpacity: 0.9 },
+            type: 'smoothstep',
+            animated: true,
+            label: '25%',
+            style: { 
+              strokeWidth: 3, 
+              stroke: '#10b981'
+            },
+            labelStyle: { 
+              fontSize: 12, 
+              fontWeight: 'bold', 
+              fill: '#10b981' 
+            },
+            labelBgStyle: { 
+              fill: 'white', 
+              fillOpacity: 0.9 
+            },
           };
           
           setEdges(currentEdges => [...currentEdges, newEdge]);
@@ -245,26 +257,28 @@ export default function PureBumpConnect() {
         <Controls />
         <Background gap={20} size={1} color="#e5e7eb" />
         
-        {/* Revolutionary 3-Zone Proximity Detection */}
-        {proximityZones.map(zone => (
-          <div
-            key={zone.id}
-            className="absolute pointer-events-none"
-            style={{
-              left: zone.targetPos.x - zone.zone.size / 2,
-              top: zone.targetPos.y - zone.zone.size / 2,
-              width: zone.zone.size,
-              height: zone.zone.size,
-              borderRadius: '50%',
-              backgroundColor: zone.zone.color,
-              opacity: zone.zone.opacity,
-              border: zone.isConnectable ? '3px solid #10b981' : '2px solid rgba(255,255,255,0.5)',
-              transform: 'translate(-50%, -50%)',
-              zIndex: 10,
-              animation: zone.isConnectable ? 'pulse 1s infinite' : 'none',
-            }}
-          />
-        ))}
+        {/* Revolutionary 3-Zone Proximity Detection - Fixed Positioning */}
+        <div className="absolute inset-0 pointer-events-none" style={{ zIndex: 50 }}>
+          {proximityZones.map(zone => (
+            <div
+              key={zone.id}
+              className="absolute"
+              style={{
+                left: zone.targetPos.x,
+                top: zone.targetPos.y,
+                width: zone.zone.size * 2,
+                height: zone.zone.size * 2,
+                borderRadius: '50%',
+                backgroundColor: zone.zone.color,
+                opacity: zone.zone.opacity,
+                border: zone.isConnectable ? '4px solid #10b981' : '2px solid rgba(255,255,255,0.7)',
+                transform: 'translate(-50%, -50%)',
+                animation: zone.isConnectable ? 'pulse 1.5s infinite' : 'none',
+                boxShadow: zone.isConnectable ? '0 0 20px rgba(16, 185, 129, 0.5)' : 'none',
+              }}
+            />
+          ))}
+        </div>
         
         {/* Connection Preview Lines */}
         {proximityZones
