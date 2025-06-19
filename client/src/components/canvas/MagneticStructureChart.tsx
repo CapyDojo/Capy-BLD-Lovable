@@ -17,6 +17,8 @@ import {
 import '@xyflow/react/dist/style.css';
 import { Building2, Shield, Users, Briefcase, User } from 'lucide-react';
 import { getUnifiedRepository } from '@/services/repositories/unified';
+import { BumpConnectSystem } from './BumpConnectSystem';
+import { OwnershipPercentageModal } from './OwnershipPercentageModal';
 
 // Enhanced entity node with magnetic field visualization
 interface EntityNodeData {

@@ -1,0 +1,15 @@
+what you described is working as you described it... but that is not the intended "Bump to Connect" effect i want you to build. sorry perhaps i should describe it clearer.  The intended flow as I envisage it is:
+
+1. user hovers over a node (the "Seeker Node"), triggers the current magnetic visual effect to signal it is "awake" and ready to seek connection.
+
+2. Magnetic Detection Initiates: once user clicks on and drags Seeker Node, Magnetic Detection should "switch on" for each of the top handle ("TH") and bottom handle ("BH") of  Seeker Node. When in this switched on state, each TH and BH of Seeker Node will each have 3 levels concentric circular detections zones which follows that handle as the node is dragged around the canvas (i.e. 2 separate pairs of 3 concentric circular detection zones - 1 for TH and 1 for BH), seeking potential connection. Seeker Node TH is looking to connect with BH of other nodes. Seeker node BH seeking connection wtih TH of other nodes. TH should not be able to connect to other TH and vice versa.  
+
+The 3 concentric zone layers are:
+
+2A. (Outer) Detection Zone: 90 px radius around each of Seeker Node TH and Seeker Node BH - when triggered (i.e. Seeker TH moves within 90 px of Target BH, or Seeker BH moves within 90 px of Target TH), the handle should have a coloured circle pulse slowly - light orange for Seeker TH and the detected Target BH; light purple for Seeker BH and the detected Target TH.
+
+2B. (Middle) Strong Pull Zone: 60 px radius around each of Seeker TH and Seeker BH - when triggered, the pulsing should speed up and the colour should turn more vivid.
+
+2C. (Inner) Connect Zone: 30 px 60 px radius around each of Seeker TH and Seeker BH - when triggered, the pulsing should turn solid, the colour should turn green with a magnet themed success animation, and the relationship edge should automatically form and appear and default to 50% (which can be changed by user).  This should all happen before the user releases Seeker node and "drops" it onto canvas.
+
+How does that all sound?  Feasible?  Buildable?  Any questions before you have 95% or more confidence that you know what and how to build?
