@@ -24,9 +24,7 @@ const EntityNode = ({ data, selected }: any) => {
     if (proximityLevel === 'CONNECTION') {
       return 'border-green-500 bg-green-50 shadow-green-500 shadow-lg animate-pulse';
     } else if (proximityLevel === 'INTEREST') {
-      return 'border-purple-500 bg-purple-50 shadow-purple-300 shadow-md';
-    } else if (proximityLevel === 'AWARENESS') {
-      return 'border-orange-500 bg-orange-50 shadow-orange-300 shadow-md';
+      return 'border-orange-500 bg-orange-50 shadow-orange-300 shadow-md animate-pulse';
     } else if (isMagnetic) {
       return 'border-blue-500 bg-blue-50 shadow-blue-300 shadow-lg';
     }
@@ -166,9 +164,8 @@ export default function WorkingBumpConnect() {
   
   // Get proximity level based on distance
   const getProximityLevel = (distance: number) => {
-    if (distance <= 80) return 'CONNECTION';
-    if (distance <= 120) return 'INTEREST';
-    if (distance <= 200) return 'AWARENESS';
+    if (distance <= 80) return 'CONNECTION';  // Green - ready to connect
+    if (distance <= 160) return 'INTEREST';   // Orange - approaching
     return null;
   };
   
