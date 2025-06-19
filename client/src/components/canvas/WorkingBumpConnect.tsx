@@ -115,6 +115,7 @@ export default function WorkingBumpConnect() {
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
   const [draggingNode, setDraggingNode] = useState<Node | null>(null);
+  const [previousProximityStates, setPreviousProximityStates] = useState<Record<string, string | null>>({});
   
   // Load data
   useEffect(() => {
@@ -251,17 +252,29 @@ export default function WorkingBumpConnect() {
       console.log(`🎯 Proximity detected: ${activeZones} zones active`);
     }
     
-    // Instant connection creation when green zone is triggered
-    if (connectionReady) {
-      console.log(`🔗 Connection ready!`);
+    // Check for transitions into CONNECTION zone and create edges immediately
+    const newProximityStates: Record<string, string | null> = {};
+    const nodesToConnect: Node[] = [];
+    
+    otherNodes.forEach(node => {
+      const distance = calculateDistance(draggedNode, node);
+      const currentProximityLevel = getProximityLevel(distance);
+      const previousProximityLevel = previousProximityStates[node.id];
       
-      // Find nodes in CONNECTION zone and create edges immediately
-      const connectableNodes = otherNodes.filter(n => {
-        const distance = calculateDistance(draggedNode, n);
-        return distance <= 120; // CONNECTION zone
-      });
+      newProximityStates[node.id] = currentProximityLevel;
       
-      connectableNodes.forEach(targetNode => {
+      // Detect transition into CONNECTION zone
+      if (currentProximityLevel === 'CONNECTION' && previousProximityLevel !== 'CONNECTION') {
+        nodesToConnect.push(node);
+      }
+    });
+    
+    // Update proximity states
+    setPreviousProximityStates(newProximityStates);
+    
+    // Create connections for nodes that just entered green zone
+    if (nodesToConnect.length > 0) {
+      nodesToConnect.forEach(targetNode => {
         const existingEdge = edges.find(e => 
           (e.source === draggedNode.id && e.target === targetNode.id) ||
           (e.source === targetNode.id && e.target === draggedNode.id)
@@ -313,7 +326,7 @@ export default function WorkingBumpConnect() {
         }
       });
     }
-  }, [draggingNode]);
+  }, [draggingNode, nodes, edges, previousProximityStates]);
   
   // Handle drag stop
   const onNodeDragStop = useCallback((event: any, node: Node) => {
