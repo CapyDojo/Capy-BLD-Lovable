@@ -1,3 +1,4 @@
+
 import React, { useCallback, useEffect, useState, useRef } from 'react';
 import {
   ReactFlow,
@@ -31,17 +32,14 @@ interface EntityNodeProps {
 }
 
 interface DetectionZone {
+  id: string;
+  sourceNodeId: string;
+  targetNodeId: string;
+  distance: number;
   level: 'outer' | 'middle' | 'inner';
-  radius: number;
-  color: string;
-  animation: string;
+  sourceHandle: 'top' | 'bottom';
+  targetHandle: 'top' | 'bottom';
 }
-
-const DETECTION_ZONES: DetectionZone[] = [
-  { level: 'outer', radius: 90, color: 'orange', animation: 'animate-pulse' },
-  { level: 'middle', radius: 60, color: 'amber', animation: 'animate-pulse' },
-  { level: 'inner', radius: 30, color: 'green', animation: 'animate-bounce' }
-];
 
 const MagneticEntityNode: React.FC<EntityNodeProps> = ({ data, selected }) => {
   const getIcon = () => {
@@ -79,7 +77,7 @@ const MagneticEntityNode: React.FC<EntityNodeProps> = ({ data, selected }) => {
         selected ? 'border-blue-500' : ''
       }`}
     >
-      {/* Magnetic field visualization when awakened */}
+      {/* Magnetic field visualization */}
       {data.isMagnetic && (
         <>
           <div className="absolute -inset-4 bg-blue-400/20 rounded-full pointer-events-none animate-ping" />
@@ -110,8 +108,9 @@ export default function BumpConnect() {
   const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [loading, setLoading] = useState(true);
-  const [draggingNode, setDraggingNode] = useState<any>(null);
-  const [detectionZones, setDetectionZones] = useState<Map<string, DetectionZone>>(new Map());
+  const [draggingNode, setDraggingNode] = useState<Node | null>(null);
+  const [detectionZones, setDetectionZones] = useState<DetectionZone[]>([]);
+  const [pendingConnections, setPendingConnections] = useState<Set<string>>(new Set());
   
   // Percentage modal state
   const [showPercentageModal, setShowPercentageModal] = useState(false);
@@ -123,27 +122,15 @@ export default function BumpConnect() {
     targetEntity: any;
   } | null>(null);
 
-  // Load data from unified repository
+  // Load data
   useEffect(() => {
     const loadData = async () => {
       try {
-        console.log('Loading repository data for Bump Connect system...');
+        console.log('🚀 Loading Bump Connect data...');
         const repository = await getUnifiedRepository('ENTERPRISE');
         
         const entities = await repository.getAllEntities();
-        console.log('Loaded entities:', entities?.length || 0);
-        
-        // Get all share classes
-        const allShareClasses: any[] = [];
-        for (const entity of entities || []) {
-          try {
-            const entityShareClasses = await repository.getShareClassesByEntity(entity.id);
-            allShareClasses.push(...(entityShareClasses || []));
-          } catch (err) {
-            console.log('Error loading share classes for entity:', entity.id);
-          }
-        }
-        console.log('Loaded share classes:', allShareClasses.length);
+        console.log('📊 Loaded entities:', entities?.length || 0);
         
         // Get ownerships
         const allOwnerships = [];
@@ -155,7 +142,7 @@ export default function BumpConnect() {
             console.log('Error loading ownerships for entity:', entity.id);
           }
         }
-        console.log('Loaded ownerships:', allOwnerships.length);
+        console.log('📊 Loaded ownerships:', allOwnerships.length);
         
         // Convert to ReactFlow format
         const flowNodes = (entities || []).map((entity, index) => ({
@@ -173,34 +160,24 @@ export default function BumpConnect() {
           },
         }));
 
-        const flowEdges = allOwnerships.map((ownership) => {
-          const shareClass = allShareClasses.find(sc => sc.id === ownership.shareClassId);
-          
-          let percentage = '10.0%';
-          if (shareClass && shareClass.totalAuthorizedShares > 0) {
-            const percent = (ownership.shares / shareClass.totalAuthorizedShares) * 100;
-            percentage = `${percent.toFixed(1)}%`;
-          }
-
-          return {
-            id: ownership.id,
-            source: ownership.ownerEntityId,
-            target: ownership.ownedEntityId,
-            type: 'default',
-            style: { strokeWidth: 2, stroke: '#3b82f6' },
-            label: percentage,
-            labelStyle: { fontSize: 12, fontWeight: 'bold' },
-            labelBgStyle: { fill: '#ffffff', fillOpacity: 0.8 },
-          };
-        });
+        const flowEdges = allOwnerships.map((ownership) => ({
+          id: `ownership-${ownership.id}`,
+          source: ownership.ownerEntityId,
+          target: ownership.ownedEntityId,
+          type: 'default',
+          style: { strokeWidth: 2, stroke: '#3b82f6' },
+          label: '50%', // Default for existing connections
+          labelStyle: { fontSize: 12, fontWeight: 'bold' },
+          labelBgStyle: { fill: '#ffffff', fillOpacity: 0.8 },
+        }));
         
         setNodes(flowNodes);
         setEdges(flowEdges);
         setLoading(false);
         
-        console.log('Bump Connect system initialized');
+        console.log('✅ Bump Connect system initialized');
       } catch (error) {
-        console.error('Repository loading failed:', error);
+        console.error('❌ Bump Connect loading failed:', error);
         setLoading(false);
       }
     };
@@ -213,7 +190,7 @@ export default function BumpConnect() {
     return Math.sqrt(Math.pow(pos2.x - pos1.x, 2) + Math.pow(pos2.y - pos1.y, 2));
   };
 
-  // Get handle positions
+  // Get handle positions for a node
   const getHandlePositions = (node: Node) => {
     return {
       top: { x: node.position.x + 90, y: node.position.y },
@@ -221,103 +198,102 @@ export default function BumpConnect() {
     };
   };
 
-  // Get detection zone based on distance
-  const getDetectionZone = (distance: number): DetectionZone | null => {
-    for (const zone of DETECTION_ZONES) {
-      if (distance <= zone.radius) {
-        return zone;
-      }
-    }
-    return null;
-  };
-
-  // Handle auto-connect when reaching inner zone
-  const handleAutoConnect = useCallback(async (sourceId: string, targetId: string) => {
-    const sourceNode = nodes.find(n => n.id === sourceId);
-    const targetNode = nodes.find(n => n.id === targetId);
-    
-    if (!sourceNode || !targetNode) return;
-
-    // Create dotted edge immediately
-    const magneticEdge: Edge = {
-      id: `magnetic-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-      source: sourceId,
-      target: targetId,
-      type: 'default',
-      style: { strokeWidth: 3, stroke: '#10b981', strokeDasharray: '5,5' },
-      label: '50%',
-      labelStyle: { fontSize: 12, fontWeight: 'bold', color: '#10b981' },
-      labelBgStyle: { fill: '#ffffff', fillOpacity: 0.9 },
-    };
-    
-    setEdges((eds) => addEdge(magneticEdge, eds));
-    
-    // Store pending connection for percentage modal
-    setPendingConnection({
-      source: sourceId,
-      target: targetId,
-      defaultPercentage: 50,
-      sourceEntity: sourceNode,
-      targetEntity: targetNode
-    });
-
-    console.log('Auto-connected:', sourceNode.data.name, '→', targetNode.data.name);
-  }, [nodes, setEdges]);
-
-  // Revolutionary Bump Connect Detection System
-  useEffect(() => {
-    if (!draggingNode) {
-      setDetectionZones(new Map());
+  // Update detection zones during drag
+  const updateDetectionZones = useCallback((draggedNode: Node) => {
+    if (!draggedNode) {
+      setDetectionZones([]);
       return;
     }
 
-    const seekerHandles = getHandlePositions(draggingNode);
-    const newDetections = new Map<string, DetectionZone>();
+    const seekerHandles = getHandlePositions(draggedNode);
+    const newZones: DetectionZone[] = [];
 
     nodes.forEach(targetNode => {
-      if (targetNode.id === draggingNode.id) return;
+      if (targetNode.id === draggedNode.id) return;
 
       const targetHandles = getHandlePositions(targetNode);
 
-      // Check Seeker TH → Target BH (orange connection)
+      // Check Seeker TH → Target BH (ownership flows down)
       const thToBhDistance = getDistance(seekerHandles.top, targetHandles.bottom);
-      const thToBhZone = getDetectionZone(thToBhDistance);
-      
-      if (thToBhZone) {
-        const detectionKey = `${draggingNode.id}-TH-${targetNode.id}-BH`;
-        newDetections.set(detectionKey, thToBhZone);
-
-        // Auto-connect at inner zone
-        if (thToBhZone.level === 'inner') {
-          handleAutoConnect(draggingNode.id, targetNode.id);
-        }
+      if (thToBhDistance <= 90) {
+        const level = thToBhDistance <= 30 ? 'inner' : thToBhDistance <= 60 ? 'middle' : 'outer';
+        newZones.push({
+          id: `zone-${draggedNode.id}-th-${targetNode.id}-bh`,
+          sourceNodeId: draggedNode.id,
+          targetNodeId: targetNode.id,
+          distance: thToBhDistance,
+          level,
+          sourceHandle: 'top',
+          targetHandle: 'bottom'
+        });
       }
 
-      // Check Seeker BH → Target TH (purple connection)
+      // Check Seeker BH → Target TH (ownership flows up)
       const bhToThDistance = getDistance(seekerHandles.bottom, targetHandles.top);
-      const bhToThZone = getDetectionZone(bhToThDistance);
-      
-      if (bhToThZone) {
-        const detectionKey = `${draggingNode.id}-BH-${targetNode.id}-TH`;
-        newDetections.set(detectionKey, bhToThZone);
-
-        // Auto-connect at inner zone
-        if (bhToThZone.level === 'inner') {
-          handleAutoConnect(draggingNode.id, targetNode.id);
-        }
+      if (bhToThDistance <= 90) {
+        const level = bhToThDistance <= 30 ? 'inner' : bhToThDistance <= 60 ? 'middle' : 'outer';
+        newZones.push({
+          id: `zone-${draggedNode.id}-bh-${targetNode.id}-th`,
+          sourceNodeId: draggedNode.id,
+          targetNodeId: targetNode.id,
+          distance: bhToThDistance,
+          level,
+          sourceHandle: 'bottom',
+          targetHandle: 'top'
+        });
       }
     });
 
-    setDetectionZones(newDetections);
-  }, [draggingNode, nodes, handleAutoConnect]);
+    setDetectionZones(newZones);
 
-  // Handle drag events
+    // Handle auto-connections in inner zones
+    const innerZones = newZones.filter(zone => zone.level === 'inner');
+    innerZones.forEach(zone => {
+      const connectionKey = `${zone.sourceNodeId}-${zone.targetNodeId}`;
+      if (!pendingConnections.has(connectionKey)) {
+        console.log('🧲 Auto-connecting:', zone.sourceNodeId, '→', zone.targetNodeId);
+        
+        // Create magnetic edge immediately
+        const magneticEdgeId = `magnetic-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+        const magneticEdge: Edge = {
+          id: magneticEdgeId,
+          source: zone.sourceNodeId,
+          target: zone.targetNodeId,
+          type: 'default',
+          style: { strokeWidth: 3, stroke: '#10b981', strokeDasharray: '5,5' },
+          label: '50%',
+          labelStyle: { fontSize: 12, fontWeight: 'bold', color: '#10b981' },
+          labelBgStyle: { fill: '#ffffff', fillOpacity: 0.9 },
+        };
+        
+        setEdges(eds => addEdge(magneticEdge, eds));
+        setPendingConnections(prev => new Set([...prev, connectionKey]));
+        
+        // Store for percentage modal
+        const sourceNode = nodes.find(n => n.id === zone.sourceNodeId);
+        const targetNode = nodes.find(n => n.id === zone.targetNodeId);
+        
+        if (sourceNode && targetNode) {
+          setPendingConnection({
+            source: zone.sourceNodeId,
+            target: zone.targetNodeId,
+            defaultPercentage: 50,
+            sourceEntity: sourceNode,
+            targetEntity: targetNode
+          });
+        }
+      }
+    });
+  }, [nodes, pendingConnections, setEdges]);
+
+  // Handle drag start
   const onNodeDragStart: NodeMouseHandler = useCallback((event, node) => {
+    console.log('🧲 Magnetic field activated around:', node.data.name);
     setDraggingNode(node);
     
-    // Activate magnetic field (step 1: Initial hover effect)
-    setNodes((nodes) =>
-      nodes.map((n) => ({
+    // Activate magnetic field
+    setNodes(nodes =>
+      nodes.map(n => ({
         ...n,
         data: {
           ...n.data,
@@ -325,21 +301,29 @@ export default function BumpConnect() {
         },
       }))
     );
-
-    console.log('Started dragging node (Seeker activated):', node.data.name);
   }, [setNodes]);
 
+  // Handle drag
+  const onNodeDrag: NodeMouseHandler = useCallback((event, node) => {
+    if (draggingNode && draggingNode.id === node.id) {
+      updateDetectionZones(node);
+    }
+  }, [draggingNode, updateDetectionZones]);
+
+  // Handle drag stop
   const onNodeDragStop: NodeMouseHandler = useCallback((event, node) => {
+    console.log('🔌 Magnetic field deactivated');
     setDraggingNode(null);
+    setDetectionZones([]);
     
-    // Show percentage modal if there's a pending connection (step 3)
+    // Show percentage modal if there's a pending connection
     if (pendingConnection) {
       setShowPercentageModal(true);
     }
     
     // Reset magnetic fields
-    setNodes((nodes) =>
-      nodes.map((n) => ({
+    setNodes(nodes =>
+      nodes.map(n => ({
         ...n,
         data: {
           ...n.data,
@@ -347,8 +331,6 @@ export default function BumpConnect() {
         },
       }))
     );
-
-    console.log('Stopped dragging node:', node.data.name);
   }, [setNodes, pendingConnection]);
 
   // Handle percentage modal confirmation
@@ -387,13 +369,16 @@ export default function BumpConnect() {
         updatedBy: 'user'
       }, 'user');
 
-      // Update edge to solid with final percentage (step 3A & 3B)
-      setEdges((edges) => 
-        edges.map((edge) => {
-          if (edge.source === pendingConnection.source && edge.target === pendingConnection.target && edge.style?.strokeDasharray) {
+      // Update edge to solid with final percentage
+      setEdges(edges => 
+        edges.map(edge => {
+          if (edge.source === pendingConnection.source && 
+              edge.target === pendingConnection.target && 
+              edge.style?.strokeDasharray) {
             return {
               ...edge,
-              style: { strokeWidth: 3, stroke: '#10b981' }, // Remove dash - make solid
+              id: `ownership-${pendingConnection.source}-${pendingConnection.target}-${Date.now()}`,
+              style: { strokeWidth: 3, stroke: '#10b981' },
               label: `${percentage}%`,
             };
           }
@@ -401,24 +386,39 @@ export default function BumpConnect() {
         })
       );
 
-      console.log('Ownership relationship created:', percentage + '%');
+      console.log('✅ Ownership relationship created:', percentage + '%');
     } catch (error) {
-      console.error('Failed to create ownership relationship:', error);
+      console.error('❌ Failed to create ownership relationship:', error);
     }
 
+    // Reset states
+    const connectionKey = `${pendingConnection.source}-${pendingConnection.target}`;
+    setPendingConnections(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(connectionKey);
+      return newSet;
+    });
     setPendingConnection(null);
   }, [pendingConnection, setEdges]);
 
   const handlePercentageCancel = useCallback(() => {
-    // Remove the dotted edge
     if (pendingConnection) {
-      setEdges((edges) => 
-        edges.filter((edge) => 
+      // Remove the dotted edge
+      setEdges(edges => 
+        edges.filter(edge => 
           !(edge.source === pendingConnection.source && 
             edge.target === pendingConnection.target && 
             edge.style?.strokeDasharray)
         )
       );
+      
+      // Reset states
+      const connectionKey = `${pendingConnection.source}-${pendingConnection.target}`;
+      setPendingConnections(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(connectionKey);
+        return newSet;
+      });
     }
     setPendingConnection(null);
   }, [pendingConnection, setEdges]);
@@ -426,7 +426,7 @@ export default function BumpConnect() {
   if (loading) {
     return (
       <div className="h-full flex items-center justify-center">
-        <div className="text-lg font-medium">Loading revolutionary Bump Connect system...</div>
+        <div className="text-lg font-medium">🚀 Loading Bump Connect system...</div>
       </div>
     );
   }
@@ -441,6 +441,7 @@ export default function BumpConnect() {
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
           onNodeDragStart={onNodeDragStart}
+          onNodeDrag={onNodeDrag}
           onNodeDragStop={onNodeDragStop}
           fitView
           className="bg-gray-50"
@@ -448,27 +449,28 @@ export default function BumpConnect() {
           <Controls />
           <Background gap={20} size={1} color="#e5e7eb" />
           
-          {/* Revolutionary 3-Zone Detection System */}
-          {draggingNode && (
+          {/* Detection Zones Visualization */}
+          {draggingNode && detectionZones.length > 0 && (
             <div className="absolute inset-0 pointer-events-none z-10">
-              {Array.from(detectionZones.entries()).map(([detectionKey, zone]) => {
-                const [seekerInfo, targetInfo] = detectionKey.split('-').slice(1);
-                const isOrangeConnection = seekerInfo === 'TH' && targetInfo.endsWith('BH');
-                
+              {detectionZones.map(zone => {
                 const seekerHandles = getHandlePositions(draggingNode);
-                const handlePos = seekerInfo === 'TH' ? seekerHandles.top : seekerHandles.bottom;
+                const handlePos = zone.sourceHandle === 'top' ? seekerHandles.top : seekerHandles.bottom;
                 
-                const baseColor = isOrangeConnection ? 'orange' : 'purple';
+                const radius = zone.level === 'inner' ? 30 : zone.level === 'middle' ? 60 : 90;
+                const color = zone.sourceHandle === 'top' ? 'orange' : 'purple';
+                const intensity = zone.level === 'inner' ? '500' : zone.level === 'middle' ? '400' : '300';
                 
                 return (
                   <div
-                    key={detectionKey}
-                    className={`absolute rounded-full border-4 border-${baseColor}-400 bg-${baseColor}-200/30 ${zone.animation}`}
+                    key={zone.id}
+                    className={`absolute rounded-full border-2 border-${color}-${intensity} bg-${color}-200/30 ${
+                      zone.level === 'inner' ? 'animate-bounce' : 'animate-pulse'
+                    }`}
                     style={{
-                      left: handlePos.x - zone.radius,
-                      top: handlePos.y - zone.radius,
-                      width: zone.radius * 2,
-                      height: zone.radius * 2,
+                      left: handlePos.x - radius,
+                      top: handlePos.y - radius,
+                      width: radius * 2,
+                      height: radius * 2,
                       zIndex: zone.level === 'inner' ? 30 : zone.level === 'middle' ? 20 : 10
                     }}
                   >
@@ -487,7 +489,22 @@ export default function BumpConnect() {
         </ReactFlow>
       </ReactFlowProvider>
 
-      {/* Ownership Percentage Modal (Step 3B & 3C) */}
+      {/* Status Display */}
+      {draggingNode && (
+        <div className="absolute top-4 left-4 bg-white p-3 rounded-lg shadow-lg z-50">
+          <div className="font-semibold text-gray-800">
+            🎯 Seeker: {draggingNode.data.name}
+          </div>
+          <div className="text-sm text-gray-600">
+            Active Zones: {detectionZones.length}
+          </div>
+          <div className="text-sm text-green-600">
+            Ready to Connect: {detectionZones.filter(z => z.level === 'inner').length}
+          </div>
+        </div>
+      )}
+
+      {/* Ownership Percentage Modal */}
       {showPercentageModal && pendingConnection && (
         <OwnershipPercentageModal
           isOpen={showPercentageModal}
