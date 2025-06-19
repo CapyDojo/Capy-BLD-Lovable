@@ -39,26 +39,55 @@ const EntityNode = ({ data, selected }: any) => {
       ${getNodeStyle()}
       hover:shadow-xl cursor-move relative
     `}>
-      {/* Connection Handles - Simplified approach */}
+      {/* Connection Handles - Both source and target for each position */}
       <Handle
-        type="target"
+        id="top"
+        type="source"
         position={Position.Top}
         className="w-3 h-3 bg-blue-500 border-2 border-white"
       />
       <Handle
+        id="bottom"
         type="source"
         position={Position.Bottom}
         className="w-3 h-3 bg-blue-500 border-2 border-white"
       />
       <Handle
-        type="target"
+        id="left"
+        type="source"
         position={Position.Left}
         className="w-3 h-3 bg-blue-500 border-2 border-white"
       />
       <Handle
+        id="right"
         type="source"
         position={Position.Right}
         className="w-3 h-3 bg-blue-500 border-2 border-white"
+      />
+      {/* Target handles */}
+      <Handle
+        id="top-target"
+        type="target"
+        position={Position.Top}
+        className="w-3 h-3 bg-red-500 border-2 border-white opacity-50"
+      />
+      <Handle
+        id="bottom-target"
+        type="target"
+        position={Position.Bottom}
+        className="w-3 h-3 bg-red-500 border-2 border-white opacity-50"
+      />
+      <Handle
+        id="left-target"
+        type="target"
+        position={Position.Left}
+        className="w-3 h-3 bg-red-500 border-2 border-white opacity-50"
+      />
+      <Handle
+        id="right-target"
+        type="target"
+        position={Position.Right}
+        className="w-3 h-3 bg-red-500 border-2 border-white opacity-50"
       />
 
       <div className="font-semibold text-gray-800 text-center">{data.name}</div>
@@ -223,10 +252,42 @@ export default function WorkingBumpConnect() {
         );
         
         if (!existingEdge) {
+          // Determine connection direction based on relative positions
+          const dx = targetNode.position.x - node.position.x;
+          const dy = targetNode.position.y - node.position.y;
+          
+          // Use vertical connections for primarily vertical arrangements
+          let sourceHandle, targetHandle;
+          if (Math.abs(dy) > Math.abs(dx)) {
+            // Vertical connection
+            if (dy > 0) {
+              // Target is below source - source uses bottom, target uses top
+              sourceHandle = 'bottom';
+              targetHandle = 'top-target';
+            } else {
+              // Target is above source - source uses top, target uses bottom
+              sourceHandle = 'top';
+              targetHandle = 'bottom-target';
+            }
+          } else {
+            // Horizontal connection
+            if (dx > 0) {
+              // Target is to the right - source uses right, target uses left
+              sourceHandle = 'right';
+              targetHandle = 'left-target';
+            } else {
+              // Target is to the left - source uses left, target uses right
+              sourceHandle = 'left';
+              targetHandle = 'right-target';
+            }
+          }
+          
           const newEdge = {
             id: `bump-${node.id}-${targetNode.id}`,
             source: node.id,
             target: targetNode.id,
+            sourceHandle,
+            targetHandle,
             type: 'smoothstep',
             animated: true,
             label: '25%',
