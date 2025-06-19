@@ -39,29 +39,25 @@ const EntityNode = ({ data, selected }: any) => {
       ${getNodeStyle()}
       hover:shadow-xl cursor-move relative
     `}>
-      {/* Connection Handles */}
+      {/* Connection Handles - Simplified approach */}
       <Handle
-        id="left"
-        type="target"
-        position={Position.Left}
-        className="w-3 h-3 bg-blue-500 border-2 border-white"
-      />
-      <Handle
-        id="right"
-        type="source"
-        position={Position.Right}
-        className="w-3 h-3 bg-blue-500 border-2 border-white"
-      />
-      <Handle
-        id="top"
         type="target"
         position={Position.Top}
         className="w-3 h-3 bg-blue-500 border-2 border-white"
       />
       <Handle
-        id="bottom"
         type="source"
         position={Position.Bottom}
+        className="w-3 h-3 bg-blue-500 border-2 border-white"
+      />
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="w-3 h-3 bg-blue-500 border-2 border-white"
+      />
+      <Handle
+        type="source"
+        position={Position.Right}
         className="w-3 h-3 bg-blue-500 border-2 border-white"
       />
 
@@ -117,6 +113,7 @@ export default function WorkingBumpConnect() {
         }));
         
         setNodes(nodeData);
+        setEdges([]); // Clear any cached edges
         setLoading(false);
         console.log('Working Bump Connect initialized');
         
@@ -226,15 +223,10 @@ export default function WorkingBumpConnect() {
         );
         
         if (!existingEdge) {
-          // Determine vertical connection direction
-          const isSourceAbove = node.position.y < targetNode.position.y;
-          
           const newEdge = {
             id: `bump-${node.id}-${targetNode.id}`,
             source: node.id,
             target: targetNode.id,
-            sourceHandle: isSourceAbove ? 'bottom' : 'top',
-            targetHandle: isSourceAbove ? 'top' : 'bottom',
             type: 'smoothstep',
             animated: true,
             label: '25%',
