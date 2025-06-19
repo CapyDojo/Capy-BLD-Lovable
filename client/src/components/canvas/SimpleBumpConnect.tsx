@@ -109,37 +109,37 @@ export default function SimpleBumpConnect() {
       
       const distance = calculateDistance(node.position, targetNode.position);
       
-      // 3-Zone Detection System
-      if (distance <= 90) {
+      // Revolutionary 3-Zone Detection System - Much Larger Zones
+      if (distance <= 200) {
         circles.push({
-          id: `zone-90-${targetNode.id}`,
-          x: targetNode.position.x,
-          y: targetNode.position.y,
-          size: 90,
+          id: `zone-200-${targetNode.id}`,
+          x: targetNode.position.x + 100, // Center on node handle
+          y: targetNode.position.y + 25,  // Center on node handle
+          size: 200,
           color: '#ff6b35',
-          opacity: 0.3,
+          opacity: 0.2,
           label: 'AWARENESS'
         });
       }
-      if (distance <= 60) {
+      if (distance <= 120) {
         circles.push({
-          id: `zone-60-${targetNode.id}`,
-          x: targetNode.position.x,
-          y: targetNode.position.y,
-          size: 60,
+          id: `zone-120-${targetNode.id}`,
+          x: targetNode.position.x + 100, // Center on node handle
+          y: targetNode.position.y + 25,  // Center on node handle
+          size: 120,
           color: '#8b5cf6',
-          opacity: 0.4,
+          opacity: 0.3,
           label: 'INTEREST'
         });
       }
-      if (distance <= 30) {
+      if (distance <= 80) {
         circles.push({
-          id: `zone-30-${targetNode.id}`,
-          x: targetNode.position.x,
-          y: targetNode.position.y,
-          size: 30,
+          id: `zone-80-${targetNode.id}`,
+          x: targetNode.position.x + 100, // Center on node handle
+          y: targetNode.position.y + 25,  // Center on node handle
+          size: 80,
           color: '#10b981',
-          opacity: 0.5,
+          opacity: 0.4,
           label: 'CONNECTION'
         });
       }
@@ -149,6 +149,41 @@ export default function SimpleBumpConnect() {
     
     if (circles.length > 0) {
       console.log(`Proximity detected: ${circles.length} zones active`);
+    }
+    
+    // Auto-create edge when in CONNECTION zone (green)
+    const connectionZones = circles.filter(c => c.size === 80);
+    if (connectionZones.length > 0) {
+      connectionZones.forEach(zone => {
+        const targetNodeId = zone.id.split('-')[2]; // Extract target node ID
+        const existingEdge = edges.find(e => 
+          (e.source === node.id && e.target === targetNodeId) ||
+          (e.source === targetNodeId && e.target === node.id)
+        );
+        
+        if (!existingEdge) {
+          const newEdge = {
+            id: `connection-${node.id}-${targetNodeId}`,
+            source: node.id,
+            target: targetNodeId,
+            type: 'smoothstep',
+            animated: true,
+            label: '25%',
+            style: { 
+              strokeWidth: 3, 
+              stroke: '#10b981' 
+            },
+            labelStyle: { 
+              fontSize: 12, 
+              fontWeight: 'bold', 
+              fill: '#10b981' 
+            },
+          };
+          
+          setEdges(currentEdges => [...currentEdges, newEdge]);
+          console.log(`✨ Auto-created connection: ${node.data.name} → ${targetNodeId}`);
+        }
+      });
     }
   }, [draggingNode, nodes]);
   
