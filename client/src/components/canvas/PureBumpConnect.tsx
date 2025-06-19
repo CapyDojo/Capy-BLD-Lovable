@@ -55,7 +55,7 @@ export default function PureBumpConnect() {
         const hierarchy = await unifiedEntityService.getOwnershipHierarchy();
         
         console.log(`📊 Loaded ${entities?.length || 0} entities`);
-        console.log(`🔗 Loaded ${ownerships?.length || 0} ownerships`);
+        console.log(`🔗 Loaded ${hierarchy?.length || 0} hierarchy nodes`);
         
         // Create clean nodes
         const nodeData = (entities || []).map((entity: any, index: number) => ({
@@ -73,17 +73,24 @@ export default function PureBumpConnect() {
           }
         }));
         
-        // Create clean edges
-        const edgeData = (ownerships || []).map((ownership) => ({
-          id: ownership.id,
-          source: ownership.ownerEntityId,
-          target: ownership.ownedEntityId,
-          type: 'default',
-          label: `${ownership.shares || 0}%`,
-          style: { strokeWidth: 2, stroke: '#6b7280' },
-          labelStyle: { fontSize: 12, fontWeight: 'bold' },
-          labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
-        }));
+        // Create clean edges from hierarchy data
+        const edgeData: any[] = [];
+        (hierarchy || []).forEach((node: any) => {
+          if (node.ownerships && node.ownerships.length > 0) {
+            node.ownerships.forEach((ownership: any) => {
+              edgeData.push({
+                id: `edge-${node.id}-${ownership.ownerEntityId}`,
+                source: ownership.ownerEntityId,
+                target: node.id,
+                type: 'default',
+                label: `${ownership.shares || 0}%`,
+                style: { strokeWidth: 2, stroke: '#6b7280' },
+                labelStyle: { fontSize: 12, fontWeight: 'bold' },
+                labelBgStyle: { fill: 'white', fillOpacity: 0.8 },
+              });
+            });
+          }
+        });
         
         setNodes(nodeData);
         setEdges(edgeData);
@@ -304,7 +311,7 @@ export default function PureBumpConnect() {
         </div>
       )}
       
-      <style jsx>{`
+      <style>{`
         @keyframes pulse {
           0%, 100% { transform: translate(-50%, -50%) scale(1); }
           50% { transform: translate(-50%, -50%) scale(1.1); }

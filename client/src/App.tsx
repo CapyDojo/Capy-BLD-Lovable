@@ -70,6 +70,11 @@ const App = () => {
               <BumpConnect />
             </MainLayout>
           </Route>
+          <Route path="/pure-bump">
+            <MainLayout>
+              <PureBumpConnect />
+            </MainLayout>
+          </Route>
           <Route path="/cap-table">
             <MainLayout>
               <CapTableEditor />
