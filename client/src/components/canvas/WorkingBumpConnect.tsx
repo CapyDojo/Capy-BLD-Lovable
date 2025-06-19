@@ -194,12 +194,37 @@ export default function WorkingBumpConnect() {
     
     let activeZones = 0;
     let connectionReady = false;
+    let seekerProximityLevel = null;
     
-    // Update proximity levels for all other nodes
+    // Find the closest target and its proximity level for the seeker
+    const otherNodes = nodes.filter(n => n.id !== draggedNode.id);
+    const distances = otherNodes.map(node => ({
+      node,
+      distance: calculateDistance(draggedNode, node)
+    }));
+    
+    // Get the closest proximity level for the seeker node
+    const closestTarget = distances.reduce((closest, current) => 
+      current.distance < closest.distance ? current : closest
+    );
+    
+    if (closestTarget) {
+      seekerProximityLevel = getProximityLevel(closestTarget.distance);
+    }
+    
+    // Update proximity levels for all nodes
     setNodes(currentNodes => 
       currentNodes.map(node => {
         if (node.id === draggedNode.id) {
-          return { ...node, data: { ...node.data, isMagnetic: true } };
+          // Apply same proximity level to seeker as closest target
+          return { 
+            ...node, 
+            data: { 
+              ...node.data, 
+              isMagnetic: true,
+              proximityLevel: seekerProximityLevel 
+            } 
+          };
         }
         
         const distance = calculateDistance(draggedNode, node);
