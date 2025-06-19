@@ -9,6 +9,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { CapTableEditor } from "@/components/cap-table/CapTableEditor";
 import BumpConnect from "@/components/canvas/BumpConnect";
+import PureBumpConnect from "@/components/canvas/PureBumpConnect";
 import { DocumentRepository } from "@/components/documents/DocumentRepository";
 import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
 
