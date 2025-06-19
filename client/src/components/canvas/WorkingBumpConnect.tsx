@@ -39,7 +39,7 @@ const EntityNode = ({ data, selected }: any) => {
       ${getNodeStyle()}
       hover:shadow-xl cursor-move relative
     `}>
-      {/* Connection Handles - Both source and target for each position */}
+      {/* Connection Handles - Only vertical connections for entities */}
       <Handle
         id="top"
         type="source"
@@ -50,18 +50,6 @@ const EntityNode = ({ data, selected }: any) => {
         id="bottom"
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 bg-blue-500 border-2 border-white"
-      />
-      <Handle
-        id="left"
-        type="source"
-        position={Position.Left}
-        className="w-3 h-3 bg-blue-500 border-2 border-white"
-      />
-      <Handle
-        id="right"
-        type="source"
-        position={Position.Right}
         className="w-3 h-3 bg-blue-500 border-2 border-white"
       />
       {/* Target handles */}
@@ -77,17 +65,31 @@ const EntityNode = ({ data, selected }: any) => {
         position={Position.Bottom}
         className="w-3 h-3 bg-red-500 border-2 border-white opacity-50"
       />
+      
+      {/* Future: Hidden left/right handles for document connections */}
+      <Handle
+        id="left"
+        type="source"
+        position={Position.Left}
+        className="w-3 h-3 bg-blue-500 border-2 border-white opacity-0 pointer-events-none"
+      />
+      <Handle
+        id="right"
+        type="source"
+        position={Position.Right}
+        className="w-3 h-3 bg-blue-500 border-2 border-white opacity-0 pointer-events-none"
+      />
       <Handle
         id="left-target"
         type="target"
         position={Position.Left}
-        className="w-3 h-3 bg-red-500 border-2 border-white opacity-50"
+        className="w-3 h-3 bg-red-500 border-2 border-white opacity-0 pointer-events-none"
       />
       <Handle
         id="right-target"
         type="target"
         position={Position.Right}
-        className="w-3 h-3 bg-red-500 border-2 border-white opacity-50"
+        className="w-3 h-3 bg-red-500 border-2 border-white opacity-0 pointer-events-none"
       />
 
       <div className="font-semibold text-gray-800 text-center">{data.name}</div>
@@ -281,30 +283,16 @@ export default function WorkingBumpConnect() {
           const dx = targetNode.position.x - node.position.x;
           const dy = targetNode.position.y - node.position.y;
           
-          // Use vertical connections for primarily vertical arrangements
+          // Use only vertical connections for entity relationships
           let sourceHandle, targetHandle;
-          if (Math.abs(dy) > Math.abs(dx)) {
-            // Vertical connection
-            if (dy > 0) {
-              // Target is below source - source uses bottom, target uses top
-              sourceHandle = 'bottom';
-              targetHandle = 'top-target';
-            } else {
-              // Target is above source - source uses top, target uses bottom
-              sourceHandle = 'top';
-              targetHandle = 'bottom-target';
-            }
+          if (dy > 0) {
+            // Target is below source - source uses bottom, target uses top
+            sourceHandle = 'bottom';
+            targetHandle = 'top-target';
           } else {
-            // Horizontal connection
-            if (dx > 0) {
-              // Target is to the right - source uses right, target uses left
-              sourceHandle = 'right';
-              targetHandle = 'left-target';
-            } else {
-              // Target is to the left - source uses left, target uses right
-              sourceHandle = 'left';
-              targetHandle = 'right-target';
-            }
+            // Target is above source - source uses top, target uses bottom
+            sourceHandle = 'top';
+            targetHandle = 'bottom-target';
           }
           
           const newEdge = {
