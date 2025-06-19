@@ -10,6 +10,7 @@ import { Dashboard } from "@/components/dashboard/Dashboard";
 import { CapTableEditor } from "@/components/cap-table/CapTableEditor";
 import BumpConnect from "@/components/canvas/BumpConnect";
 import PureBumpConnect from "@/components/canvas/PureBumpConnect";
+import SimpleBumpConnect from "@/components/canvas/SimpleBumpConnect";
 import { DocumentRepository } from "@/components/documents/DocumentRepository";
 import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
 
@@ -73,6 +74,11 @@ const App = () => {
           <Route path="/pure-bump">
             <MainLayout>
               <PureBumpConnect />
+            </MainLayout>
+          </Route>
+          <Route path="/simple-bump">
+            <MainLayout>
+              <SimpleBumpConnect />
             </MainLayout>
           </Route>
           <Route path="/cap-table">
