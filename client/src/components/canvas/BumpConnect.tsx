@@ -102,15 +102,15 @@ const MagneticEntityNode: React.FC<EntityNodeProps> = ({ data, selected }) => {
   );
 };
 
-const nodeTypes = {
+const nodeTypes: any = {
   entity: MagneticEntityNode,
 };
 
 export default function BumpConnect() {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<any>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any>([]);
   const [loading, setLoading] = useState(true);
-  const [draggingNode, setDraggingNode] = useState<Node | null>(null);
+  const [draggingNode, setDraggingNode] = useState<any>(null);
   const [detectionZones, setDetectionZones] = useState<Map<string, DetectionZone>>(new Map());
   
   // Percentage modal state
@@ -134,7 +134,7 @@ export default function BumpConnect() {
         console.log('Loaded entities:', entities?.length || 0);
         
         // Get all share classes
-        const allShareClasses = [];
+        const allShareClasses: any[] = [];
         for (const entity of entities || []) {
           try {
             const entityShareClasses = await repository.getShareClassesByEntity(entity.id);
@@ -446,7 +446,7 @@ export default function BumpConnect() {
           className="bg-gray-50"
         >
           <Controls />
-          <Background variant="cross" gap={20} size={1} color="#e5e7eb" />
+          <Background gap={20} size={1} color="#e5e7eb" />
           
           {/* Revolutionary 3-Zone Detection System */}
           {draggingNode && (
