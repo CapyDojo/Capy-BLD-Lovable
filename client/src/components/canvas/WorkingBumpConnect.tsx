@@ -164,8 +164,8 @@ export default function WorkingBumpConnect() {
   
   // Get proximity level based on distance
   const getProximityLevel = (distance: number) => {
-    if (distance <= 80) return 'CONNECTION';  // Green - ready to connect
-    if (distance <= 160) return 'INTEREST';   // Orange - approaching
+    if (distance <= 120) return 'CONNECTION';  // Green - ready to connect
+    if (distance <= 200) return 'INTEREST';   // Orange - approaching
     return null;
   };
   
