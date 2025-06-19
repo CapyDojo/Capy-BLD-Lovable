@@ -11,6 +11,7 @@ import { CapTableEditor } from "@/components/cap-table/CapTableEditor";
 import BumpConnect from "@/components/canvas/BumpConnect";
 import PureBumpConnect from "@/components/canvas/PureBumpConnect";
 import SimpleBumpConnect from "@/components/canvas/SimpleBumpConnect";
+import WorkingBumpConnect from "@/components/canvas/WorkingBumpConnect";
 import { DocumentRepository } from "@/components/documents/DocumentRepository";
 import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
 
@@ -79,6 +80,11 @@ const App = () => {
           <Route path="/simple-bump">
             <MainLayout>
               <SimpleBumpConnect />
+            </MainLayout>
+          </Route>
+          <Route path="/working-bump">
+            <MainLayout>
+              <WorkingBumpConnect />
             </MainLayout>
           </Route>
           <Route path="/cap-table">
