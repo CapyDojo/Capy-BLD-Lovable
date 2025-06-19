@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
@@ -9,36 +8,41 @@ interface OwnershipPercentageModalProps {
   isOpen: boolean;
   onClose: () => void;
   onConfirm: (percentage: number) => void;
+  defaultPercentage: number;
+  sourceEntityName: string;
+  targetEntityName: string;
 }
 
 export const OwnershipPercentageModal: React.FC<OwnershipPercentageModalProps> = ({
   isOpen,
   onClose,
-  onConfirm
+  onConfirm,
+  defaultPercentage,
+  sourceEntityName,
+  targetEntityName
 }) => {
-  const [customPercentage, setCustomPercentage] = useState<string>('');
-  const [selectedPercentage, setSelectedPercentage] = useState<number>(100);
+  const [selectedPercentage, setSelectedPercentage] = useState(defaultPercentage);
+  const [customPercentage, setCustomPercentage] = useState('');
+  const [isCustom, setIsCustom] = useState(false);
 
-  const quickOptions = [25, 50, 75, 100];
-
-  const handleQuickSelect = (percentage: number) => {
-    setSelectedPercentage(percentage);
-    setCustomPercentage('');
-  };
-
-  const handleCustomChange = (value: string) => {
-    setCustomPercentage(value);
-    const numValue = parseFloat(value);
-    if (!isNaN(numValue) && numValue >= 0 && numValue <= 100) {
-      setSelectedPercentage(numValue);
-    }
-  };
+  const presetPercentages = [25, 75, 100];
 
   const handleConfirm = () => {
-    const finalPercentage = customPercentage ? parseFloat(customPercentage) : selectedPercentage;
-    if (finalPercentage >= 0 && finalPercentage <= 100) {
+    const finalPercentage = isCustom ? parseFloat(customPercentage) : selectedPercentage;
+    if (finalPercentage > 0 && finalPercentage <= 100) {
       onConfirm(finalPercentage);
+      onClose();
     }
+  };
+
+  const handlePresetClick = (percentage: number) => {
+    setSelectedPercentage(percentage);
+    setIsCustom(false);
+  };
+
+  const handleCustomInputChange = (value: string) => {
+    setCustomPercentage(value);
+    setIsCustom(true);
   };
 
   return (
@@ -48,52 +52,59 @@ export const OwnershipPercentageModal: React.FC<OwnershipPercentageModalProps> =
           <DialogTitle>Set Ownership Percentage</DialogTitle>
         </DialogHeader>
         
-        <div className="space-y-6">
-          <div>
-            <Label className="text-sm font-medium mb-3 block">Quick Select</Label>
-            <div className="grid grid-cols-4 gap-2">
-              {quickOptions.map((percentage) => (
+        <div className="space-y-4">
+          <div className="text-sm text-gray-600">
+            <strong>{sourceEntityName}</strong> owns <strong>{targetEntityName}</strong>
+          </div>
+
+          <div className="space-y-3">
+            <Label>Select ownership percentage:</Label>
+            
+            {/* Default percentage */}
+            <Button
+              variant={!isCustom && selectedPercentage === defaultPercentage ? "default" : "outline"}
+              className="w-full"
+              onClick={() => handlePresetClick(defaultPercentage)}
+            >
+              {defaultPercentage}% (Default)
+            </Button>
+
+            {/* Preset percentages */}
+            <div className="grid grid-cols-3 gap-2">
+              {presetPercentages.map(percentage => (
                 <Button
                   key={percentage}
-                  variant={selectedPercentage === percentage && !customPercentage ? "default" : "outline"}
-                  onClick={() => handleQuickSelect(percentage)}
-                  className="h-12 text-lg font-semibold"
+                  variant={!isCustom && selectedPercentage === percentage ? "default" : "outline"}
+                  onClick={() => handlePresetClick(percentage)}
                 >
                   {percentage}%
                 </Button>
               ))}
             </div>
-          </div>
 
-          <div>
-            <Label htmlFor="custom-percentage" className="text-sm font-medium mb-2 block">
-              Custom Percentage
-            </Label>
-            <div className="flex items-center space-x-2">
+            {/* Custom percentage */}
+            <div className="space-y-2">
+              <Label htmlFor="custom-percentage">Custom percentage:</Label>
               <Input
                 id="custom-percentage"
                 type="number"
-                min="0"
+                min="0.01"
                 max="100"
-                step="0.1"
-                placeholder="Enter percentage"
+                step="0.01"
+                placeholder="Enter custom percentage"
                 value={customPercentage}
-                onChange={(e) => handleCustomChange(e.target.value)}
-                className="flex-1"
+                onChange={(e) => handleCustomInputChange(e.target.value)}
+                className={isCustom ? "border-blue-500" : ""}
               />
-              <span className="text-gray-500 font-medium">%</span>
             </div>
           </div>
 
-          <div className="flex justify-end space-x-3 pt-4 border-t">
+          <div className="flex justify-end space-x-2">
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleConfirm}
-              className="bg-green-600 hover:bg-green-700"
-            >
-              Create Connection ({customPercentage || selectedPercentage}%)
+            <Button onClick={handleConfirm}>
+              Confirm {isCustom ? `${customPercentage}%` : `${selectedPercentage}%`}
             </Button>
           </div>
         </div>
