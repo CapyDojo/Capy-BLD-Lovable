@@ -126,13 +126,14 @@ The application uses a unified repository pattern with enterprise-grade data man
 ## Changelog
 
 ### June 19, 2025 - Bump Connect System Breakthrough
-- **Revolutionary Magnetic Connection System**: Successfully implemented working Bump & Connect with 3-zone proximity detection (200px/120px/80px)
+- **Revolutionary Magnetic Connection System**: Successfully implemented working Bump & Connect with simplified 2-zone proximity detection (160px/80px)
 - **Directional Edge Routing**: Fixed critical edge routing issue - connections now properly route based on actual node positions and drag direction
-- **Handle Architecture**: Implemented dual handle system (source/target) for all node positions with proper ID mapping
+- **Handle Architecture**: Implemented dual handle system (source/target) for vertical connections only with proper ID mapping
 - **Cache Management**: Added edge cache clearing to prevent ReactFlow handle ID conflicts
-- **Visual Feedback**: Maintained progressive visual feedback system (orange→purple→green) with magnetic attraction zones
+- **Visual Feedback**: Streamlined visual feedback system (orange→green) with magnetic attraction zones - removed redundant purple zone
 - **Automatic Connection Creation**: Perfected automatic edge creation with proper ownership percentage assignment (25% default)
 - **ReactFlow Integration**: Leveraged ReactFlow's native coordinate system instead of custom absolute positioning overlay
+- **Entity Connection Logic**: Restricted connections to vertical-only (top/bottom handles) for logical organizational hierarchies
 
 ### June 18, 2025 - Production Readiness & Cleanup
 - **Production Cleanup**: Removed development artifacts (architectural audit, simple test runner) from Lovable migration
