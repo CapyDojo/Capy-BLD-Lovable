@@ -14,6 +14,7 @@ import {
   ReactFlowProvider
 } from '@xyflow/react';
 import { unifiedEntityService } from '../../services/UnifiedEntityService';
+import { EntityTypes } from '../../types/entity';
 
 // Enhanced Entity Node with Connection Handles
 const EntityNode = ({ data, selected }: any) => {
@@ -110,7 +111,15 @@ const nodeTypes = {
   entity: EntityNode,
 };
 
-export default function WorkingBumpConnect() {
+interface WorkingBumpConnectProps {
+  sensitivity?: {
+    approachZone: number;
+    connectionZone: number;
+    dwellTime: number;
+  };
+}
+
+export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectProps) {
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
   const [loading, setLoading] = useState(true);
@@ -119,12 +128,12 @@ export default function WorkingBumpConnect() {
   const [recentEdges, setRecentEdges] = useState<string[]>([]); // Track recent edges for undo
   const [greenZoneTimer, setGreenZoneTimer] = useState<Record<string, NodeJS.Timeout | null>>({});
   
-  // Sensitivity settings
-  const [sensitivity, setSensitivity] = useState({
+  // Use sensitivity from props or defaults
+  const currentSensitivity = sensitivity || {
     approachZone: 260,    // Orange zone radius
     connectionZone: 180,  // Green zone radius
     dwellTime: 300        // Milliseconds to hold in green zone
-  });
+  };
   
   // Load data
   useEffect(() => {

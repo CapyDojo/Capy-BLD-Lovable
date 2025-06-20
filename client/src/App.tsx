@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +20,21 @@ import Database from "@/pages/Database";
 import StressTest from "@/pages/StressTest";
 import Settings from "@/pages/Settings";
 import NotFound from "./pages/NotFound";
+
+// Wrapper component for BumpConnect with sensitivity controls
+const BumpConnectWrapper: React.FC = () => {
+  const [sensitivity, setSensitivity] = useState({
+    approachZone: 260,
+    connectionZone: 180,
+    dwellTime: 300
+  });
+
+  return (
+    <MainLayout sensitivity={sensitivity} setSensitivity={setSensitivity}>
+      <WorkingBumpConnect sensitivity={sensitivity} />
+    </MainLayout>
+  );
+};
 
 
 
@@ -83,9 +98,7 @@ const App = () => {
             </MainLayout>
           </Route>
           <Route path="/working-bump">
-            <MainLayout>
-              <WorkingBumpConnect />
-            </MainLayout>
+            <BumpConnectWrapper />
           </Route>
           <Route path="/cap-table">
             <MainLayout>
