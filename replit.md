@@ -125,12 +125,20 @@ The application uses a unified repository pattern with enterprise-grade data man
 
 ## Changelog
 
+### June 20, 2025 - Customizable Sensitivity Controls
+- **Dynamic Sensitivity System**: Implemented fully customizable connection sensitivity with real-time adjustment
+- **Left Panel Integration**: Moved sensitivity controls to dedicated 320px left panel for better organization
+- **Fine-Tuned Control**: Changed to 10px increments (from 20px) for precise sensitivity adjustment
+- **Optimized Defaults**: Updated "Normal" preset to 260px orange, 180px green, 300ms dwell time for improved UX
+- **Visual Enhancement**: Added colored value badges, range indicators, and real-time connection statistics
+- **Preset System**: Three-tier sensitivity presets (Easy/Normal/Precise) for quick configuration
+
 ### June 19, 2025 - Bump Connect System Breakthrough
-- **Revolutionary Magnetic Connection System**: Successfully implemented working Bump & Connect with simplified 2-zone proximity detection (160px/80px)
+- **Revolutionary Magnetic Connection System**: Successfully implemented working Bump & Connect with simplified 2-zone proximity detection
 - **Directional Edge Routing**: Fixed critical edge routing issue - connections now properly route based on actual node positions and drag direction
 - **Handle Architecture**: Implemented dual handle system (source/target) for vertical connections only with proper ID mapping
 - **Cache Management**: Added edge cache clearing to prevent ReactFlow handle ID conflicts
-- **Visual Feedback**: Streamlined visual feedback system (orange→green) with magnetic attraction zones - removed redundant purple zone
+- **Visual Feedback**: Streamlined visual feedback system (orange→green) with magnetic attraction zones
 - **Automatic Connection Creation**: Perfected automatic edge creation with proper ownership percentage assignment (25% default)
 - **ReactFlow Integration**: Leveraged ReactFlow's native coordinate system instead of custom absolute positioning overlay
 - **Entity Connection Logic**: Restricted connections to vertical-only (top/bottom handles) for logical organizational hierarchies

@@ -17,6 +17,12 @@ import { cn } from '@/lib/utils';
 interface SidebarProps {
   collapsed: boolean;
   onToggle: () => void;
+  sensitivity?: {
+    approachZone: number;
+    connectionZone: number;
+    dwellTime: number;
+  };
+  setSensitivity?: (value: any) => void;
 }
 
 const navigation = [
@@ -32,8 +38,9 @@ const navigation = [
   { name: 'Settings', href: '/settings', icon: Settings },
 ];
 
-export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, sensitivity, setSensitivity }) => {
   const [location] = useLocation();
+  const isBumpConnectPage = location === '/working-bump';
 
   return (
     <div className={cn(
@@ -77,6 +84,88 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
           );
         })}
       </nav>
+
+      {/* Sensitivity Controls - Only show on Bump Connect page and when not collapsed */}
+      {isBumpConnectPage && !collapsed && sensitivity && setSensitivity && (
+        <div className="p-4 border-t border-gray-200">
+          <div className="bg-gray-50 p-3 rounded-lg">
+            <div className="text-sm font-semibold mb-3 text-gray-800">Connection Sensitivity</div>
+            
+            {/* Approach Zone Slider */}
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-600">Approach Zone</span>
+                <span className="text-xs font-mono text-orange-600 bg-orange-50 px-2 py-1 rounded">{sensitivity.approachZone}px</span>
+              </div>
+              <input
+                type="range"
+                min="100"
+                max="300"
+                step="10"
+                value={sensitivity.approachZone}
+                onChange={(e) => setSensitivity((prev: any) => ({ ...prev, approachZone: parseInt(e.target.value) }))}
+                className="w-full h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            {/* Connection Zone Slider */}
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-600">Connection Zone</span>
+                <span className="text-xs font-mono text-green-600 bg-green-50 px-2 py-1 rounded">{sensitivity.connectionZone}px</span>
+              </div>
+              <input
+                type="range"
+                min="60"
+                max="200"
+                step="10"
+                value={sensitivity.connectionZone}
+                onChange={(e) => setSensitivity((prev: any) => ({ ...prev, connectionZone: parseInt(e.target.value) }))}
+                className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            {/* Dwell Time Slider */}
+            <div className="mb-3">
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-xs text-gray-600">Dwell Time</span>
+                <span className="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">{sensitivity.dwellTime}ms</span>
+              </div>
+              <input
+                type="range"
+                min="100"
+                max="1000"
+                step="100"
+                value={sensitivity.dwellTime}
+                onChange={(e) => setSensitivity((prev: any) => ({ ...prev, dwellTime: parseInt(e.target.value) }))}
+                className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+              />
+            </div>
+
+            {/* Preset Buttons */}
+            <div className="flex gap-1 mt-3">
+              <button
+                onClick={() => setSensitivity({ approachZone: 280, connectionZone: 160, dwellTime: 100 })}
+                className="flex-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+              >
+                Easy
+              </button>
+              <button
+                onClick={() => setSensitivity({ approachZone: 260, connectionZone: 180, dwellTime: 300 })}
+                className="flex-1 px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
+              >
+                Normal
+              </button>
+              <button
+                onClick={() => setSensitivity({ approachZone: 140, connectionZone: 80, dwellTime: 600 })}
+                className="flex-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+              >
+                Precise
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
