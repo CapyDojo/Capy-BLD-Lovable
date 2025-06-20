@@ -14,7 +14,8 @@ import {
   ReactFlowProvider
 } from '@xyflow/react';
 import { unifiedEntityService } from '../../services/UnifiedEntityService';
-import { EntityTypes } from '../../types/entity';
+import { Entity, EntityTypes } from '../../types/entity';
+import { EntityEditPanel } from './EntityEditPanel';
 
 // Professional Legal Entity Information Panel
 const EntityInfoPanel = ({ data, position, visible }: any) => {
@@ -344,6 +345,9 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
   const [hoveredNode, setHoveredNode] = useState<any>(null);
   const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
   const [showHoverCard, setShowHoverCard] = useState(false);
+  const [selectedEntity, setSelectedEntity] = useState<Entity | null>(null);
+  const [editPanelOpen, setEditPanelOpen] = useState(false);
+  const [entities, setEntities] = useState<Entity[]>([]);
   
   // Use sensitivity from props or defaults
   const currentSensitivity = sensitivity || {
@@ -357,8 +361,9 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     const loadData = async () => {
       try {
         console.log('Loading Working Bump Connect data...');
-        const entities = await unifiedEntityService.getAllEntities();
-        console.log(`Loaded ${entities.length} entities`);
+        const loadedEntities = await unifiedEntityService.getAllEntities();
+        console.log(`Loaded ${loadedEntities.length} entities`);
+        setEntities(loadedEntities);
         
         // Professional legal org chart layout - hierarchical positioning
         const getEntityPosition = (entity: any) => {
@@ -391,7 +396,7 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
           return { x: 300, y: 300 };
         };
 
-        const initialNodes = entities.map((entity) => ({
+        const initialNodes = loadedEntities.map((entity) => ({
           id: entity.id,
           type: 'entity',
           position: getEntityPosition(entity),
@@ -409,7 +414,7 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
         setNodes(initialNodes as any);
         
         // Create edges based on actual entity names and IDs
-        const entityMap = entities.reduce((map, entity) => {
+        const entityMap = loadedEntities.reduce((map, entity) => {
           map[entity.name] = entity.id;
           return map;
         }, {} as Record<string, string>);
