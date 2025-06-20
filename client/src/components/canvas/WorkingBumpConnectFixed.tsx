@@ -820,12 +820,44 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     console.log(`🔄 Canvas updated for entity: ${updatedEntity.name}`);
   }, [setNodes]);
 
+  // Canvas state persistence functionality
+  const saveCanvasState = useCallback(async (nodesToSave: Node[], edgesToSave: Edge[]) => {
+    try {
+      const canvasState = {
+        nodes: nodesToSave.map(node => ({
+          id: node.id,
+          position: node.position,
+          data: node.data
+        })),
+        edges: edgesToSave.map(edge => ({
+          id: edge.id,
+          source: edge.source,
+          target: edge.target,
+          sourceHandle: edge.sourceHandle,
+          targetHandle: edge.targetHandle,
+          label: edge.label
+        })),
+        timestamp: Date.now()
+      };
+      localStorage.setItem('canvasState', JSON.stringify(canvasState));
+      console.log('Canvas state saved successfully');
+    } catch (error) {
+      console.error('Error saving canvas state:', error);
+    }
+  }, []);
 
+  const loadCanvasState = useCallback(() => {
+    try {
+      const savedState = localStorage.getItem('canvasState');
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        if (Date.now() - parsedState.timestamp < 24 * 60 * 60 * 1000) {
+          console.log('Canvas state loaded from localStorage');
           return parsedState;
         }
       }
     } catch (error) {
-      console.error('Failed to load canvas state:', error);
+      console.error('Error loading canvas state:', error);
     }
     return null;
   }, []);
