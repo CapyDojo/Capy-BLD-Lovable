@@ -190,9 +190,32 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     if (!draggingNode) return;
     
     setNodes((currentNodes: any) => {
+      // Find the closest node to determine seeker's proximity level
+      let seekerProximityLevel = null;
+      let minDistance = Infinity;
+      
+      currentNodes.forEach((n: any) => {
+        if (n.id !== node.id) {
+          const distance = calculateDistance(node, n);
+          if (distance < minDistance) {
+            minDistance = distance;
+            seekerProximityLevel = getProximityLevel(distance);
+          }
+        }
+      });
+      
       return currentNodes.map((n: any) => {
         if (n.id === node.id) {
-          return { ...n, position: node.position };
+          // Update the dragging node with its position and proximity level
+          return { 
+            ...n, 
+            position: node.position,
+            data: {
+              ...n.data,
+              proximityLevel: seekerProximityLevel,
+              isSeeker: true
+            }
+          };
         }
         
         if (n.id !== node.id) {
