@@ -24,6 +24,13 @@ export const EntityCanvas: React.FC = () => {
     deleteSelectedNode,
   } = useEntityCanvas();
 
+  // Ensure panel opens when a node is selected
+  React.useEffect(() => {
+    if (selectedNode) {
+      setSidebarOpen(true);
+    }
+  }, [selectedNode, setSidebarOpen]);
+
   return (
     <div className="h-full flex">
       <div className="w-64 bg-white border-r border-gray-200">
@@ -45,8 +52,10 @@ export const EntityCanvas: React.FC = () => {
       {selectedNode && (
         <EntityDetailsPanel
           selectedNode={selectedNode}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
+          isOpen={sidebarOpen && !!selectedNode}
+          onClose={() => {
+            setSidebarOpen(false);
+          }}
           onDelete={deleteSelectedNode}
           onUpdateNode={updateSelectedNode}
         />
