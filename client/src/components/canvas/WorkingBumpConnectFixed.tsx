@@ -181,6 +181,7 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
       `}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onPointerLeave={handleMouseLeave}
     >
       {/* Connection Handles - Only vertical connections for entities */}
       <Handle
@@ -544,8 +545,8 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
   const handleNodeHover = useCallback((data: any, position: { x: number; y: number } | null, visible: boolean) => {
     setHoveredNode(data);
     setHoverPosition(position);
-    setShowHoverCard(visible);
-  }, []);
+    setShowHoverCard(visible && !draggingNode); // Don't show hover cards when dragging
+  }, [draggingNode]);
 
   // Node types configuration with hover support
   const nodeTypes = {
@@ -577,6 +578,33 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [recentEdges, setEdges]);
+
+  // Global mouse move handler to clear hover cards when mouse moves away from canvas
+  useEffect(() => {
+    const handleGlobalMouseMove = (event: MouseEvent) => {
+      // If not dragging and hover card is visible, check if mouse is still over a node
+      if (!draggingNode && showHoverCard) {
+        const canvasElement = document.querySelector('.react-flow');
+        if (canvasElement) {
+          const rect = canvasElement.getBoundingClientRect();
+          const isOverCanvas = event.clientX >= rect.left && 
+                              event.clientX <= rect.right && 
+                              event.clientY >= rect.top && 
+                              event.clientY <= rect.bottom;
+          
+          // If mouse is not over canvas, clear hover card
+          if (!isOverCanvas) {
+            setShowHoverCard(false);
+            setHoveredNode(null);
+            setHoverPosition(null);
+          }
+        }
+      }
+    };
+
+    document.addEventListener('mousemove', handleGlobalMouseMove);
+    return () => document.removeEventListener('mousemove', handleGlobalMouseMove);
+  }, [draggingNode, showHoverCard]);
 
   if (loading) {
     return (
