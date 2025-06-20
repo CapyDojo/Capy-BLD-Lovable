@@ -125,6 +125,16 @@ The application uses a unified repository pattern with enterprise-grade data man
 
 ## Changelog
 
+### June 20, 2025 - In-Canvas Entity Editing System Complete
+- **In-Canvas Edit Panel**: Successfully implemented right-side panel that appears when clicking nodes on structure chart
+- **Real-Time Database Sync**: All entity edits immediately update the database via UnifiedEntityService with audit trail logging
+- **Dynamic Canvas Updates**: Node data refreshes instantly after edits, reflecting changes in entity names, types, and metadata
+- **Professional Edit Interface**: Same comprehensive form fields as Entity Manager (jurisdiction, registration, tax ID, etc.)
+- **Smart Form Adaptation**: Form fields dynamically adapt based on entity type (Corporation vs Individual vs Partnership)
+- **Seamless UX Integration**: Edit panel opens on node click, hover cards hide during editing, ESC key support maintained
+- **Entity State Management**: Local entity state synchronizes with canvas nodes for immediate visual feedback
+- **Audit Compliance**: All in-canvas edits logged with 'canvas-edit' identifier for compliance tracking
+
 ### June 20, 2025 - Professional Legal Organizational Chart Complete
 - **Legal-Standard Layout**: Successfully implemented hierarchical organizational chart following legal professional standards
 - **Professional Visual Design**: Clean white background with subtle dot grid pattern, formal chart headers, and color-coded legend system

@@ -733,7 +733,46 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     }
   }, [draggingNode]);
 
-  // Node types configuration with hover support - memoized to prevent React Flow warnings
+  // Node click handler for opening edit panel
+  const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+    // Find the entity for this node
+    const entity = entities.find(e => e.id === node.id);
+    if (entity) {
+      setSelectedEntity(entity);
+      setEditPanelOpen(true);
+      // Hide hover card when edit panel opens
+      setShowHoverCard(false);
+      console.log(`📝 Opening edit panel for entity: ${entity.name}`);
+    }
+  }, [entities]);
+
+  // Handle entity updates from edit panel
+  const handleEntityUpdated = useCallback(async (updatedEntity: Entity) => {
+    // Update entities state
+    setEntities(prev => prev.map(e => e.id === updatedEntity.id ? updatedEntity : e));
+    
+    // Update node data in canvas
+    setNodes((currentNodes: any) => 
+      currentNodes.map((node: any) => {
+        if (node.id === updatedEntity.id) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              name: updatedEntity.name,
+              type: updatedEntity.type,
+              jurisdiction: updatedEntity.jurisdiction
+            }
+          };
+        }
+        return node;
+      })
+    );
+
+    console.log(`🔄 Canvas updated for entity: ${updatedEntity.name}`);
+  }, [setNodes]);
+
+  // Node types configuration with hover support and click handling - memoized to prevent React Flow warnings
   const nodeTypes = useMemo(() => ({
     entity: (props: any) => <EntityNode {...props} onNodeHover={handleNodeHover} />,
   }), [handleNodeHover]);
@@ -834,6 +873,7 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
         onNodeDragStart={onNodeDragStart}
         onNodeDrag={onNodeDrag}
         onNodeDragStop={onNodeDragStop}
+        onNodeClick={handleNodeClick}
         onConnect={onConnect}
         fitView
         className="bg-white"
@@ -908,6 +948,17 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
           visible={showHoverCard}
         />
       )}
+
+      {/* In-Canvas Entity Edit Panel */}
+      <EntityEditPanel
+        entity={selectedEntity}
+        isOpen={editPanelOpen}
+        onClose={() => {
+          setEditPanelOpen(false);
+          setSelectedEntity(null);
+        }}
+        onEntityUpdated={handleEntityUpdated}
+      />
     </div>
   );
 }
