@@ -281,6 +281,24 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     return () => clearTimeout(timer);
   }, [recentEdges]);
 
+  // ESC key handler for undoing recent connections
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && recentEdges.length > 0) {
+        event.preventDefault();
+        const lastEdgeId = recentEdges[recentEdges.length - 1];
+        
+        setEdges((currentEdges: any) => currentEdges.filter((edge: any) => edge.id !== lastEdgeId));
+        setRecentEdges(currentRecent => currentRecent.slice(0, -1));
+        
+        console.log(`🔙 Undid connection: ${lastEdgeId}`);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [recentEdges, setEdges]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-full">
@@ -337,6 +355,13 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
           <div>Dwell Time: {currentSensitivity.dwellTime}ms</div>
         </div>
       </div>
+
+      {/* Undo Hint */}
+      {recentEdges.length > 0 && (
+        <div className="absolute bottom-4 right-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm z-50">
+          Press ESC to undo ({recentEdges.length} available)
+        </div>
+      )}
     </div>
   );
 }
