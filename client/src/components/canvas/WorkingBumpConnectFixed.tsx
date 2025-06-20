@@ -22,12 +22,13 @@ const EntityNode = ({ data, selected }: any) => {
   
   // Dynamic styling based on proximity and seeker status
   const getNodeStyle = () => {
+    // Proximity colors always take precedence over seeker state
     if (proximityLevel === 'CONNECTION') {
       return 'border-green-500 bg-green-50 shadow-green-500 shadow-lg animate-pulse';
     } else if (proximityLevel === 'INTEREST') {
       return 'border-orange-500 bg-orange-50 shadow-orange-300 shadow-md animate-pulse';
     } else if (isSeeker) {
-      // Seeker node gets a blue glow to show it's actively seeking connections
+      // Seeker node gets a blue glow when not in proximity to other nodes
       return 'border-blue-500 bg-blue-50 shadow-blue-500 shadow-lg animate-pulse';
     } else if (isMagnetic) {
       return 'border-blue-500 bg-blue-50 shadow-blue-300 shadow-lg';
