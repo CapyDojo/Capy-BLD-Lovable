@@ -83,9 +83,7 @@ const App = () => {
             </MainLayout>
           </Route>
           <Route path="/structure">
-            <MainLayout>
-              <BumpConnect />
-            </MainLayout>
+            <BumpConnectWrapper />
           </Route>
           <Route path="/pure-bump">
             <MainLayout>
