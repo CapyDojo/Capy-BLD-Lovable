@@ -127,7 +127,9 @@ The application uses a unified repository pattern with enterprise-grade data man
 
 ### June 20, 2025 - Complete Visual Feedback System Achievement
 - **Bidirectional Visual Feedback**: Successfully implemented complete seeker node color transitions (blue → orange → green) based on proximity to targets
-- **Seeker Node Proximity Detection**: Fixed proximity calculation for dragging nodes to show visual feedback based on closest target distance
+- **Handle-Specific Glowing**: Individual handles now glow orange (interest) and green (connection) when detecting compatible connection points
+- **Clean Dragging UX**: Hover cards automatically disappear during drag operations, replaced with in-node connection guidance
+- **In-Node Status Indicators**: Connection tips now appear directly within nodes ("Seeking connections", "Move closer", "Ready to connect")
 - **ESC Key Restoration**: Restored ESC key functionality for undoing recent connections with proper visual indicators
 - **Optimized Sensitivity Settings**: Finalized user-preferred Normal preset (280px orange, 160px green, 300ms dwell time)
 - **Proportional Preset Scaling**: Easy (320px/200px/200ms), Normal (280px/160px/300ms), Precise (200px/100px/500ms)

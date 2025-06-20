@@ -157,7 +157,8 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
 
   const handleMouseEnter = (e: React.MouseEvent) => {
     setIsHovered(true);
-    if (onNodeHover) {
+    // Only show hover cards when not dragging
+    if (onNodeHover && !isSeeker) {
       const rect = e.currentTarget.getBoundingClientRect();
       onNodeHover(data, { x: rect.left, y: rect.top }, true);
     }
@@ -212,10 +213,22 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
         <div className="text-xs text-gray-400 text-center">{data.jurisdiction}</div>
       )}
       
-      {/* Proximity Indicator */}
-      {data.proximityLevel && (
-        <div className="absolute -top-2 -right-2 px-2 py-1 text-xs font-bold rounded-full bg-white border shadow-sm">
-          {data.proximityLevel}
+      {/* In-Node Connection Guidance */}
+      {isSeeker && (
+        <div className="mt-2 text-center">
+          <div className="text-xs font-medium text-blue-700">🔍 Seeking connections...</div>
+        </div>
+      )}
+      
+      {proximityLevel === 'CONNECTION' && !isSeeker && (
+        <div className="mt-2 text-center">
+          <div className="text-xs font-medium text-green-700 animate-pulse">💚 Ready to connect</div>
+        </div>
+      )}
+      
+      {proximityLevel === 'INTEREST' && !isSeeker && (
+        <div className="mt-2 text-center">
+          <div className="text-xs font-medium text-orange-700">🟡 Move closer</div>
         </div>
       )}
     </div>
@@ -357,6 +370,11 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
   const onNodeDragStart = useCallback((event: any, node: Node) => {
     console.log(`🎯 Seeker activated: ${node.data.name}`);
     setDraggingNode(node);
+    
+    // Clear hover cards when dragging starts
+    setShowHoverCard(false);
+    setHoveredNode(null);
+    setHoverPosition(null);
     
     // Activate magnetic state for dragging node and mark it as seeker
     setNodes((currentNodes: any) => 
