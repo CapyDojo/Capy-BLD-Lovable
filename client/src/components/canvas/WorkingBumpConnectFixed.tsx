@@ -360,13 +360,41 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
         const entities = await unifiedEntityService.getAllEntities();
         console.log(`Loaded ${entities.length} entities`);
         
-        const initialNodes = entities.map((entity, index) => ({
+        // Professional legal org chart layout - hierarchical positioning
+        const getEntityPosition = (entity: any) => {
+          const name = entity.name;
+          
+          // Target company at center-bottom (focal point)
+          if (name === 'TechFlow Inc') {
+            return { x: 600, y: 400 };
+          }
+          
+          // Subsidiary below parent company
+          if (name === 'TechFlow Europe Ltd') {
+            return { x: 600, y: 580 };
+          }
+          
+          // Founders at top level - key management
+          if (name === 'Alex Chen') return { x: 400, y: 100 }; // CEO left
+          if (name === 'Jordan Patel') return { x: 600, y: 100 }; // CTO center
+          if (name === 'Sam Rivera') return { x: 800, y: 100 }; // VP Eng right
+          
+          // Institutional investors - left side hierarchy
+          if (name === 'Sequoia Capital') return { x: 200, y: 250 }; // Lead investor
+          if (name === 'Andreessen Horowitz') return { x: 400, y: 250 }; // Co-investor
+          if (name === 'First Round Capital') return { x: 600, y: 250 }; // Early investor
+          
+          // Employee pool - right side
+          if (name === 'Employee Option Pool') return { x: 900, y: 250 };
+          
+          // Default fallback
+          return { x: 300, y: 300 };
+        };
+
+        const initialNodes = entities.map((entity) => ({
           id: entity.id,
           type: 'entity',
-          position: { 
-            x: 150 + (index % 3) * 250, 
-            y: 150 + Math.floor(index / 3) * 200 
-          },
+          position: getEntityPosition(entity),
           data: {
             name: entity.name,
             type: entity.type,
@@ -386,7 +414,7 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
           return map;
         }, {} as Record<string, string>);
         
-        const createEdge = (ownerName: string, ownedName: string, label: string, color: string) => {
+        const createEdge = (ownerName: string, ownedName: string, label: string, color: string, isSubsidiary = false) => {
           const ownerId = entityMap[ownerName];
           const ownedId = entityMap[ownedName];
           
@@ -401,22 +429,40 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
             target: ownedId,
             sourceHandle: 'bottom',
             targetHandle: 'top-target',
-            type: 'smoothstep',
+            type: isSubsidiary ? 'straight' : 'smoothstep',
             animated: false,
             label,
-            style: { strokeWidth: 2, stroke: color },
-            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
+            style: { 
+              strokeWidth: isSubsidiary ? 3 : 2, 
+              stroke: color,
+              strokeDasharray: isSubsidiary ? '0' : '0'
+            },
+            labelStyle: { 
+              fontSize: 11, 
+              fontWeight: '600', 
+              fill: '#1f2937',
+              backgroundColor: 'white',
+              padding: '2px 6px',
+              borderRadius: '4px',
+              border: '1px solid #e5e7eb'
+            }
           };
         };
         
+        // Professional color coding for legal org charts
         const ownershipEdges = [
-          createEdge('Alex Chen', 'TechFlow Inc', '5.25M shares (35%)', '#6366f1'),
-          createEdge('Jordan Patel', 'TechFlow Inc', '4.5M shares (30%)', '#6366f1'),
-          createEdge('Sam Rivera', 'TechFlow Inc', '300K shares (2%)', '#6366f1'),
-          createEdge('Sequoia Capital', 'TechFlow Inc', '3M shares (15%)', '#059669'),
-          createEdge('Andreessen Horowitz', 'TechFlow Inc', '1M shares (8%)', '#059669'),
-          createEdge('First Round Capital', 'TechFlow Inc', '2M shares (8%)', '#dc2626'),
-          createEdge('TechFlow Inc', 'TechFlow Europe Ltd', '1M shares (100%)', '#6366f1')
+          // Founders - Blue (management/founders)
+          createEdge('Alex Chen', 'TechFlow Inc', '35%', '#2563eb'),
+          createEdge('Jordan Patel', 'TechFlow Inc', '30%', '#2563eb'),
+          createEdge('Sam Rivera', 'TechFlow Inc', '2%', '#2563eb'),
+          
+          // Institutional Investors - Green (institutional capital)
+          createEdge('Sequoia Capital', 'TechFlow Inc', '15%', '#059669'),
+          createEdge('Andreessen Horowitz', 'TechFlow Inc', '8%', '#059669'),
+          createEdge('First Round Capital', 'TechFlow Inc', '8%', '#dc2626'),
+          
+          // Subsidiary - Dark blue (corporate structure)
+          createEdge('TechFlow Inc', 'TechFlow Europe Ltd', '100%', '#1e40af', true)
         ].filter(Boolean);
         
         setEdges(ownershipEdges);
@@ -750,6 +796,30 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
   
   return (
     <div className="w-full h-full relative">
+      {/* Professional Chart Header */}
+      <div className="absolute top-4 left-4 z-50 bg-white p-4 rounded-lg shadow-lg border">
+        <h1 className="text-lg font-bold text-gray-900 mb-1">TechFlow Inc. Organizational Structure</h1>
+        <p className="text-sm text-gray-600 mb-2">Post-Series A Capitalization Table</p>
+        <div className="flex items-center space-x-4 text-xs">
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-0.5 bg-blue-600"></div>
+            <span>Founders/Management</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-0.5 bg-green-600"></div>
+            <span>Institutional Investors</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-0.5 bg-red-600"></div>
+            <span>Early Stage</span>
+          </div>
+          <div className="flex items-center space-x-1">
+            <div className="w-3 h-0.5 bg-blue-800"></div>
+            <span>Subsidiaries</span>
+          </div>
+        </div>
+      </div>
+
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -761,10 +831,31 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
         onNodeDragStop={onNodeDragStop}
         onConnect={onConnect}
         fitView
-        className="bg-gray-50"
+        className="bg-white"
+        minZoom={0.4}
+        maxZoom={1.5}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.85 }}
+        proOptions={{ hideAttribution: true }}
       >
-        <Controls />
-        <Background gap={20} size={1} color="#e5e7eb" />
+        <Controls 
+          position="bottom-right"
+          showZoom={true}
+          showFitView={true}
+          showInteractive={false}
+          style={{
+            background: 'white',
+            border: '1px solid #e5e7eb',
+            borderRadius: '8px',
+            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+          }}
+        />
+        <Background 
+          variant="dots" 
+          gap={25} 
+          size={1.2} 
+          color="#f3f4f6"
+          style={{ backgroundColor: '#fafafa' }}
+        />
       </ReactFlow>
       
       {/* Status Display */}
