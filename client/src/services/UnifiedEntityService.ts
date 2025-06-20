@@ -61,6 +61,11 @@ export class UnifiedEntityService {
     return repository.getAllEntities();
   }
 
+  async getAllOwnerships(): Promise<UnifiedOwnership[]> {
+    const repository = await getUnifiedRepository('ENTERPRISE');
+    return repository.queryOwnerships({});
+  }
+
   // Ownership operations using unified repository
   async createOwnership(
     ownerEntityId: string,
