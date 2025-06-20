@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { 
   ReactFlow, 
   Controls, 
@@ -543,9 +543,15 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
 
   // Hover callback handler
   const handleNodeHover = useCallback((data: any, position: { x: number; y: number } | null, visible: boolean) => {
-    setHoveredNode(data);
-    setHoverPosition(position);
-    setShowHoverCard(visible && !draggingNode); // Don't show hover cards when dragging
+    if (visible && !draggingNode) {
+      setHoveredNode(data);
+      setHoverPosition(position);
+      setShowHoverCard(true);
+    } else {
+      setShowHoverCard(false);
+      setHoveredNode(null);
+      setHoverPosition(null);
+    }
   }, [draggingNode]);
 
   // Node types configuration with hover support
