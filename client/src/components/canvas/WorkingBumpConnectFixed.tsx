@@ -396,22 +396,134 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
           return { x: 300, y: 300 };
         };
 
-        const initialNodes = loadedEntities.map((entity) => ({
-          id: entity.id,
-          type: 'entity',
-          position: getEntityPosition(entity),
-          data: {
-            name: entity.name,
-            type: entity.type,
-            jurisdiction: entity.jurisdiction,
-            isMagnetic: false,
-            proximityLevel: null,
-            isSeeker: false,
-            handleStates: {}
-          }
-        }));
+        // Try to load saved canvas state first
+        const savedState = loadCanvasState();
+        let initialNodes;
+        let initialEdges;
+
+        if (savedState && savedState.nodes.length > 0) {
+          // Use saved positions and merge with current entity data
+          console.log('📁 Restoring canvas from saved state');
+          initialNodes = loadedEntities.map((entity) => {
+            const savedNode = savedState.nodes.find((n: any) => n.id === entity.id);
+            return {
+              id: entity.id,
+              type: 'entity',
+              position: savedNode ? savedNode.position : getEntityPosition(entity),
+              data: {
+                name: entity.name,
+                type: entity.type,
+                jurisdiction: entity.jurisdiction,
+                isMagnetic: false,
+                proximityLevel: null,
+                isSeeker: false,
+                handleStates: {}
+              }
+            };
+          });
+          
+          // Restore saved edges if they reference existing entities
+          const validEntityIds = new Set(loadedEntities.map(e => e.id));
+          initialEdges = savedState.edges.filter((edge: any) => 
+            validEntityIds.has(edge.source) && validEntityIds.has(edge.target)
+          );
+        } else {
+          // Use default layout
+          console.log('🏗️ Using default canvas layout');
+          initialNodes = loadedEntities.map((entity) => ({
+            id: entity.id,
+            type: 'entity',
+            position: getEntityPosition(entity),
+            data: {
+              name: entity.name,
+              type: entity.type,
+              jurisdiction: entity.jurisdiction,
+              isMagnetic: false,
+              proximityLevel: null,
+              isSeeker: false,
+              handleStates: {}
+            }
+          }));
+          
+          // Generate default edges
+          initialEdges = [];
+        }
         
         setNodes(initialNodes as any);
+        
+        if (savedState && initialEdges.length > 0) {
+          // Use saved edges
+          setEdges(initialEdges);
+          console.log(`📁 Restored ${initialEdges.length} saved edges`);
+        } else {
+          // Create default edges based on actual entity names and IDs
+          const entityMap = loadedEntities.reduce((map, entity) => {
+            map[entity.name] = entity.id;
+            return map;
+          }, {} as Record<string, string>);
+          
+          const createEdge = (ownerName: string, ownedName: string, label: string, color: string, isSubsidiary = false) => {
+            const ownerId = entityMap[ownerName];
+            const ownedId = entityMap[ownedName];
+            
+            if (!ownerId || !ownedId) {
+              console.warn(`Could not create edge: ${ownerName} -> ${ownedName} (missing entity)`);
+              return null;
+            }
+            
+            return {
+              id: `edge-${ownerId}-${ownedId}`,
+              source: ownerId,
+              target: ownedId,
+              sourceHandle: 'bottom',
+              targetHandle: 'top-target',
+              type: isSubsidiary ? 'straight' : 'smoothstep',
+              animated: false,
+              label,
+              style: { 
+                strokeWidth: isSubsidiary ? 3 : 2, 
+                stroke: color,
+                strokeDasharray: isSubsidiary ? '0' : '0'
+              },
+              labelStyle: { 
+                fontSize: 11, 
+                fontWeight: '600', 
+                fill: '#1f2937',
+                backgroundColor: 'white',
+                padding: '2px 6px',
+                borderRadius: '4px',
+                border: '1px solid #e5e7eb'
+              }
+            };
+          };
+          
+          // Professional color coding for legal org charts
+          const ownershipEdges = [
+            // Founders - Blue (management/founders)
+            createEdge('Alex Chen', 'TechFlow Inc', '35%', '#2563eb'),
+            createEdge('Jordan Patel', 'TechFlow Inc', '30%', '#2563eb'),
+            createEdge('Sam Rivera', 'TechFlow Inc', '2%', '#2563eb'),
+            
+            // Institutional Investors - Green (institutional capital)
+            createEdge('Sequoia Capital', 'TechFlow Inc', '15%', '#059669'),
+            createEdge('Andreessen Horowitz', 'TechFlow Inc', '8%', '#059669'),
+            createEdge('First Round Capital', 'TechFlow Inc', '8%', '#dc2626'),
+            
+            // Subsidiary - Dark blue (corporate structure)
+            createEdge('TechFlow Inc', 'TechFlow Europe Ltd', '100%', '#1e40af', true)
+          ].filter(Boolean);
+          
+          setEdges(ownershipEdges);
+          console.log(`Created ${ownershipEdges.length} ownership edges for TechFlow startup structure`);
+          console.log('Edge details:', ownershipEdges.map(e => ({ id: e.id, source: e.source, target: e.target })));
+        }
+        
+        setLoading(false);
+        console.log('Working Bump Connect initialized');
+    };
+    
+    loadData();
+  }, []);
         
         // Create edges based on actual entity names and IDs
         const entityMap = loadedEntities.reduce((map, entity) => {
@@ -771,6 +883,46 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
 
     console.log(`🔄 Canvas updated for entity: ${updatedEntity.name}`);
   }, [setNodes]);
+
+  // Save canvas state to localStorage
+  const saveCanvasState = useCallback((nodes: any[], edges: any[]) => {
+    const canvasState = {
+      nodes: nodes.map((node: any) => ({
+        id: node.id,
+        position: node.position,
+        data: node.data
+      })),
+      edges: edges.map((edge: any) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        sourceHandle: edge.sourceHandle,
+        targetHandle: edge.targetHandle,
+        label: edge.label
+      })),
+      timestamp: Date.now()
+    };
+    localStorage.setItem('canvas-state', JSON.stringify(canvasState));
+    console.log('💾 Canvas state saved to localStorage');
+  }, []);
+
+  // Load canvas state from localStorage
+  const loadCanvasState = useCallback(() => {
+    try {
+      const savedState = localStorage.getItem('canvas-state');
+      if (savedState) {
+        const parsedState = JSON.parse(savedState);
+        // Only load if it's recent (within 24 hours)
+        if (Date.now() - parsedState.timestamp < 24 * 60 * 60 * 1000) {
+          console.log('📁 Loading saved canvas state from localStorage');
+          return parsedState;
+        }
+      }
+    } catch (error) {
+      console.error('Failed to load canvas state:', error);
+    }
+    return null;
+  }, []);
 
   // Node types configuration with hover support and click handling - memoized to prevent React Flow warnings
   const nodeTypes = useMemo(() => ({
