@@ -129,7 +129,7 @@ The application uses a unified repository pattern with enterprise-grade data man
 - **Sidebar Integration**: Successfully moved sensitivity controls from separate left panel to bottom of existing sidebar navigation
 - **Dynamic Visibility**: Sensitivity controls appear automatically when on Bump Connect page, maintaining clean navigation
 - **Fine-Tuned Control**: Implemented 10px increments for precise sensitivity adjustment (approach/connection zones)
-- **Optimized Defaults**: "Normal" preset set to user-preferred 260px orange, 180px green, 300ms dwell time
+- **Optimized Defaults**: "Normal" preset set to user-preferred 280px orange, 160px green, 300ms dwell time
 - **Component Architecture**: Created BumpConnectWrapper with state management passing sensitivity to both MainLayout and WorkingBumpConnect
 - **Real-time Updates**: Sensitivity changes in sidebar immediately affect canvas magnetic behavior and connection zones
 - **Clean Interface**: Removed duplicate left panel from WorkingBumpConnect, centralizing all controls in main sidebar

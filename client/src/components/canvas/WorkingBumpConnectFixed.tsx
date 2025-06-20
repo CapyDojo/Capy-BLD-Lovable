@@ -103,8 +103,8 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
   
   // Use sensitivity from props or defaults
   const currentSensitivity = sensitivity || {
-    approachZone: 260,
-    connectionZone: 180,
+    approachZone: 280,
+    connectionZone: 160,
     dwellTime: 300
   };
   

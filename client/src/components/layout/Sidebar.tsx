@@ -151,7 +151,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, sensitivi
                 Easy
               </button>
               <button
-                onClick={() => setSensitivity({ approachZone: 260, connectionZone: 180, dwellTime: 300 })}
+                onClick={() => setSensitivity({ approachZone: 280, connectionZone: 160, dwellTime: 300 })}
                 className="flex-1 px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
               >
                 Normal
