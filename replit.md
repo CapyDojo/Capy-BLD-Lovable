@@ -125,6 +125,14 @@ The application uses a unified repository pattern with enterprise-grade data man
 
 ## Changelog
 
+### June 20, 2025 - Structure Chart Integration Complete
+- **Complete System Integration**: Successfully replaced Structure Chart with refined Bump Connect magnetic system
+- **Clean Architecture Swap**: Eliminated dual-system complexity by using single magnetic connection approach
+- **Sensitivity Control Integration**: Unified sensitivity controls now appear in main sidebar for Structure Chart page
+- **Professional Entity Panels**: Legal-focused hover cards with tax status, liability info, and jurisdiction details
+- **Enterprise Data Integration**: Full compatibility with existing enterprise data architecture and audit systems
+- **Seamless User Experience**: Main Structure Chart now provides magical magnetic connections with professional information display
+
 ### June 20, 2025 - Speech Bubble Hover System Complete
 - **Speech Bubble Redesign**: Transformed hover cards into speech bubbles emerging from top-right corner of nodes
 - **Dynamic Node Scaling**: Hover cards now scale proportionally with node size for visual consistency
