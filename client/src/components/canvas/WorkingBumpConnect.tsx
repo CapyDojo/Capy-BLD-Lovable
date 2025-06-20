@@ -426,124 +426,169 @@ export default function WorkingBumpConnect() {
   }
   
   return (
-    <div className="w-full h-screen bg-gray-50 relative">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        onNodeDragStart={onNodeDragStart}
-        onNodeDrag={onNodeDrag}
-        onNodeDragStop={onNodeDragStop}
-        onConnect={onConnect}
-        fitView
-        className="bg-gray-50"
-      >
-        <Controls />
-        <Background gap={20} size={1} color="#e5e7eb" />
-      </ReactFlow>
-      
-      {/* Status Display */}
-      {draggingNode && (
-        <div className="absolute top-4 left-4 bg-white p-4 rounded-lg shadow-lg z-50 border">
-          <div className="font-semibold text-gray-800 mb-1">
-            🎯 Seeker: {draggingNode.data.name}
-          </div>
-          <div className="text-sm text-gray-600 mb-1">
-            Active Zones: {nodes.filter(n => n.data.proximityLevel).length}
-          </div>
-          <div className="text-sm">
-            Connection Ready: <span className={nodes.some(n => n.data.proximityLevel === 'CONNECTION') ? 'text-green-600 font-bold' : 'text-gray-400'}>
-              {nodes.some(n => n.data.proximityLevel === 'CONNECTION') ? `YES (Hold ${sensitivity.dwellTime}ms)` : 'NO'}
-            </span>
-          </div>
-        </div>
-      )}
+    <div className="w-full h-screen bg-gray-50 flex">
+      {/* Left Panel */}
+      <div className="w-80 bg-white border-r border-gray-200 p-4 overflow-y-auto">
+        <div className="space-y-6">
+          {/* Connection Sensitivity Controls */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="text-sm font-semibold mb-4 text-gray-800">Connection Sensitivity</div>
+            
+            {/* Approach Zone Slider */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-600">Approach Zone</span>
+                <span className="text-xs font-mono text-orange-600 bg-orange-50 px-2 py-1 rounded">{sensitivity.approachZone}px</span>
+              </div>
+              <input
+                type="range"
+                min="100"
+                max="300"
+                step="10"
+                value={sensitivity.approachZone}
+                onChange={(e) => setSensitivity(prev => ({ ...prev, approachZone: parseInt(e.target.value) }))}
+                className="w-full h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>100px</span>
+                <span>300px</span>
+              </div>
+            </div>
 
-      {/* Undo Hint */}
-      {recentEdges.length > 0 && (
-        <div className="absolute top-4 right-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm z-50">
-          Press ESC to undo ({recentEdges.length} available)
+            {/* Connection Zone Slider */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-600">Connection Zone</span>
+                <span className="text-xs font-mono text-green-600 bg-green-50 px-2 py-1 rounded">{sensitivity.connectionZone}px</span>
+              </div>
+              <input
+                type="range"
+                min="60"
+                max="200"
+                step="10"
+                value={sensitivity.connectionZone}
+                onChange={(e) => setSensitivity(prev => ({ ...prev, connectionZone: parseInt(e.target.value) }))}
+                className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>60px</span>
+                <span>200px</span>
+              </div>
+            </div>
+
+            {/* Dwell Time Slider */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-xs text-gray-600">Dwell Time</span>
+                <span className="text-xs font-mono text-blue-600 bg-blue-50 px-2 py-1 rounded">{sensitivity.dwellTime}ms</span>
+              </div>
+              <input
+                type="range"
+                min="100"
+                max="1000"
+                step="100"
+                value={sensitivity.dwellTime}
+                onChange={(e) => setSensitivity(prev => ({ ...prev, dwellTime: parseInt(e.target.value) }))}
+                className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>100ms</span>
+                <span>1000ms</span>
+              </div>
+            </div>
+
+            {/* Preset Buttons */}
+            <div className="flex gap-2 mt-4">
+              <button
+                onClick={() => setSensitivity({ approachZone: 280, connectionZone: 160, dwellTime: 100 })}
+                className="flex-1 px-3 py-2 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+              >
+                Easy
+              </button>
+              <button
+                onClick={() => setSensitivity({ approachZone: 200, connectionZone: 120, dwellTime: 300 })}
+                className="flex-1 px-3 py-2 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
+              >
+                Normal
+              </button>
+              <button
+                onClick={() => setSensitivity({ approachZone: 140, connectionZone: 80, dwellTime: 600 })}
+                className="flex-1 px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+              >
+                Precise
+              </button>
+            </div>
+          </div>
+
+          {/* Connection Stats */}
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <div className="text-sm font-semibold mb-3 text-gray-800">Connection Activity</div>
+            <div className="space-y-2 text-xs">
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Entities:</span>
+                <span className="font-mono text-gray-800">{nodes.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Total Connections:</span>
+                <span className="font-mono text-gray-800">{edges.length}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Recent Connections:</span>
+                <span className="font-mono text-gray-800">{recentEdges.length}</span>
+              </div>
+              {draggingNode && (
+                <div className="flex justify-between text-green-600">
+                  <span>Active Zones:</span>
+                  <span className="font-mono">{nodes.filter(n => n.data.proximityLevel).length}</span>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
-      )}
-      
-      {/* Sensitivity Control Panel */}
-      <div className="absolute bottom-4 left-4 bg-white p-4 rounded-lg shadow-lg border max-w-xs">
-        <div className="text-sm font-semibold mb-3">Connection Sensitivity</div>
+      </div>
+
+      {/* Main Canvas Area */}
+      <div className="flex-1 relative">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          nodeTypes={nodeTypes}
+          onNodeDragStart={onNodeDragStart}
+          onNodeDrag={onNodeDrag}
+          onNodeDragStop={onNodeDragStop}
+          onConnect={onConnect}
+          fitView
+          className="bg-gray-50"
+        >
+          <Controls />
+          <Background gap={20} size={1} color="#e5e7eb" />
+        </ReactFlow>
         
-        {/* Approach Zone Slider */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-600">Approach Zone</span>
-            <span className="text-xs font-mono text-orange-600">{sensitivity.approachZone}px</span>
+        {/* Status Display */}
+        {draggingNode && (
+          <div className="absolute top-4 left-4 bg-white p-4 rounded-lg shadow-lg z-50 border">
+            <div className="font-semibold text-gray-800 mb-1">
+              🎯 Seeker: {draggingNode.data.name}
+            </div>
+            <div className="text-sm text-gray-600 mb-1">
+              Active Zones: {nodes.filter(n => n.data.proximityLevel).length}
+            </div>
+            <div className="text-sm">
+              Connection Ready: <span className={nodes.some(n => n.data.proximityLevel === 'CONNECTION') ? 'text-green-600 font-bold' : 'text-gray-400'}>
+                {nodes.some(n => n.data.proximityLevel === 'CONNECTION') ? `YES (Hold ${sensitivity.dwellTime}ms)` : 'NO'}
+              </span>
+            </div>
           </div>
-          <input
-            type="range"
-            min="100"
-            max="300"
-            step="20"
-            value={sensitivity.approachZone}
-            onChange={(e) => setSensitivity(prev => ({ ...prev, approachZone: parseInt(e.target.value) }))}
-            className="w-full h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
+        )}
 
-        {/* Connection Zone Slider */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-600">Connection Zone</span>
-            <span className="text-xs font-mono text-green-600">{sensitivity.connectionZone}px</span>
+        {/* Undo Hint */}
+        {recentEdges.length > 0 && (
+          <div className="absolute top-4 right-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm z-50">
+            Press ESC to undo ({recentEdges.length} available)
           </div>
-          <input
-            type="range"
-            min="60"
-            max="180"
-            step="20"
-            value={sensitivity.connectionZone}
-            onChange={(e) => setSensitivity(prev => ({ ...prev, connectionZone: parseInt(e.target.value) }))}
-            className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
-
-        {/* Dwell Time Slider */}
-        <div className="mb-3">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-gray-600">Dwell Time</span>
-            <span className="text-xs font-mono text-blue-600">{sensitivity.dwellTime}ms</span>
-          </div>
-          <input
-            type="range"
-            min="100"
-            max="1000"
-            step="100"
-            value={sensitivity.dwellTime}
-            onChange={(e) => setSensitivity(prev => ({ ...prev, dwellTime: parseInt(e.target.value) }))}
-            className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
-          />
-        </div>
-
-        {/* Preset Buttons */}
-        <div className="flex gap-1 mt-3">
-          <button
-            onClick={() => setSensitivity({ approachZone: 280, connectionZone: 160, dwellTime: 100 })}
-            className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
-          >
-            Easy
-          </button>
-          <button
-            onClick={() => setSensitivity({ approachZone: 200, connectionZone: 120, dwellTime: 300 })}
-            className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
-          >
-            Normal
-          </button>
-          <button
-            onClick={() => setSensitivity({ approachZone: 140, connectionZone: 80, dwellTime: 600 })}
-            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
-          >
-            Precise
-          </button>
-        </div>
+        )}
       </div>
     </div>
   );
