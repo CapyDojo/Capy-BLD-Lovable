@@ -121,8 +121,8 @@ export default function WorkingBumpConnect() {
   
   // Sensitivity settings
   const [sensitivity, setSensitivity] = useState({
-    approachZone: 200,    // Orange zone radius
-    connectionZone: 120,  // Green zone radius
+    approachZone: 260,    // Orange zone radius
+    connectionZone: 180,  // Green zone radius
     dwellTime: 300        // Milliseconds to hold in green zone
   });
   
@@ -506,7 +506,7 @@ export default function WorkingBumpConnect() {
                 Easy
               </button>
               <button
-                onClick={() => setSensitivity({ approachZone: 200, connectionZone: 120, dwellTime: 300 })}
+                onClick={() => setSensitivity({ approachZone: 260, connectionZone: 180, dwellTime: 300 })}
                 className="flex-1 px-3 py-2 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
               >
                 Normal
