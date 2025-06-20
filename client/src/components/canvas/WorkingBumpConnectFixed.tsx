@@ -380,99 +380,48 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
         
         setNodes(initialNodes as any);
         
-        // Create sample ownership edges for TechFlow startup structure
-        const sampleEdges = [
-          // Founders to TechFlow Inc
-          {
-            id: 'edge-alex-techflow',
-            source: 'entity-alex-chen',
-            target: 'entity-techflow-inc',
-            sourceHandle: 'bottom',
-            targetHandle: 'top-target',
-            type: 'smoothstep',
-            animated: false,
-            label: '5.25M shares (35%)',
-            style: { strokeWidth: 2, stroke: '#6366f1' },
-            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
-          },
-          {
-            id: 'edge-jordan-techflow',
-            source: 'entity-jordan-patel',
-            target: 'entity-techflow-inc',
-            sourceHandle: 'bottom',
-            targetHandle: 'top-target',
-            type: 'smoothstep',
-            animated: false,
-            label: '4.5M shares (30%)',
-            style: { strokeWidth: 2, stroke: '#6366f1' },
-            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
-          },
-          {
-            id: 'edge-sam-techflow',
-            source: 'entity-sam-rivera',
-            target: 'entity-techflow-inc',
-            sourceHandle: 'bottom',
-            targetHandle: 'top-target',
-            type: 'smoothstep',
-            animated: false,
-            label: '300K shares (2%)',
-            style: { strokeWidth: 2, stroke: '#6366f1' },
-            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
-          },
-          // Investors to TechFlow Inc
-          {
-            id: 'edge-sequoia-techflow',
-            source: 'entity-sequoia-capital',
-            target: 'entity-techflow-inc',
-            sourceHandle: 'bottom',
-            targetHandle: 'top-target',
-            type: 'smoothstep',
-            animated: false,
-            label: '3M shares (15%)',
-            style: { strokeWidth: 2, stroke: '#059669' },
-            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
-          },
-          {
-            id: 'edge-a16z-techflow',
-            source: 'entity-andreessen-horowitz',
-            target: 'entity-techflow-inc',
-            sourceHandle: 'bottom',
-            targetHandle: 'top-target',
-            type: 'smoothstep',
-            animated: false,
-            label: '1M shares (8%)',
-            style: { strokeWidth: 2, stroke: '#059669' },
-            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
-          },
-          {
-            id: 'edge-first-round-techflow',
-            source: 'entity-first-round',
-            target: 'entity-techflow-inc',
-            sourceHandle: 'bottom',
-            targetHandle: 'top-target',
-            type: 'smoothstep',
-            animated: false,
-            label: '2M shares (8%)',
-            style: { strokeWidth: 2, stroke: '#dc2626' },
-            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
-          },
-          // TechFlow Inc to subsidiary
-          {
-            id: 'edge-techflow-europe',
-            source: 'entity-techflow-inc',
-            target: 'entity-techflow-europe',
-            sourceHandle: 'bottom',
-            targetHandle: 'top-target',
-            type: 'smoothstep',
-            animated: false,
-            label: '1M shares (100%)',
-            style: { strokeWidth: 2, stroke: '#6366f1' },
-            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
-          }
-        ];
+        // Create edges based on actual entity names and IDs
+        const entityMap = entities.reduce((map, entity) => {
+          map[entity.name] = entity.id;
+          return map;
+        }, {} as Record<string, string>);
         
-        setEdges(sampleEdges);
-        console.log(`Loaded ${sampleEdges.length} ownership edges for TechFlow startup structure`);
+        const createEdge = (ownerName: string, ownedName: string, label: string, color: string) => {
+          const ownerId = entityMap[ownerName];
+          const ownedId = entityMap[ownedName];
+          
+          if (!ownerId || !ownedId) {
+            console.warn(`Could not create edge: ${ownerName} -> ${ownedName} (missing entity)`);
+            return null;
+          }
+          
+          return {
+            id: `edge-${ownerId}-${ownedId}`,
+            source: ownerId,
+            target: ownedId,
+            sourceHandle: 'bottom',
+            targetHandle: 'top-target',
+            type: 'smoothstep',
+            animated: false,
+            label,
+            style: { strokeWidth: 2, stroke: color },
+            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
+          };
+        };
+        
+        const ownershipEdges = [
+          createEdge('Alex Chen', 'TechFlow Inc', '5.25M shares (35%)', '#6366f1'),
+          createEdge('Jordan Patel', 'TechFlow Inc', '4.5M shares (30%)', '#6366f1'),
+          createEdge('Sam Rivera', 'TechFlow Inc', '300K shares (2%)', '#6366f1'),
+          createEdge('Sequoia Capital', 'TechFlow Inc', '3M shares (15%)', '#059669'),
+          createEdge('Andreessen Horowitz', 'TechFlow Inc', '1M shares (8%)', '#059669'),
+          createEdge('First Round Capital', 'TechFlow Inc', '2M shares (8%)', '#dc2626'),
+          createEdge('TechFlow Inc', 'TechFlow Europe Ltd', '1M shares (100%)', '#6366f1')
+        ].filter(Boolean);
+        
+        setEdges(ownershipEdges);
+        console.log(`Created ${ownershipEdges.length} ownership edges for TechFlow startup structure`);
+        console.log('Edge details:', ownershipEdges.map(e => ({ id: e.id, source: e.source, target: e.target })));
         
         setLoading(false);
         console.log('Working Bump Connect initialized');
