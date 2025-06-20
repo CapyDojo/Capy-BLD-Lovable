@@ -24,8 +24,8 @@ import NotFound from "./pages/NotFound";
 // Wrapper component for BumpConnect with sensitivity controls
 const BumpConnectWrapper: React.FC = () => {
   const [sensitivity, setSensitivity] = useState({
-    approachZone: 260,
-    connectionZone: 180,
+    approachZone: 280,
+    connectionZone: 160,
     dwellTime: 300
   });
 
