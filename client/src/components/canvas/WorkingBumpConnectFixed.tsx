@@ -530,6 +530,15 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
           Press ESC to undo ({recentEdges.length} available)
         </div>
       )}
+
+      {/* Hover Info Cards */}
+      {showHoverCard && hoveredNode && hoverPosition && (
+        <HoverInfoCard
+          data={hoveredNode}
+          position={hoverPosition}
+          visible={showHoverCard}
+        />
+      )}
     </div>
   );
 }
