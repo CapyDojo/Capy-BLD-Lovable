@@ -19,6 +19,7 @@ import DataStructure from "@/pages/DataStructure";
 import Database from "@/pages/Database";
 import StressTest from "@/pages/StressTest";
 import Settings from "@/pages/Settings";
+import EntityManager from "@/pages/EntityManager";
 import NotFound from "./pages/NotFound";
 
 // Wrapper component for BumpConnect with sensitivity controls
@@ -130,6 +131,11 @@ const App = () => {
           <Route path="/stress-test">
             <MainLayout>
               <StressTest />
+            </MainLayout>
+          </Route>
+          <Route path="/entities">
+            <MainLayout>
+              <EntityManager />
             </MainLayout>
           </Route>
           <Route path="/settings">

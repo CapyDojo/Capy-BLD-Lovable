@@ -8,6 +8,7 @@ export interface Entity {
   jurisdiction?: string; // Optional for individuals
   registrationNumber?: string;
   incorporationDate?: Date;
+  taxId?: string; // Tax ID / EIN
   address?: string;
   position?: { x: number; y: number }; // Canvas position
   metadata: Record<string, any>; // Future extensibility
