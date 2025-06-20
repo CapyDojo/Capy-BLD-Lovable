@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { 
   ReactFlow, 
   Controls, 
@@ -157,8 +157,8 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
 
   const handleMouseEnter = (e: React.MouseEvent) => {
     setIsHovered(true);
-    // Only show hover cards when not dragging
-    if (onNodeHover && !isSeeker) {
+    // Show hover cards unless actively dragging
+    if (onNodeHover) {
       const rect = e.currentTarget.getBoundingClientRect();
       onNodeHover(data, { x: rect.left, y: rect.top }, true);
     }
@@ -543,21 +543,27 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
 
   // Hover callback handler
   const handleNodeHover = useCallback((data: any, position: { x: number; y: number } | null, visible: boolean) => {
-    if (visible && !draggingNode) {
-      setHoveredNode(data);
-      setHoverPosition(position);
-      setShowHoverCard(true);
+    console.log('handleNodeHover called:', { visible, draggingNode: !!draggingNode, nodeName: data?.name });
+    
+    if (visible) {
+      // Only show hover card if not dragging anything
+      if (!draggingNode) {
+        setHoveredNode(data);
+        setHoverPosition(position);
+        setShowHoverCard(true);
+      }
     } else {
+      // Always hide hover card when visibility is false
       setShowHoverCard(false);
       setHoveredNode(null);
       setHoverPosition(null);
     }
   }, [draggingNode]);
 
-  // Node types configuration with hover support
-  const nodeTypes = {
+  // Node types configuration with hover support - memoized to prevent React Flow warnings
+  const nodeTypes = useMemo(() => ({
     entity: (props: any) => <EntityNode {...props} onNodeHover={handleNodeHover} />,
-  };
+  }), [handleNodeHover]);
 
   // Clear recent edges when they get old
   useEffect(() => {
