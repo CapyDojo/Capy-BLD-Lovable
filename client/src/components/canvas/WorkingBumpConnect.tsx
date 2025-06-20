@@ -120,8 +120,8 @@ interface WorkingBumpConnectProps {
 }
 
 export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectProps) {
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+  const [nodes, setNodes, onNodesChange] = useNodesState<any[]>([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [draggingNode, setDraggingNode] = useState<Node | null>(null);
   const [previousProximityStates, setPreviousProximityStates] = useState<Record<string, string | null>>({});
@@ -201,8 +201,8 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
   
   // Get proximity level based on distance and current sensitivity settings
   const getProximityLevel = (distance: number) => {
-    if (distance <= sensitivity.connectionZone) return 'CONNECTION';  // Green - ready to connect
-    if (distance <= sensitivity.approachZone) return 'INTEREST';      // Orange - approaching
+    if (distance <= currentSensitivity.connectionZone) return 'CONNECTION';  // Green - ready to connect
+    if (distance <= currentSensitivity.approachZone) return 'INTEREST';      // Orange - approaching
     return null;
   };
   
