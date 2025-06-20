@@ -144,14 +144,15 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
   // Get handle styling based on proximity state
   const getHandleStyle = (handleId: string) => {
     const handleState = handleStates?.[handleId];
+    let baseClasses = 'react-flow__handle';
+    
     if (handleState === 'CONNECTION') {
-      return 'w-4 h-4 bg-green-500 border-2 border-white shadow-lg shadow-green-500 animate-pulse';
+      return `${baseClasses} handle-connection`;
     } else if (handleState === 'INTEREST') {
-      return 'w-4 h-4 bg-orange-500 border-2 border-white shadow-md shadow-orange-300 animate-pulse';
-    } else if (isSeeker) {
-      return 'w-3 h-3 bg-blue-500 border-2 border-white';
+      return `${baseClasses} handle-interest`;
     }
-    return 'w-3 h-3 bg-gray-400 border-2 border-white';
+    
+    return baseClasses;
   };
 
   const handleMouseEnter = (e: React.MouseEvent) => {
@@ -460,9 +461,25 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
           
           setPreviousProximityStates(prev => ({ ...prev, [n.id]: proximityLevel }));
           
+          // Calculate target handle states for this specific target
+          const targetHandleStates: Record<string, string | null> = {};
+          const handleProximity = calculateHandleProximity(node, n, currentSensitivity);
+          
+          // Map seeker handle states to corresponding target handles
+          if (handleProximity['bottom']) {
+            targetHandleStates['top-target'] = handleProximity['bottom'];
+          }
+          if (handleProximity['top']) {
+            targetHandleStates['bottom-target'] = handleProximity['top'];
+          }
+
           return {
             ...n,
-            data: { ...n.data, proximityLevel }
+            data: { 
+              ...n.data, 
+              proximityLevel,
+              handleStates: targetHandleStates
+            }
           };
         }
         
@@ -490,7 +507,8 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
           ...n.data, 
           isMagnetic: false,
           proximityLevel: null,
-          isSeeker: false
+          isSeeker: false,
+          handleStates: {}
         }
       }))
     );
