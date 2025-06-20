@@ -122,7 +122,7 @@ const HoverInfoCard = ({ data, position, visible }: any) => {
 
 // Enhanced Entity Node with Connection Handles
 const EntityNode = ({ data, selected, onNodeHover }: any) => {
-  const { isMagnetic, proximityLevel, isSeeker } = data;
+  const { isMagnetic, proximityLevel, isSeeker, handleStates } = data;
   const [isHovered, setIsHovered] = useState(false);
   
   // Dynamic styling based on proximity and seeker status
@@ -139,6 +139,19 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
       return 'border-blue-500 bg-blue-50 shadow-blue-300 shadow-lg';
     }
     return 'border-gray-300 bg-white';
+  };
+
+  // Get handle styling based on proximity state
+  const getHandleStyle = (handleId: string) => {
+    const handleState = handleStates?.[handleId];
+    if (handleState === 'CONNECTION') {
+      return 'w-4 h-4 bg-green-500 border-2 border-white shadow-lg shadow-green-500 animate-pulse';
+    } else if (handleState === 'INTEREST') {
+      return 'w-4 h-4 bg-orange-500 border-2 border-white shadow-md shadow-orange-300 animate-pulse';
+    } else if (isSeeker) {
+      return 'w-3 h-3 bg-blue-500 border-2 border-white';
+    }
+    return 'w-3 h-3 bg-gray-400 border-2 border-white';
   };
 
   const handleMouseEnter = (e: React.MouseEvent) => {
@@ -171,25 +184,25 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
         id="top"
         type="source"
         position={Position.Top}
-        className="w-3 h-3 bg-blue-500 border-2 border-white"
+        className={getHandleStyle('top')}
       />
       <Handle
         id="bottom"
         type="source"
         position={Position.Bottom}
-        className="w-3 h-3 bg-blue-500 border-2 border-white"
+        className={getHandleStyle('bottom')}
       />
       <Handle
         id="top-target"
         type="target"
         position={Position.Top}
-        className="w-3 h-3 bg-red-500 border-2 border-white"
+        className={getHandleStyle('top-target')}
       />
       <Handle
         id="bottom-target"
         type="target"
         position={Position.Bottom}
-        className="w-3 h-3 bg-red-500 border-2 border-white"
+        className={getHandleStyle('bottom-target')}
       />
 
       <div className="font-semibold text-gray-800 text-center">{data.name}</div>
@@ -259,7 +272,9 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
             type: entity.type,
             jurisdiction: entity.jurisdiction,
             isMagnetic: false,
-            proximityLevel: null
+            proximityLevel: null,
+            isSeeker: false,
+            handleStates: {}
           }
         }));
         
@@ -284,6 +299,50 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     const dx = node1.position.x - node2.position.x;
     const dy = node1.position.y - node2.position.y;
     return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  // Calculate handle-specific proximity states
+  const calculateHandleProximity = (seekerNode: Node, targetNode: Node, sensitivity: any) => {
+    const handleStates: Record<string, string | null> = {};
+    
+    // Handle positions relative to node centers
+    const handleOffsets: Record<string, {x: number, y: number}> = {
+      'top': { x: 0, y: -30 },
+      'bottom': { x: 0, y: 30 },
+      'top-target': { x: 0, y: -30 },
+      'bottom-target': { x: 0, y: 30 }
+    };
+
+    // Check each seeker handle against compatible target handles
+    const compatiblePairs = [
+      { seeker: 'bottom', target: 'top-target' },
+      { seeker: 'top', target: 'bottom-target' }
+    ];
+
+    compatiblePairs.forEach(pair => {
+      const seekerHandlePos = {
+        x: seekerNode.position.x + handleOffsets[pair.seeker].x,
+        y: seekerNode.position.y + handleOffsets[pair.seeker].y
+      };
+      
+      const targetHandlePos = {
+        x: targetNode.position.x + handleOffsets[pair.target].x,
+        y: targetNode.position.y + handleOffsets[pair.target].y
+      };
+
+      const distance = Math.sqrt(
+        Math.pow(seekerHandlePos.x - targetHandlePos.x, 2) + 
+        Math.pow(seekerHandlePos.y - targetHandlePos.y, 2)
+      );
+
+      if (distance <= sensitivity.connectionZone) {
+        handleStates[pair.seeker] = 'CONNECTION';
+      } else if (distance <= sensitivity.approachZone) {
+        handleStates[pair.seeker] = 'INTEREST';
+      }
+    });
+
+    return handleStates;
   };
   
   // Get proximity level based on distance and current sensitivity settings
@@ -333,6 +392,20 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
       
       return currentNodes.map((n: any) => {
         if (n.id === node.id) {
+          // Calculate seeker handle states for all potential targets
+          const seekerHandleStates: Record<string, string | null> = {};
+          
+          currentNodes.forEach((targetNode: any) => {
+            if (targetNode.id !== node.id) {
+              const handleProximity = calculateHandleProximity(node, targetNode, currentSensitivity);
+              Object.entries(handleProximity).forEach(([handleId, state]) => {
+                if (state && (!seekerHandleStates[handleId] || state === 'CONNECTION')) {
+                  seekerHandleStates[handleId] = state;
+                }
+              });
+            }
+          });
+
           // Update the dragging node with its position and proximity level
           return { 
             ...n, 
@@ -340,7 +413,8 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
             data: {
               ...n.data,
               proximityLevel: seekerProximityLevel,
-              isSeeker: true
+              isSeeker: true,
+              handleStates: seekerHandleStates
             }
           };
         }
