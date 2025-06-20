@@ -16,9 +16,114 @@ import {
 import { unifiedEntityService } from '../../services/UnifiedEntityService';
 import { EntityTypes } from '../../types/entity';
 
+// Hover Info Card Component
+const HoverInfoCard = ({ data, position, visible }: any) => {
+  if (!visible) return null;
+
+  const getEntityTypeIcon = (type: EntityTypes) => {
+    switch (type) {
+      case 'Corporation': return '🏢';
+      case 'LLC': return '🏬';
+      case 'Partnership': return '🤝';
+      case 'Trust': return '🏛️';
+      case 'Individual': return '👤';
+      default: return '📋';
+    }
+  };
+
+  const getStatusBadge = (proximityLevel: string) => {
+    if (proximityLevel === 'CONNECTION') {
+      return <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Ready to Connect</span>;
+    } else if (proximityLevel === 'INTEREST') {
+      return <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">In Range</span>;
+    } else if (data.isSeeker) {
+      return <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">Active Seeker</span>;
+    }
+    return <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">Available</span>;
+  };
+
+  return (
+    <div 
+      className="absolute z-50 pointer-events-none"
+      style={{
+        left: position.x + 20,
+        top: position.y - 10,
+        transform: 'translateY(-100%)'
+      }}
+    >
+      <div className="bg-white border border-gray-200 rounded-lg shadow-xl p-4 min-w-[280px] max-w-[320px]">
+        {/* Header */}
+        <div className="flex items-start gap-3 mb-3">
+          <div className="text-2xl flex-shrink-0">{getEntityTypeIcon(data.type)}</div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-gray-900 text-sm leading-tight">{data.name}</h3>
+            <p className="text-xs text-gray-500 mt-1">{data.type}</p>
+          </div>
+          {getStatusBadge(data.proximityLevel)}
+        </div>
+
+        {/* Details */}
+        <div className="space-y-2 text-xs">
+          {data.jurisdiction && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Jurisdiction:</span>
+              <span className="text-gray-900 font-medium">{data.jurisdiction}</span>
+            </div>
+          )}
+          
+          {data.type !== 'Individual' && (
+            <>
+              <div className="flex justify-between">
+                <span className="text-gray-600">Entity Type:</span>
+                <span className="text-gray-900 font-medium">{data.type}</span>
+              </div>
+              
+              <div className="flex justify-between">
+                <span className="text-gray-600">Status:</span>
+                <span className="text-green-600 font-medium">Active</span>
+              </div>
+            </>
+          )}
+
+          {data.type === 'Individual' && (
+            <div className="flex justify-between">
+              <span className="text-gray-600">Role:</span>
+              <span className="text-gray-900 font-medium">Stakeholder</span>
+            </div>
+          )}
+        </div>
+
+        {/* Connection Info */}
+        {(data.proximityLevel || data.isMagnetic) && (
+          <div className="mt-3 pt-3 border-t border-gray-100">
+            <div className="text-xs text-gray-600">
+              {data.proximityLevel === 'CONNECTION' && (
+                <div className="text-green-700">💚 Hold to create connection</div>
+              )}
+              {data.proximityLevel === 'INTEREST' && (
+                <div className="text-orange-700">🟡 Move closer to connect</div>
+              )}
+              {data.isSeeker && !data.proximityLevel && (
+                <div className="text-blue-700">🔍 Seeking connections...</div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Arrow pointing to node */}
+        <div className="absolute bottom-0 left-8 transform translate-y-full">
+          <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-200"></div>
+          <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white absolute top-0 left-0 transform -translate-y-px"></div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Enhanced Entity Node with Connection Handles
-const EntityNode = ({ data, selected }: any) => {
+const EntityNode = ({ data, selected, onNodeHover }: any) => {
   const { isMagnetic, proximityLevel, isSeeker } = data;
+  const [isHovered, setIsHovered] = useState(false);
   
   // Dynamic styling based on proximity and seeker status
   const getNodeStyle = () => {
@@ -36,12 +141,31 @@ const EntityNode = ({ data, selected }: any) => {
     return 'border-gray-300 bg-white';
   };
 
+  const handleMouseEnter = (e: React.MouseEvent) => {
+    setIsHovered(true);
+    if (onNodeHover) {
+      const rect = e.currentTarget.getBoundingClientRect();
+      onNodeHover(data, { x: rect.left, y: rect.top }, true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    if (onNodeHover) {
+      onNodeHover(null, null, false);
+    }
+  };
+
   return (
-    <div className={`
-      px-4 py-3 rounded-lg border-2 shadow-lg transition-all duration-300 min-w-[120px]
-      ${getNodeStyle()}
-      hover:shadow-xl cursor-move relative
-    `}>
+    <div 
+      className={`
+        px-4 py-3 rounded-lg border-2 shadow-lg transition-all duration-300 min-w-[120px]
+        ${getNodeStyle()}
+        hover:shadow-xl cursor-move relative
+      `}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
       {/* Connection Handles - Only vertical connections for entities */}
       <Handle
         id="top"
@@ -104,6 +228,9 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
   const [previousProximityStates, setPreviousProximityStates] = useState<Record<string, string | null>>({});
   const [recentEdges, setRecentEdges] = useState<string[]>([]);
   const [greenZoneTimer, setGreenZoneTimer] = useState<Record<string, NodeJS.Timeout | null>>({});
+  const [hoveredNode, setHoveredNode] = useState<any>(null);
+  const [hoverPosition, setHoverPosition] = useState<{ x: number; y: number } | null>(null);
+  const [showHoverCard, setShowHoverCard] = useState(false);
   
   // Use sensitivity from props or defaults
   const currentSensitivity = sensitivity || {
@@ -301,6 +428,18 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
   const onConnect = useCallback((params: Connection) => {
     console.log('Manual connection created:', params);
   }, []);
+
+  // Hover callback handler
+  const handleNodeHover = useCallback((data: any, position: { x: number; y: number } | null, visible: boolean) => {
+    setHoveredNode(data);
+    setHoverPosition(position);
+    setShowHoverCard(visible);
+  }, []);
+
+  // Node types configuration with hover support
+  const nodeTypes = {
+    entity: (props: any) => <EntityNode {...props} onNodeHover={handleNodeHover} />,
+  };
 
   // Clear recent edges when they get old
   useEffect(() => {
