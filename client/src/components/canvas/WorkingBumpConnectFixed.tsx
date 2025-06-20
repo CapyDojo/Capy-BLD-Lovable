@@ -134,7 +134,7 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
         
         setNodes(initialNodes as any);
         
-        const initialEdges = [];
+        const initialEdges: any[] = [];
         setEdges(initialEdges);
         
         setLoading(false);
@@ -225,7 +225,7 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
             setGreenZoneTimer(prev => ({ ...prev, [n.id]: timerId }));
           } else if (proximityLevel !== 'CONNECTION' && greenZoneTimer[n.id]) {
             // Left green zone - clear timer
-            clearTimeout(greenZoneTimer[n.id]);
+            clearTimeout(greenZoneTimer[n.id] as NodeJS.Timeout);
             setGreenZoneTimer(prev => ({ ...prev, [n.id]: null }));
           }
           
