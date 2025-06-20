@@ -764,9 +764,9 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
         </div>
       )}
 
-      {/* Hover Info Cards */}
+      {/* Professional Entity Information Panel */}
       {showHoverCard && hoveredNode && hoverPosition && (
-        <HoverInfoCard
+        <EntityInfoPanel
           data={hoveredNode}
           position={hoverPosition}
           visible={showHoverCard}
