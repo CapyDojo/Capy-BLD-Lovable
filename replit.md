@@ -125,6 +125,16 @@ The application uses a unified repository pattern with enterprise-grade data man
 
 ## Changelog
 
+### June 20, 2025 - Professional Legal Organizational Chart Complete
+- **Legal-Standard Layout**: Successfully implemented hierarchical organizational chart following legal professional standards
+- **Professional Visual Design**: Clean white background with subtle dot grid pattern, formal chart headers, and color-coded legend system
+- **Legal Chart Components**: Added formal title "TechFlow Inc. Organizational Structure" with "Post-Series A Capitalization Table" designation
+- **Color-Coded Entity Categories**: Professional legend with blue (founders/management), green (institutional investors), red (early stage), dark blue (subsidiaries)
+- **Enhanced Chart Controls**: Professional zoom and navigation controls with clean styling and proper positioning
+- **Clean Edge Visualization**: Simplified ownership percentages with professional formatting and consistent styling
+- **Fixed Edge Rendering Bug**: Resolved critical issue where ownership relationships weren't displaying as visual connections on canvas
+- **Dynamic Entity Mapping**: Implemented proper ReactFlow edge rendering with entity ID mapping for reliable relationship visualization
+
 ### June 20, 2025 - Structure Chart Integration Complete
 - **Complete System Integration**: Successfully replaced Structure Chart with refined Bump Connect magnetic system
 - **Clean Architecture Swap**: Eliminated dual-system complexity by using single magnetic connection approach
