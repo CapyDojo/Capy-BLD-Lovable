@@ -125,13 +125,14 @@ The application uses a unified repository pattern with enterprise-grade data man
 
 ## Changelog
 
-### June 20, 2025 - Customizable Sensitivity Controls
-- **Dynamic Sensitivity System**: Implemented fully customizable connection sensitivity with real-time adjustment
-- **Left Panel Integration**: Moved sensitivity controls to dedicated 320px left panel for better organization
-- **Fine-Tuned Control**: Changed to 10px increments (from 20px) for precise sensitivity adjustment
-- **Optimized Defaults**: Updated "Normal" preset to 260px orange, 180px green, 300ms dwell time for improved UX
-- **Visual Enhancement**: Added colored value badges, range indicators, and real-time connection statistics
-- **Preset System**: Three-tier sensitivity presets (Easy/Normal/Precise) for quick configuration
+### June 20, 2025 - Sidebar Integration Complete
+- **Sidebar Integration**: Successfully moved sensitivity controls from separate left panel to bottom of existing sidebar navigation
+- **Dynamic Visibility**: Sensitivity controls appear automatically when on Bump Connect page, maintaining clean navigation
+- **Fine-Tuned Control**: Implemented 10px increments for precise sensitivity adjustment (approach/connection zones)
+- **Optimized Defaults**: "Normal" preset set to user-preferred 260px orange, 180px green, 300ms dwell time
+- **Component Architecture**: Created BumpConnectWrapper with state management passing sensitivity to both MainLayout and WorkingBumpConnect
+- **Real-time Updates**: Sensitivity changes in sidebar immediately affect canvas magnetic behavior and connection zones
+- **Clean Interface**: Removed duplicate left panel from WorkingBumpConnect, centralizing all controls in main sidebar
 
 ### June 19, 2025 - Bump Connect System Breakthrough
 - **Revolutionary Magnetic Connection System**: Successfully implemented working Bump & Connect with simplified 2-zone proximity detection
