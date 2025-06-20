@@ -42,13 +42,44 @@ const HoverInfoCard = ({ data, position, visible }: any) => {
     return <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">Available</span>;
   };
 
+  // Smart positioning to keep card in viewport
+  const getSmartPosition = () => {
+    const cardWidth = 320;
+    const cardHeight = 150;
+    const offset = 20;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    let left = position.x + offset;
+    let top = position.y - cardHeight - offset;
+    
+    // Adjust horizontal position if card would go off screen
+    if (left + cardWidth > viewportWidth) {
+      left = position.x - cardWidth - offset;
+    }
+    if (left < 0) {
+      left = Math.max(10, viewportWidth - cardWidth - 10);
+    }
+    
+    // Adjust vertical position if card would go off screen
+    if (top < 0) {
+      top = position.y + offset;
+    }
+    if (top + cardHeight > viewportHeight) {
+      top = viewportHeight - cardHeight - 10;
+    }
+    
+    return { left, top };
+  };
+
+  const smartPosition = getSmartPosition();
+
   return (
     <div 
       className="absolute z-50 pointer-events-none"
       style={{
-        left: position.x + 20,
-        top: position.y - 10,
-        transform: 'translateY(-100%)'
+        left: smartPosition.left,
+        top: smartPosition.top,
       }}
     >
       <div className="bg-white border border-gray-200 rounded-lg shadow-xl p-4 min-w-[280px] max-w-[320px]">
@@ -160,7 +191,10 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
     // Show hover cards unless actively dragging
     if (onNodeHover) {
       const rect = e.currentTarget.getBoundingClientRect();
-      onNodeHover(data, { x: rect.left, y: rect.top }, true);
+      // Get mouse position relative to viewport for better positioning
+      const mouseX = e.clientX || rect.left + rect.width / 2;
+      const mouseY = e.clientY || rect.top + rect.height / 2;
+      onNodeHover(data, { x: mouseX, y: mouseY }, true);
     }
   };
 
@@ -543,8 +577,6 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
 
   // Hover callback handler
   const handleNodeHover = useCallback((data: any, position: { x: number; y: number } | null, visible: boolean) => {
-    console.log('handleNodeHover called:', { visible, draggingNode: !!draggingNode, nodeName: data?.name });
-    
     if (visible) {
       // Only show hover card if not dragging anything
       if (!draggingNode) {
