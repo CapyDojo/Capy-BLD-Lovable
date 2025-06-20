@@ -119,6 +119,13 @@ export default function WorkingBumpConnect() {
   const [recentEdges, setRecentEdges] = useState<string[]>([]); // Track recent edges for undo
   const [greenZoneTimer, setGreenZoneTimer] = useState<Record<string, NodeJS.Timeout | null>>({});
   
+  // Sensitivity settings
+  const [sensitivity, setSensitivity] = useState({
+    approachZone: 200,    // Orange zone radius
+    connectionZone: 120,  // Green zone radius
+    dwellTime: 300        // Milliseconds to hold in green zone
+  });
+  
   // Load data
   useEffect(() => {
     const loadData = async () => {
@@ -183,10 +190,10 @@ export default function WorkingBumpConnect() {
     return Math.sqrt(dx * dx + dy * dy);
   };
   
-  // Get proximity level based on distance
+  // Get proximity level based on distance and current sensitivity settings
   const getProximityLevel = (distance: number) => {
-    if (distance <= 120) return 'CONNECTION';  // Green - ready to connect
-    if (distance <= 200) return 'INTEREST';   // Orange - approaching
+    if (distance <= sensitivity.connectionZone) return 'CONNECTION';  // Green - ready to connect
+    if (distance <= sensitivity.approachZone) return 'INTEREST';      // Orange - approaching
     return null;
   };
   
@@ -292,7 +299,7 @@ export default function WorkingBumpConnect() {
           clearTimeout(greenZoneTimer[pairKey]);
         }
         
-        // Set timer for 300ms dwell time
+        // Set timer for dynamic dwell time
         const timer = setTimeout(() => {
           nodesToConnect.push(node);
           setGreenZoneTimer(prev => ({ ...prev, [pairKey]: null }));
@@ -348,7 +355,7 @@ export default function WorkingBumpConnect() {
               console.error('Failed to create ownership:', error);
             });
           }
-        }, 300);
+        }, sensitivity.dwellTime);
         
         setGreenZoneTimer(prev => ({ ...prev, [pairKey]: timer }));
       }
@@ -448,7 +455,7 @@ export default function WorkingBumpConnect() {
           </div>
           <div className="text-sm">
             Connection Ready: <span className={nodes.some(n => n.data.proximityLevel === 'CONNECTION') ? 'text-green-600 font-bold' : 'text-gray-400'}>
-              {nodes.some(n => n.data.proximityLevel === 'CONNECTION') ? 'YES (Hold 0.3s)' : 'NO'}
+              {nodes.some(n => n.data.proximityLevel === 'CONNECTION') ? `YES (Hold ${sensitivity.dwellTime}ms)` : 'NO'}
             </span>
           </div>
         </div>
@@ -461,22 +468,81 @@ export default function WorkingBumpConnect() {
         </div>
       )}
       
-      {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white p-3 rounded-lg shadow-lg border">
-        <div className="text-sm font-semibold mb-2">Proximity Zones</div>
-        <div className="space-y-1 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-orange-500 rounded-full opacity-50"></div>
-            <span>AWARENESS (200px)</span>
+      {/* Sensitivity Control Panel */}
+      <div className="absolute bottom-4 left-4 bg-white p-4 rounded-lg shadow-lg border max-w-xs">
+        <div className="text-sm font-semibold mb-3">Connection Sensitivity</div>
+        
+        {/* Approach Zone Slider */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-600">Approach Zone</span>
+            <span className="text-xs font-mono text-orange-600">{sensitivity.approachZone}px</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-purple-500 rounded-full opacity-60"></div>
-            <span>INTEREST (120px)</span>
+          <input
+            type="range"
+            min="100"
+            max="300"
+            step="20"
+            value={sensitivity.approachZone}
+            onChange={(e) => setSensitivity(prev => ({ ...prev, approachZone: parseInt(e.target.value) }))}
+            className="w-full h-2 bg-orange-200 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+
+        {/* Connection Zone Slider */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-600">Connection Zone</span>
+            <span className="text-xs font-mono text-green-600">{sensitivity.connectionZone}px</span>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 bg-green-500 rounded-full opacity-70"></div>
-            <span>CONNECTION (80px)</span>
+          <input
+            type="range"
+            min="60"
+            max="180"
+            step="20"
+            value={sensitivity.connectionZone}
+            onChange={(e) => setSensitivity(prev => ({ ...prev, connectionZone: parseInt(e.target.value) }))}
+            className="w-full h-2 bg-green-200 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+
+        {/* Dwell Time Slider */}
+        <div className="mb-3">
+          <div className="flex items-center justify-between mb-1">
+            <span className="text-xs text-gray-600">Dwell Time</span>
+            <span className="text-xs font-mono text-blue-600">{sensitivity.dwellTime}ms</span>
           </div>
+          <input
+            type="range"
+            min="100"
+            max="1000"
+            step="100"
+            value={sensitivity.dwellTime}
+            onChange={(e) => setSensitivity(prev => ({ ...prev, dwellTime: parseInt(e.target.value) }))}
+            className="w-full h-2 bg-blue-200 rounded-lg appearance-none cursor-pointer"
+          />
+        </div>
+
+        {/* Preset Buttons */}
+        <div className="flex gap-1 mt-3">
+          <button
+            onClick={() => setSensitivity({ approachZone: 280, connectionZone: 160, dwellTime: 100 })}
+            className="px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
+          >
+            Easy
+          </button>
+          <button
+            onClick={() => setSensitivity({ approachZone: 200, connectionZone: 120, dwellTime: 300 })}
+            className="px-2 py-1 text-xs bg-yellow-100 text-yellow-700 rounded hover:bg-yellow-200 transition-colors"
+          >
+            Normal
+          </button>
+          <button
+            onClick={() => setSensitivity({ approachZone: 140, connectionZone: 80, dwellTime: 600 })}
+            className="px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
+          >
+            Precise
+          </button>
         </div>
       </div>
     </div>
