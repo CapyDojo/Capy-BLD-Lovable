@@ -18,14 +18,17 @@ import { EntityTypes } from '../../types/entity';
 
 // Enhanced Entity Node with Connection Handles
 const EntityNode = ({ data, selected }: any) => {
-  const { isMagnetic, proximityLevel } = data;
+  const { isMagnetic, proximityLevel, isSeeker } = data;
   
-  // Dynamic styling based on proximity
+  // Dynamic styling based on proximity and seeker status
   const getNodeStyle = () => {
     if (proximityLevel === 'CONNECTION') {
       return 'border-green-500 bg-green-50 shadow-green-500 shadow-lg animate-pulse';
     } else if (proximityLevel === 'INTEREST') {
       return 'border-orange-500 bg-orange-50 shadow-orange-300 shadow-md animate-pulse';
+    } else if (isSeeker) {
+      // Seeker node gets a blue glow to show it's actively seeking connections
+      return 'border-blue-500 bg-blue-50 shadow-blue-500 shadow-lg animate-pulse';
     } else if (isMagnetic) {
       return 'border-blue-500 bg-blue-50 shadow-blue-300 shadow-lg';
     }
@@ -167,14 +170,15 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     console.log(`🎯 Seeker activated: ${node.data.name}`);
     setDraggingNode(node);
     
-    // Activate magnetic state for dragging node
+    // Activate magnetic state for dragging node and mark it as seeker
     setNodes((currentNodes: any) => 
       currentNodes.map((n: any) => ({
         ...n,
         data: { 
           ...n.data, 
           isMagnetic: n.id === node.id,
-          proximityLevel: null
+          proximityLevel: null,
+          isSeeker: n.id === node.id
         }
       }))
     );
@@ -253,14 +257,15 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     });
     setGreenZoneTimer({});
     
-    // Deactivate all magnetic states and proximity levels
+    // Deactivate all magnetic states and proximity levels, clear seeker flag
     setNodes((currentNodes: any) => 
       currentNodes.map((n: any) => ({
         ...n,
         data: { 
           ...n.data, 
           isMagnetic: false,
-          proximityLevel: null
+          proximityLevel: null,
+          isSeeker: false
         }
       }))
     );
