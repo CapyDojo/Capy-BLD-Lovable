@@ -44,31 +44,35 @@ const HoverInfoCard = ({ data, position, visible }: any) => {
 
   // Speech bubble positioning from top-right corner of node
   const getSpeechBubblePosition = () => {
-    const baseCardWidth = 280;
-    const baseCardHeight = 140;
+    const baseCardWidth = 260;
+    const baseCardHeight = 120;
     
-    // Scale card size based on node size
-    const nodeScale = Math.max(0.8, Math.min(1.5, (position.nodeWidth || 120) / 120));
+    // Scale card size based on node size with more subtle scaling
+    const nodeScale = Math.max(0.9, Math.min(1.3, (position.nodeWidth || 120) / 120));
     const cardWidth = baseCardWidth * nodeScale;
     const cardHeight = baseCardHeight * nodeScale;
     
-    const bubbleOffset = 12; // Distance from node corner
+    const bubbleOffset = 16; // Distance from node corner
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
-    // Start from top-right corner of node
+    // Position from top-right corner with better spacing
     let left = position.x + bubbleOffset;
-    let top = position.y - bubbleOffset;
+    let top = position.y - cardHeight - bubbleOffset;
+    let tailDirection = 'left'; // Default tail points left to node
     
-    // Adjust if card would go off screen
+    // Check if card would go off right edge
     if (left + cardWidth > viewportWidth - 20) {
       // Flip to left side of node
       left = position.x - cardWidth - bubbleOffset - (position.nodeWidth || 0);
+      tailDirection = 'right';
     }
     
-    if (top - cardHeight < 20) {
+    // Check if card would go off top edge
+    if (top < 20) {
       // Move below node if too high
       top = position.y + (position.nodeHeight || 0) + bubbleOffset;
+      tailDirection = top < position.y ? 'top' : tailDirection;
     }
     
     return { 
@@ -76,7 +80,8 @@ const HoverInfoCard = ({ data, position, visible }: any) => {
       top: Math.max(10, top),
       cardWidth,
       cardHeight,
-      scale: nodeScale
+      scale: nodeScale,
+      tailDirection
     };
   };
 
@@ -97,9 +102,25 @@ const HoverInfoCard = ({ data, position, visible }: any) => {
              width: bubblePosition.cardWidth,
              minHeight: bubblePosition.cardHeight
            }}>
-        {/* Speech bubble tail pointing to node */}
-        <div className="absolute -left-2 top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-transparent border-r-white"></div>
-        <div className="absolute -left-[3px] top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-transparent border-r-gray-200"></div>
+        {/* Dynamic speech bubble tail based on position */}
+        {bubblePosition.tailDirection === 'left' && (
+          <>
+            <div className="absolute -left-2 top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-transparent border-r-white"></div>
+            <div className="absolute -left-[3px] top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-transparent border-r-gray-200"></div>
+          </>
+        )}
+        {bubblePosition.tailDirection === 'right' && (
+          <>
+            <div className="absolute -right-2 top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-l-[8px] border-transparent border-l-white"></div>
+            <div className="absolute -right-[3px] top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-l-[8px] border-transparent border-l-gray-200"></div>
+          </>
+        )}
+        {bubblePosition.tailDirection === 'top' && (
+          <>
+            <div className="absolute left-4 -top-2 w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-transparent border-b-white"></div>
+            <div className="absolute left-4 -top-[3px] w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-transparent border-b-gray-200"></div>
+          </>
+        )}
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
           <div className="text-2xl flex-shrink-0">{getEntityTypeIcon(data.type)}</div>
