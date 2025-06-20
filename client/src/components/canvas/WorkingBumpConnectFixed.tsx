@@ -16,173 +16,178 @@ import {
 import { unifiedEntityService } from '../../services/UnifiedEntityService';
 import { EntityTypes } from '../../types/entity';
 
-// Hover Info Card Component
-const HoverInfoCard = ({ data, position, visible }: any) => {
+// Professional Legal Entity Information Panel
+const EntityInfoPanel = ({ data, position, visible }: any) => {
   if (!visible) return null;
 
-  const getEntityTypeIcon = (type: EntityTypes) => {
-    switch (type) {
-      case 'Corporation': return '🏢';
-      case 'LLC': return '🏬';
-      case 'Partnership': return '🤝';
-      case 'Trust': return '🏛️';
-      case 'Individual': return '👤';
-      default: return '📋';
-    }
+  // Legal professional context with clear visual hierarchy
+  const getEntityDetails = (type: EntityTypes) => {
+    const entityMap = {
+      'Corporation': { 
+        icon: '🏢', 
+        color: 'border-blue-500 bg-blue-50', 
+        textColor: 'text-blue-900',
+        category: 'Corporate Entity'
+      },
+      'LLC': { 
+        icon: '🏪', 
+        color: 'border-purple-500 bg-purple-50', 
+        textColor: 'text-purple-900',
+        category: 'Limited Liability'
+      },
+      'Partnership': { 
+        icon: '🤝', 
+        color: 'border-green-500 bg-green-50', 
+        textColor: 'text-green-900',
+        category: 'Partnership Entity'
+      },
+      'Trust': { 
+        icon: '🛡️', 
+        color: 'border-orange-500 bg-orange-50', 
+        textColor: 'text-orange-900',
+        category: 'Trust Entity'
+      },
+      'Individual': { 
+        icon: '👤', 
+        color: 'border-gray-500 bg-gray-50', 
+        textColor: 'text-gray-900',
+        category: 'Natural Person'
+      }
+    };
+    return entityMap[type] || entityMap['Individual'];
   };
 
-  const getStatusBadge = (proximityLevel: string) => {
+  const getConnectionStatus = (proximityLevel: string, isSeeker: boolean) => {
     if (proximityLevel === 'CONNECTION') {
-      return <span className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded-full">Ready to Connect</span>;
-    } else if (proximityLevel === 'INTEREST') {
-      return <span className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-full">In Range</span>;
-    } else if (data.isSeeker) {
-      return <span className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-full">Active Seeker</span>;
+      return {
+        status: 'Ready to Connect',
+        instruction: 'Release to create ownership relationship',
+        badge: 'bg-green-100 text-green-800 border-green-300',
+        priority: 'high'
+      };
     }
-    return <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">Available</span>;
-  };
-
-  // Speech bubble positioning from top-right corner of node
-  const getSpeechBubblePosition = () => {
-    const baseCardWidth = 260;
-    const baseCardHeight = 120;
-    
-    // Scale card size based on node size with more subtle scaling
-    const nodeScale = Math.max(0.9, Math.min(1.3, (position.nodeWidth || 120) / 120));
-    const cardWidth = baseCardWidth * nodeScale;
-    const cardHeight = baseCardHeight * nodeScale;
-    
-    const bubbleOffset = 16; // Distance from node corner
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    // Position from top-right corner with better spacing
-    let left = position.x + bubbleOffset;
-    let top = position.y - cardHeight - bubbleOffset;
-    let tailDirection = 'left'; // Default tail points left to node
-    
-    // Check if card would go off right edge
-    if (left + cardWidth > viewportWidth - 20) {
-      // Flip to left side of node
-      left = position.x - cardWidth - bubbleOffset - (position.nodeWidth || 0);
-      tailDirection = 'right';
+    if (proximityLevel === 'INTEREST') {
+      return {
+        status: 'In Connection Range',
+        instruction: 'Move closer to enable connection',
+        badge: 'bg-orange-100 text-orange-800 border-orange-300',
+        priority: 'medium'
+      };
     }
-    
-    // Check if card would go off top edge
-    if (top < 20) {
-      // Move below node if too high
-      top = position.y + (position.nodeHeight || 0) + bubbleOffset;
-      tailDirection = top < position.y ? 'top' : tailDirection;
+    if (isSeeker) {
+      return {
+        status: 'Seeking Connections',
+        instruction: 'Drag toward compatible entities',
+        badge: 'bg-blue-100 text-blue-800 border-blue-300',
+        priority: 'active'
+      };
     }
-    
-    return { 
-      left: Math.max(10, left), 
-      top: Math.max(10, top),
-      cardWidth,
-      cardHeight,
-      scale: nodeScale,
-      tailDirection
+    return {
+      status: 'Available',
+      instruction: 'Click to select or drag to connect',
+      badge: 'bg-gray-100 text-gray-700 border-gray-300',
+      priority: 'default'
     };
   };
 
-  const bubblePosition = getSpeechBubblePosition();
+  // Professional positioning system for legal professionals
+  const getProfessionalCardPosition = () => {
+    const cardWidth = 340;
+    const cardHeight = 200;
+    const offset = 24;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Position near cursor with smart viewport handling
+    let left = position.x + offset;
+    let top = position.y - cardHeight/2;
+    
+    // Ensure card stays within viewport
+    if (left + cardWidth > viewportWidth - 24) {
+      left = position.x - cardWidth - offset;
+    }
+    if (left < 24) {
+      left = 24;
+    }
+    if (top < 24) {
+      top = 24;
+    }
+    if (top + cardHeight > viewportHeight - 24) {
+      top = viewportHeight - cardHeight - 24;
+    }
+    
+    return { left, top };
+  };
+
+  const cardPosition = getProfessionalCardPosition();
+  const entityDetails = getEntityDetails(data.type);
+  const connectionInfo = getConnectionStatus(data.proximityLevel, data.isSeeker);
 
   return (
     <div 
-      className="absolute z-50 pointer-events-none"
+      className="fixed z-50 pointer-events-none"
       style={{
-        left: bubblePosition.left,
-        top: bubblePosition.top,
-        transform: `scale(${bubblePosition.scale})`,
-        transformOrigin: 'top left'
+        left: cardPosition.left,
+        top: cardPosition.top,
       }}
     >
-      <div className="bg-white border border-gray-200 rounded-lg shadow-xl p-3 relative"
-           style={{
-             width: bubblePosition.cardWidth,
-             minHeight: bubblePosition.cardHeight
-           }}>
-        {/* Dynamic speech bubble tail based on position */}
-        {bubblePosition.tailDirection === 'left' && (
-          <>
-            <div className="absolute -left-2 top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-transparent border-r-white"></div>
-            <div className="absolute -left-[3px] top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-transparent border-r-gray-200"></div>
-          </>
-        )}
-        {bubblePosition.tailDirection === 'right' && (
-          <>
-            <div className="absolute -right-2 top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-l-[8px] border-transparent border-l-white"></div>
-            <div className="absolute -right-[3px] top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-l-[8px] border-transparent border-l-gray-200"></div>
-          </>
-        )}
-        {bubblePosition.tailDirection === 'top' && (
-          <>
-            <div className="absolute left-4 -top-2 w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-transparent border-b-white"></div>
-            <div className="absolute left-4 -top-[3px] w-0 h-0 border-l-[8px] border-r-[8px] border-b-[8px] border-transparent border-b-gray-200"></div>
-          </>
-        )}
-        {/* Header */}
-        <div className="flex items-start gap-3 mb-3">
-          <div className="text-2xl flex-shrink-0">{getEntityTypeIcon(data.type)}</div>
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-gray-900 text-sm leading-tight">{data.name}</h3>
-            <p className="text-xs text-gray-500 mt-1">{data.type}</p>
-          </div>
-          {getStatusBadge(data.proximityLevel)}
-        </div>
-
-        {/* Details */}
-        <div className="space-y-2 text-xs">
-          {data.jurisdiction && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Jurisdiction:</span>
-              <span className="text-gray-900 font-medium">{data.jurisdiction}</span>
-            </div>
-          )}
-          
-          {data.type !== 'Individual' && (
-            <>
-              <div className="flex justify-between">
-                <span className="text-gray-600">Entity Type:</span>
-                <span className="text-gray-900 font-medium">{data.type}</span>
+      <div className="bg-white border border-slate-300 rounded-xl shadow-2xl overflow-hidden max-w-sm">
+        {/* Professional header with entity branding */}
+        <div className={`px-5 py-4 border-l-4 ${entityDetails.color}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <span className={`text-2xl ${entityDetails.textColor}`}>{entityDetails.icon}</span>
+              <div>
+                <h3 className="font-semibold text-slate-900 text-base leading-tight">{data.name}</h3>
+                <p className="text-sm text-slate-600 font-medium">{entityDetails.category}</p>
               </div>
-              
-              <div className="flex justify-between">
-                <span className="text-gray-600">Status:</span>
-                <span className="text-green-600 font-medium">Active</span>
-              </div>
-            </>
-          )}
-
-          {data.type === 'Individual' && (
-            <div className="flex justify-between">
-              <span className="text-gray-600">Role:</span>
-              <span className="text-gray-900 font-medium">Stakeholder</span>
-            </div>
-          )}
-        </div>
-
-        {/* Connection Info */}
-        {(data.proximityLevel || data.isMagnetic) && (
-          <div className="mt-3 pt-3 border-t border-gray-100">
-            <div className="text-xs text-gray-600">
-              {data.proximityLevel === 'CONNECTION' && (
-                <div className="text-green-700">💚 Hold to create connection</div>
-              )}
-              {data.proximityLevel === 'INTEREST' && (
-                <div className="text-orange-700">🟡 Move closer to connect</div>
-              )}
-              {data.isSeeker && !data.proximityLevel && (
-                <div className="text-blue-700">🔍 Seeking connections...</div>
-              )}
             </div>
           </div>
-        )}
+        </div>
 
-        {/* Arrow pointing to node */}
-        <div className="absolute bottom-0 left-8 transform translate-y-full">
-          <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-gray-200"></div>
-          <div className="w-0 h-0 border-l-4 border-r-4 border-t-4 border-l-transparent border-r-transparent border-t-white absolute top-0 left-0 transform -translate-y-px"></div>
+        {/* Entity information grid */}
+        <div className="px-5 py-4 space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Entity Type</label>
+              <p className="text-sm font-medium text-slate-900 mt-1">{data.type}</p>
+            </div>
+            {data.jurisdiction && (
+              <div>
+                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Jurisdiction</label>
+                <p className="text-sm font-medium text-slate-900 mt-1">{data.jurisdiction}</p>
+              </div>
+            )}
+          </div>
+
+          {/* Connection status panel */}
+          {(data.proximityLevel || data.isSeeker) && (
+            <div className={`p-3 rounded-lg border ${connectionInfo.badge}`}>
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-semibold">Connection Status</span>
+                <span className="text-xs font-medium">{connectionInfo.status}</span>
+              </div>
+              <p className="text-xs leading-relaxed">{connectionInfo.instruction}</p>
+            </div>
+          )}
+
+          {/* Quick action guide */}
+          <div className="pt-3 border-t border-slate-200">
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div>
+                <div className="text-xs font-medium text-slate-600">Click</div>
+                <div className="text-xs text-slate-500">Select</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-slate-600">Drag</div>
+                <div className="text-xs text-slate-500">Connect</div>
+              </div>
+              <div>
+                <div className="text-xs font-medium text-slate-600">ESC</div>
+                <div className="text-xs text-slate-500">Cancel</div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
