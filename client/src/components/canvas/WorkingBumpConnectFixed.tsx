@@ -165,6 +165,7 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
   };
 
   const handleMouseLeave = () => {
+    console.log('Mouse leaving node:', data.name);
     setIsHovered(false);
     if (onNodeHover) {
       onNodeHover(null, null, false);
