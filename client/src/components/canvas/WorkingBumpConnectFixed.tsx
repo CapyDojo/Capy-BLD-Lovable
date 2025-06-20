@@ -42,47 +42,64 @@ const HoverInfoCard = ({ data, position, visible }: any) => {
     return <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded-full">Available</span>;
   };
 
-  // Smart positioning to keep card in viewport
-  const getSmartPosition = () => {
-    const cardWidth = 320;
-    const cardHeight = 150;
-    const offset = 20;
+  // Speech bubble positioning from top-right corner of node
+  const getSpeechBubblePosition = () => {
+    const baseCardWidth = 280;
+    const baseCardHeight = 140;
+    
+    // Scale card size based on node size
+    const nodeScale = Math.max(0.8, Math.min(1.5, (position.nodeWidth || 120) / 120));
+    const cardWidth = baseCardWidth * nodeScale;
+    const cardHeight = baseCardHeight * nodeScale;
+    
+    const bubbleOffset = 12; // Distance from node corner
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
     
-    let left = position.x + offset;
-    let top = position.y - cardHeight - offset;
+    // Start from top-right corner of node
+    let left = position.x + bubbleOffset;
+    let top = position.y - bubbleOffset;
     
-    // Adjust horizontal position if card would go off screen
-    if (left + cardWidth > viewportWidth) {
-      left = position.x - cardWidth - offset;
-    }
-    if (left < 0) {
-      left = Math.max(10, viewportWidth - cardWidth - 10);
-    }
-    
-    // Adjust vertical position if card would go off screen
-    if (top < 0) {
-      top = position.y + offset;
-    }
-    if (top + cardHeight > viewportHeight) {
-      top = viewportHeight - cardHeight - 10;
+    // Adjust if card would go off screen
+    if (left + cardWidth > viewportWidth - 20) {
+      // Flip to left side of node
+      left = position.x - cardWidth - bubbleOffset - (position.nodeWidth || 0);
     }
     
-    return { left, top };
+    if (top - cardHeight < 20) {
+      // Move below node if too high
+      top = position.y + (position.nodeHeight || 0) + bubbleOffset;
+    }
+    
+    return { 
+      left: Math.max(10, left), 
+      top: Math.max(10, top),
+      cardWidth,
+      cardHeight,
+      scale: nodeScale
+    };
   };
 
-  const smartPosition = getSmartPosition();
+  const bubblePosition = getSpeechBubblePosition();
 
   return (
     <div 
       className="absolute z-50 pointer-events-none"
       style={{
-        left: smartPosition.left,
-        top: smartPosition.top,
+        left: bubblePosition.left,
+        top: bubblePosition.top,
+        transform: `scale(${bubblePosition.scale})`,
+        transformOrigin: 'top left'
       }}
     >
-      <div className="bg-white border border-gray-200 rounded-lg shadow-xl p-4 min-w-[280px] max-w-[320px]">
+      <div className="bg-white border border-gray-200 rounded-lg shadow-xl p-3 relative"
+           style={{
+             width: bubblePosition.cardWidth,
+             minHeight: bubblePosition.cardHeight
+           }}>
+        {/* Speech bubble tail pointing to node */}
+        <div className="absolute -left-2 top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-transparent border-r-white"></div>
+        <div className="absolute -left-[3px] top-4 w-0 h-0 border-t-[8px] border-b-[8px] border-r-[8px] border-transparent border-r-gray-200"></div>
         {/* Header */}
         <div className="flex items-start gap-3 mb-3">
           <div className="text-2xl flex-shrink-0">{getEntityTypeIcon(data.type)}</div>
@@ -191,10 +208,17 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
     // Show hover cards unless actively dragging
     if (onNodeHover) {
       const rect = e.currentTarget.getBoundingClientRect();
-      // Get mouse position relative to viewport for better positioning
-      const mouseX = e.clientX || rect.left + rect.width / 2;
-      const mouseY = e.clientY || rect.top + rect.height / 2;
-      onNodeHover(data, { x: mouseX, y: mouseY }, true);
+      // Position hover card from top-right corner of the node
+      const anchorX = rect.right;
+      const anchorY = rect.top;
+      const nodeWidth = rect.width;
+      const nodeHeight = rect.height;
+      onNodeHover(data, { 
+        x: anchorX, 
+        y: anchorY,
+        nodeWidth,
+        nodeHeight 
+      }, true);
     }
   };
 
