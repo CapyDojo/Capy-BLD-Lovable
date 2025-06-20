@@ -55,7 +55,7 @@ const stageOptions = [
   'Seed', 'Series A', 'Series B', 'Series C', 'Growth', 'Public', 'Mature'
 ];
 
-export const EntityEditPanel: React.FC<EntityEditPanelProps> = ({ 
+const EntityEditPanel: React.FC<EntityEditPanelProps> = ({ 
   entity, 
   isOpen, 
   onClose, 
@@ -359,3 +359,5 @@ export const EntityEditPanel: React.FC<EntityEditPanelProps> = ({
     </div>
   );
 };
+
+export default EntityEditPanel;

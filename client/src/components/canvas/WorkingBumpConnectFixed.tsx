@@ -1,276 +1,91 @@
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { 
-  ReactFlow, 
-  Controls, 
-  Background, 
-  useNodesState, 
-  useEdgesState,
-  Handle,
-  Position,
-  Node,
-  Edge,
-  Connection,
-  addEdge,
-  ReactFlowProvider,
-  applyNodeChanges,
-  applyEdgeChanges
-} from '@xyflow/react';
+import React, { useState, useCallback, useEffect, useMemo } from 'react';
+import { ReactFlow, Node, Edge, addEdge, useNodesState, useEdgesState, Connection, Position, Handle, Background, BackgroundVariant } from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
 import { unifiedEntityService } from '../../services/UnifiedEntityService';
 import { Entity, EntityTypes } from '../../types/entity';
-import { EntityEditPanel } from './EntityEditPanel';
+import EntityEditPanel from './EntityEditPanel';
 
-// Professional Legal Entity Information Panel
-const EntityInfoPanel = ({ data, position, visible }: any) => {
-  if (!visible) return null;
-
-  // Legal professional context with clear visual hierarchy
-  const getEntityDetails = (type: EntityTypes) => {
-    const entityMap = {
-      'Corporation': { 
-        icon: '🏢', 
-        color: 'border-blue-500 bg-blue-50', 
-        textColor: 'text-blue-900',
-        category: 'Corporate Entity'
-      },
-      'LLC': { 
-        icon: '🏪', 
-        color: 'border-purple-500 bg-purple-50', 
-        textColor: 'text-purple-900',
-        category: 'Limited Liability'
-      },
-      'Partnership': { 
-        icon: '🤝', 
-        color: 'border-green-500 bg-green-50', 
-        textColor: 'text-green-900',
-        category: 'Partnership Entity'
-      },
-      'Trust': { 
-        icon: '🛡️', 
-        color: 'border-orange-500 bg-orange-50', 
-        textColor: 'text-orange-900',
-        category: 'Trust Entity'
-      },
-      'Individual': { 
-        icon: '👤', 
-        color: 'border-gray-500 bg-gray-50', 
-        textColor: 'text-gray-900',
-        category: 'Natural Person'
-      }
-    };
-    return entityMap[type] || entityMap['Individual'];
-  };
-
-  const getConnectionStatus = (proximityLevel: string, isSeeker: boolean) => {
-    if (proximityLevel === 'CONNECTION') {
-      return {
-        status: 'Ready to Connect',
-        instruction: 'Release to create ownership relationship',
-        badge: 'bg-green-100 text-green-800 border-green-300',
-        priority: 'high'
-      };
-    }
-    if (proximityLevel === 'INTEREST') {
-      return {
-        status: 'In Connection Range',
-        instruction: 'Move closer to enable connection',
-        badge: 'bg-orange-100 text-orange-800 border-orange-300',
-        priority: 'medium'
-      };
-    }
-    if (isSeeker) {
-      return {
-        status: 'Seeking Connections',
-        instruction: 'Drag toward compatible entities',
-        badge: 'bg-blue-100 text-blue-800 border-blue-300',
-        priority: 'active'
-      };
-    }
-    return {
-      status: 'Available',
-      instruction: 'Click to select or drag to connect',
-      badge: 'bg-gray-100 text-gray-700 border-gray-300',
-      priority: 'default'
-    };
-  };
-
-  // Professional positioning system for legal professionals
-  const getProfessionalCardPosition = () => {
-    const cardWidth = 340;
-    const cardHeight = 200;
-    const offset = 24;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    
-    // Position near cursor with smart viewport handling
-    let left = position.x + offset;
-    let top = position.y - cardHeight/2;
-    
-    // Ensure card stays within viewport
-    if (left + cardWidth > viewportWidth - 24) {
-      left = position.x - cardWidth - offset;
-    }
-    if (left < 24) {
-      left = 24;
-    }
-    if (top < 24) {
-      top = 24;
-    }
-    if (top + cardHeight > viewportHeight - 24) {
-      top = viewportHeight - cardHeight - 24;
-    }
-    
-    return { left, top };
-  };
-
-  const cardPosition = getProfessionalCardPosition();
-  const entityDetails = getEntityDetails(data.type);
-  const connectionInfo = getConnectionStatus(data.proximityLevel, data.isSeeker);
-
-  return (
-    <div 
-      className="fixed z-50 pointer-events-none"
-      style={{
-        left: cardPosition.left,
-        top: cardPosition.top,
-      }}
-    >
-      <div className="bg-white border border-slate-300 rounded-xl shadow-2xl overflow-hidden max-w-sm">
-        {/* Professional header with entity branding */}
-        <div className={`px-5 py-4 border-l-4 ${entityDetails.color}`}>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <span className={`text-2xl ${entityDetails.textColor}`}>{entityDetails.icon}</span>
-              <div>
-                <h3 className="font-semibold text-slate-900 text-base leading-tight">{data.name}</h3>
-                <p className="text-sm text-slate-600 font-medium">{entityDetails.category}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Entity information grid */}
-        <div className="px-5 py-4 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Entity Type</label>
-              <p className="text-sm font-medium text-slate-900 mt-1">{data.type}</p>
-            </div>
-            {data.jurisdiction && (
-              <div>
-                <label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Jurisdiction</label>
-                <p className="text-sm font-medium text-slate-900 mt-1">{data.jurisdiction}</p>
-              </div>
-            )}
-          </div>
-
-          {/* Connection status panel */}
-          {(data.proximityLevel || data.isSeeker) && (
-            <div className={`p-3 rounded-lg border ${connectionInfo.badge}`}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold">Connection Status</span>
-                <span className="text-xs font-medium">{connectionInfo.status}</span>
-              </div>
-              <p className="text-xs leading-relaxed">{connectionInfo.instruction}</p>
-            </div>
-          )}
-
-          {/* Quick action guide */}
-          <div className="pt-3 border-t border-slate-200">
-            <div className="grid grid-cols-3 gap-2 text-center">
-              <div>
-                <div className="text-xs font-medium text-slate-600">Click</div>
-                <div className="text-xs text-slate-500">Select</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-slate-600">Drag</div>
-                <div className="text-xs text-slate-500">Connect</div>
-              </div>
-              <div>
-                <div className="text-xs font-medium text-slate-600">ESC</div>
-                <div className="text-xs text-slate-500">Cancel</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+// Canvas state persistence functions
+const saveCanvasState = (nodes: Node[], edges: Edge[]) => {
+  try {
+    const state = { nodes, edges, timestamp: Date.now() };
+    localStorage.setItem('canvas-state', JSON.stringify(state));
+    console.log('💾 Canvas state saved with', nodes.length, 'nodes and', edges.length, 'edges');
+  } catch (error) {
+    console.error('Failed to save canvas state:', error);
+  }
 };
 
-// Enhanced Entity Node with Connection Handles
-const EntityNode = ({ data, selected, onNodeHover }: any) => {
-  const { isMagnetic, proximityLevel, isSeeker, handleStates } = data;
-  const [isHovered, setIsHovered] = useState(false);
-  
-  // Dynamic styling based on proximity and seeker status
+const loadCanvasState = () => {
+  try {
+    const saved = localStorage.getItem('canvas-state');
+    if (saved) {
+      const state = JSON.parse(saved);
+      console.log('📁 Canvas state loaded from', new Date(state.timestamp));
+      return state;
+    }
+  } catch (error) {
+    console.error('Failed to load canvas state:', error);
+  }
+  return null;
+};
+
+// Entity node component with magnetic visual feedback
+const EntityNode = ({ data, id }: { data: any; id: string }) => {
   const getNodeStyle = () => {
-    // Proximity colors always take precedence over seeker state
-    if (proximityLevel === 'CONNECTION') {
-      return 'border-green-500 bg-green-50 shadow-green-500 shadow-lg animate-pulse';
-    } else if (proximityLevel === 'INTEREST') {
-      return 'border-orange-500 bg-orange-50 shadow-orange-300 shadow-md animate-pulse';
-    } else if (isSeeker) {
-      // Seeker node gets a blue glow when not in proximity to other nodes
-      return 'border-blue-500 bg-blue-50 shadow-blue-500 shadow-lg animate-pulse';
-    } else if (isMagnetic) {
-      return 'border-blue-500 bg-blue-50 shadow-blue-300 shadow-lg';
+    const baseStyle = "px-4 py-3 rounded-lg border-2 bg-white shadow-lg transition-all duration-200 min-w-[140px] text-center relative";
+    
+    if (data.isSeeker) {
+      // Seeker node - blue glow with proximity-based color
+      if (data.proximityLevel === 'CONNECTION') {
+        return `${baseStyle} border-green-400 bg-green-50 shadow-green-200 shadow-xl`;
+      } else if (data.proximityLevel === 'INTEREST') {
+        return `${baseStyle} border-orange-400 bg-orange-50 shadow-orange-200 shadow-xl`;
+      } else {
+        return `${baseStyle} border-blue-400 bg-blue-50 shadow-blue-200 shadow-xl`;
+      }
     }
-    return 'border-gray-300 bg-white';
+    
+    if (data.proximityLevel === 'CONNECTION') {
+      return `${baseStyle} border-green-400 bg-green-50 shadow-green-200 shadow-xl`;
+    } else if (data.proximityLevel === 'INTEREST') {
+      return `${baseStyle} border-orange-400 bg-orange-50 shadow-orange-200 shadow-xl`;
+    }
+    
+    return `${baseStyle} border-gray-300 bg-white shadow-md hover:shadow-lg`;
   };
 
-  // Get handle styling based on proximity state
   const getHandleStyle = (handleId: string) => {
-    const handleState = handleStates?.[handleId];
-    let baseClasses = 'react-flow__handle';
+    const baseStyle = "w-3 h-3 border-2 border-gray-400 bg-white";
     
-    if (handleState === 'CONNECTION') {
-      return `${baseClasses} handle-connection`;
-    } else if (handleState === 'INTEREST') {
-      return `${baseClasses} handle-interest`;
+    if (data.isSeeker && data.handleStates && data.handleStates[handleId]) {
+      const state = data.handleStates[handleId];
+      if (state === 'CONNECTION') {
+        return `${baseStyle} !border-green-500 !bg-green-400 shadow-lg shadow-green-300`;
+      } else if (state === 'INTEREST') {
+        return `${baseStyle} !border-orange-500 !bg-orange-400 shadow-lg shadow-orange-300`;
+      }
     }
     
-    return baseClasses;
+    return `${baseStyle} opacity-75`;
   };
 
-  const handleMouseEnter = (e: React.MouseEvent) => {
-    setIsHovered(true);
-    // Show hover cards unless actively dragging
-    if (onNodeHover) {
-      const rect = e.currentTarget.getBoundingClientRect();
-      // Position hover card from top-right corner of the node
-      const anchorX = rect.right;
-      const anchorY = rect.top;
-      const nodeWidth = rect.width;
-      const nodeHeight = rect.height;
-      onNodeHover(data, { 
-        x: anchorX, 
-        y: anchorY,
-        nodeWidth,
-        nodeHeight 
-      }, true);
+  const getConnectionTip = () => {
+    if (data.isSeeker) {
+      if (data.proximityLevel === 'CONNECTION') {
+        return "Ready to connect";
+      } else if (data.proximityLevel === 'INTEREST') {
+        return "Move closer";
+      } else {
+        return "Seeking connections";
+      }
     }
-  };
-
-  const handleMouseLeave = () => {
-    console.log('Mouse leaving node:', data.name);
-    setIsHovered(false);
-    if (onNodeHover) {
-      onNodeHover(null, null, false);
-    }
+    return null;
   };
 
   return (
-    <div 
-      className={`
-        px-4 py-3 rounded-lg border-2 shadow-lg transition-all duration-300 min-w-[120px]
-        ${getNodeStyle()}
-        hover:shadow-xl cursor-move relative
-      `}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-      onPointerLeave={handleMouseLeave}
-    >
-      {/* Connection Handles - Only vertical connections for entities */}
+    <div className={getNodeStyle()}>
+      {/* Connection handles */}
       <Handle
         id="top"
         type="source"
@@ -298,36 +113,18 @@ const EntityNode = ({ data, selected, onNodeHover }: any) => {
 
       <div className="font-semibold text-gray-800 text-center">{data.name}</div>
       <div className="text-xs text-gray-500 text-center">{data.type}</div>
-      {data.jurisdiction && (
-        <div className="text-xs text-gray-400 text-center">{data.jurisdiction}</div>
-      )}
       
-      {/* In-Node Connection Guidance */}
-      {isSeeker && (
-        <div className="mt-2 text-center">
-          <div className="text-xs font-medium text-blue-700">🔍 Seeking connections...</div>
-        </div>
-      )}
-      
-      {proximityLevel === 'CONNECTION' && !isSeeker && (
-        <div className="mt-2 text-center">
-          <div className="text-xs font-medium text-green-700 animate-pulse">💚 Ready to connect</div>
-        </div>
-      )}
-      
-      {proximityLevel === 'INTEREST' && !isSeeker && (
-        <div className="mt-2 text-center">
-          <div className="text-xs font-medium text-orange-700">🟡 Move closer</div>
+      {/* Connection status indicator */}
+      {getConnectionTip() && (
+        <div className="absolute -bottom-6 left-1/2 transform -translate-x-1/2 text-xs font-medium px-2 py-1 bg-gray-900 text-white rounded whitespace-nowrap">
+          {getConnectionTip()}
         </div>
       )}
     </div>
   );
 };
 
-const nodeTypes = {
-  entity: EntityNode,
-};
-
+// Main component interface
 interface WorkingBumpConnectProps {
   sensitivity?: {
     approachZone: number;
@@ -451,7 +248,7 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
           initialEdges = [];
         }
         
-        setNodes(initialNodes as any);
+        setNodes(initialNodes);
         
         if (savedState && initialEdges.length > 0) {
           // Use saved edges
@@ -517,7 +314,6 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
           
           setEdges(ownershipEdges);
           console.log(`Created ${ownershipEdges.length} ownership edges for TechFlow startup structure`);
-          console.log('Edge details:', ownershipEdges.map(e => ({ id: e.id, source: e.source, target: e.target })));
         }
         
         setLoading(false);
@@ -531,7 +327,16 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     loadData();
   }, []);
 
-
+  // Save canvas state when nodes or edges change
+  useEffect(() => {
+    if (!loading && nodes.length > 0) {
+      const timeoutId = setTimeout(() => {
+        saveCanvasState(nodes, edges);
+      }, 1000); // Debounce saves
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [nodes, edges, loading]);
 
   // Calculate distance between two nodes
   const calculateDistance = (node1: Node, node2: Node) => {
@@ -621,7 +426,7 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
     
     setNodes((currentNodes: any) => {
       // Find the closest node to determine seeker's proximity level
-      let seekerProximityLevel = null;
+      let seekerProximityLevel: any = null;
       let minDistance = Infinity;
       
       currentNodes.forEach((n: any) => {
@@ -698,30 +503,16 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
             setGreenZoneTimer(prev => ({ ...prev, [n.id]: timerId }));
           } else if (proximityLevel !== 'CONNECTION' && greenZoneTimer[n.id]) {
             // Left green zone - clear timer
-            clearTimeout(greenZoneTimer[n.id] as NodeJS.Timeout);
+            clearTimeout(greenZoneTimer[n.id]);
             setGreenZoneTimer(prev => ({ ...prev, [n.id]: null }));
           }
           
-          setPreviousProximityStates(prev => ({ ...prev, [n.id]: proximityLevel }));
-          
-          // Calculate target handle states for this specific target
-          const targetHandleStates: Record<string, string | null> = {};
-          const handleProximity = calculateHandleProximity(node, n, currentSensitivity);
-          
-          // Map seeker handle states to corresponding target handles
-          if (handleProximity['bottom']) {
-            targetHandleStates['top-target'] = handleProximity['bottom'];
-          }
-          if (handleProximity['top']) {
-            targetHandleStates['bottom-target'] = handleProximity['top'];
-          }
-
           return {
             ...n,
             data: { 
               ...n.data, 
               proximityLevel,
-              handleStates: targetHandleStates
+              isMagnetic: false 
             }
           };
         }
@@ -729,20 +520,24 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
         return n;
       });
     });
-  }, [draggingNode, previousProximityStates, greenZoneTimer, currentSensitivity.dwellTime, setNodes, setEdges]);
+    
+    // Update proximity states for next iteration
+    const newProximityStates: Record<string, string | null> = {};
+    nodes.forEach((n: any) => {
+      if (n.id !== node.id) {
+        const distance = calculateDistance(node, n);
+        newProximityStates[n.id] = getProximityLevel(distance);
+      }
+    });
+    setPreviousProximityStates(newProximityStates);
+  }, [draggingNode, nodes, currentSensitivity, previousProximityStates, greenZoneTimer]);
 
   // Handle drag stop
   const onNodeDragStop = useCallback((event: any, node: Node) => {
-    console.log(`🛑 Seeker deactivated: ${node.data.name}`);
+    console.log(`🎯 Seeker deactivated: ${node.data.name}`);
     setDraggingNode(null);
     
-    // Clear all timers
-    Object.values(greenZoneTimer).forEach(timer => {
-      if (timer) clearTimeout(timer);
-    });
-    setGreenZoneTimer({});
-    
-    // Deactivate all magnetic states and proximity levels, clear seeker flag
+    // Clear all proximity states
     setNodes((currentNodes: any) => 
       currentNodes.map((n: any) => ({
         ...n,
@@ -755,300 +550,142 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
         }
       }))
     );
-    
-    setPreviousProximityStates({});
-  }, [greenZoneTimer, setNodes]);
+  }, [setNodes]);
 
-  // Handle connection
+  // Handle manual connections
   const onConnect = useCallback((params: Connection) => {
-    console.log('Manual connection created:', params);
-  }, []);
+    console.log(`🔗 Manual connection: ${params.source} → ${params.target}`);
+    const newEdge = {
+      ...params,
+      type: 'smoothstep',
+      animated: true,
+      label: '25%',
+      style: { 
+        strokeWidth: 2, 
+        stroke: '#6b7280' 
+      },
+    };
+    setEdges(eds => addEdge(newEdge, eds));
+  }, [setEdges]);
 
-  // Hover callback handler
-  const handleNodeHover = useCallback((data: any, position: { x: number; y: number } | null, visible: boolean) => {
-    if (visible) {
-      // Only show hover card if not dragging anything
-      if (!draggingNode) {
-        setHoveredNode(data);
-        setHoverPosition(position);
-        setShowHoverCard(true);
-      }
-    } else {
-      // Always hide hover card when visibility is false
-      setShowHoverCard(false);
-      setHoveredNode(null);
-      setHoverPosition(null);
-    }
-  }, [draggingNode]);
-
-  // Node click handler for opening edit panel
+  // Handle node click for editing
   const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
-    // Find the entity for this node
+    event.stopPropagation();
     const entity = entities.find(e => e.id === node.id);
     if (entity) {
       setSelectedEntity(entity);
       setEditPanelOpen(true);
-      // Hide hover card when edit panel opens
-      setShowHoverCard(false);
-      console.log(`📝 Opening edit panel for entity: ${entity.name}`);
     }
   }, [entities]);
 
   // Handle entity updates from edit panel
   const handleEntityUpdated = useCallback(async (updatedEntity: Entity) => {
-    // Update entities state
-    setEntities(prev => prev.map(e => e.id === updatedEntity.id ? updatedEntity : e));
-    
-    // Update node data in canvas
-    setNodes((currentNodes: any) => 
-      currentNodes.map((node: any) => {
-        if (node.id === updatedEntity.id) {
-          return {
-            ...node,
-            data: {
-              ...node.data,
-              name: updatedEntity.name,
-              type: updatedEntity.type,
-              jurisdiction: updatedEntity.jurisdiction
-            }
-          };
-        }
-        return node;
-      })
-    );
-
-    console.log(`🔄 Canvas updated for entity: ${updatedEntity.name}`);
+    try {
+      // Update entity in service
+      await unifiedEntityService.updateEntity(updatedEntity.id, updatedEntity, 'canvas-edit');
+      
+      // Update local entities state
+      setEntities(prev => prev.map(e => e.id === updatedEntity.id ? updatedEntity : e));
+      
+      // Update node data in canvas
+      setNodes((currentNodes: any) => 
+        currentNodes.map((node: any) => 
+          node.id === updatedEntity.id 
+            ? { ...node, data: { ...node.data, name: updatedEntity.name, type: updatedEntity.type } }
+            : node
+        )
+      );
+      
+      console.log(`✅ Entity updated: ${updatedEntity.name}`);
+    } catch (error) {
+      console.error('Failed to update entity:', error);
+    }
   }, [setNodes]);
-
-  // Canvas state persistence functionality
-  const saveCanvasState = useCallback(async (nodesToSave: Node[], edgesToSave: Edge[]) => {
-    try {
-      const canvasState = {
-        nodes: nodesToSave.map(node => ({
-          id: node.id,
-          position: node.position,
-          data: node.data
-        })),
-        edges: edgesToSave.map(edge => ({
-          id: edge.id,
-          source: edge.source,
-          target: edge.target,
-          sourceHandle: edge.sourceHandle,
-          targetHandle: edge.targetHandle,
-          label: edge.label
-        })),
-        timestamp: Date.now()
-      };
-      localStorage.setItem('canvasState', JSON.stringify(canvasState));
-      console.log('Canvas state saved successfully');
-    } catch (error) {
-      console.error('Error saving canvas state:', error);
-    }
-  }, []);
-
-  const loadCanvasState = useCallback(() => {
-    try {
-      const savedState = localStorage.getItem('canvasState');
-      if (savedState) {
-        const parsedState = JSON.parse(savedState);
-        if (Date.now() - parsedState.timestamp < 24 * 60 * 60 * 1000) {
-          console.log('Canvas state loaded from localStorage');
-          return parsedState;
-        }
-      }
-    } catch (error) {
-      console.error('Error loading canvas state:', error);
-    }
-    return null;
-  }, []);
-
-  // Node types configuration with hover support and click handling - memoized to prevent React Flow warnings
-  const nodeTypes = useMemo(() => ({
-    entity: (props: any) => <EntityNode {...props} onNodeHover={handleNodeHover} />,
-  }), [handleNodeHover]);
-
-  // Clear recent edges when they get old
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setRecentEdges([]);
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [recentEdges]);
 
   // ESC key handler for undoing recent connections
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && recentEdges.length > 0) {
+      if (event.key === 'Escape') {
         event.preventDefault();
-        const lastEdgeId = recentEdges[recentEdges.length - 1];
         
-        setEdges((currentEdges: any) => currentEdges.filter((edge: any) => edge.id !== lastEdgeId));
-        setRecentEdges(currentRecent => currentRecent.slice(0, -1));
-        
-        console.log(`🔙 Undid connection: ${lastEdgeId}`);
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [recentEdges, setEdges]);
-
-  // Global mouse move handler to clear hover cards when mouse moves away from canvas
-  useEffect(() => {
-    const handleGlobalMouseMove = (event: MouseEvent) => {
-      // If not dragging and hover card is visible, check if mouse is still over a node
-      if (!draggingNode && showHoverCard) {
-        const canvasElement = document.querySelector('.react-flow');
-        if (canvasElement) {
-          const rect = canvasElement.getBoundingClientRect();
-          const isOverCanvas = event.clientX >= rect.left && 
-                              event.clientX <= rect.right && 
-                              event.clientY >= rect.top && 
-                              event.clientY <= rect.bottom;
-          
-          // If mouse is not over canvas, clear hover card
-          if (!isOverCanvas) {
-            setShowHoverCard(false);
-            setHoveredNode(null);
-            setHoverPosition(null);
-          }
+        if (editPanelOpen) {
+          // Close edit panel first
+          setEditPanelOpen(false);
+          setSelectedEntity(null);
+        } else if (recentEdges.length > 0) {
+          // Undo recent connection
+          const lastEdgeId = recentEdges[recentEdges.length - 1];
+          setEdges((currentEdges: any) => currentEdges.filter((edge: any) => edge.id !== lastEdgeId));
+          setRecentEdges(currentRecent => currentRecent.slice(0, -1));
+          console.log(`🔙 Undid connection: ${lastEdgeId}`);
         }
       }
     };
 
-    document.addEventListener('mousemove', handleGlobalMouseMove);
-    return () => document.removeEventListener('mousemove', handleGlobalMouseMove);
-  }, [draggingNode, showHoverCard]);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [recentEdges, setEdges, editPanelOpen]);
+
+  // Node types configuration
+  const nodeTypes = useMemo(() => ({
+    entity: EntityNode,
+  }), []);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-lg">Loading Working Bump Connect...</div>
+      <div className="flex items-center justify-center h-screen bg-white">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-lg font-medium text-gray-900">Loading canvas...</div>
+          <div className="text-sm text-gray-500 mt-1">Preparing organizational structure</div>
+        </div>
       </div>
     );
   }
-  
+
   return (
-    <div className="w-full h-full relative">
-      {/* Professional Chart Header */}
-      <div className="absolute top-4 left-4 z-50 bg-white p-4 rounded-lg shadow-lg border">
-        <h1 className="text-lg font-bold text-gray-900 mb-1">TechFlow Inc. Organizational Structure</h1>
-        <p className="text-sm text-gray-600 mb-2">Post-Series A Capitalization Table</p>
-        <div className="flex items-center space-x-4 text-xs">
-          <div className="flex items-center space-x-1">
-            <div className="w-3 h-0.5 bg-blue-600"></div>
-            <span>Founders/Management</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-3 h-0.5 bg-green-600"></div>
-            <span>Institutional Investors</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-3 h-0.5 bg-red-600"></div>
-            <span>Early Stage</span>
-          </div>
-          <div className="flex items-center space-x-1">
-            <div className="w-3 h-0.5 bg-blue-800"></div>
-            <span>Subsidiaries</span>
-          </div>
+    <div className="w-full h-screen bg-white flex">
+      {/* Main Canvas */}
+      <div className="flex-1 relative">
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onConnect={onConnect}
+          onNodeDragStart={onNodeDragStart}
+          onNodeDrag={onNodeDrag}
+          onNodeDragStop={onNodeDragStop}
+          onNodeClick={handleNodeClick}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.2 }}
+          className="bg-gray-50"
+          connectionLineStyle={{ stroke: '#3b82f6', strokeWidth: 2 }}
+          defaultEdgeOptions={{ type: 'smoothstep', animated: false }}
+        >
+          <Background variant={'dots' as BackgroundVariant} gap={20} size={1} />
+        </ReactFlow>
+
+        {/* Professional Chart Header */}
+        <div className="absolute top-6 left-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <h1 className="text-lg font-semibold text-gray-900 mb-1">TechFlow Inc. Organizational Structure</h1>
+          <p className="text-sm text-gray-600">Post-Series A Capitalization Table</p>
         </div>
       </div>
 
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        onNodeDragStart={onNodeDragStart}
-        onNodeDrag={onNodeDrag}
-        onNodeDragStop={onNodeDragStop}
-        onNodeClick={handleNodeClick}
-        onConnect={onConnect}
-        fitView
-        className="bg-white"
-        minZoom={0.4}
-        maxZoom={1.5}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.85 }}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Controls 
-          position="bottom-right"
-          showZoom={true}
-          showFitView={true}
-          showInteractive={false}
-          style={{
-            background: 'white',
-            border: '1px solid #e5e7eb',
-            borderRadius: '8px',
-            boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
+      {/* Entity Edit Panel */}
+      {editPanelOpen && selectedEntity && (
+        <EntityEditPanel
+          entity={selectedEntity}
+          isOpen={editPanelOpen}
+          onClose={() => {
+            setEditPanelOpen(false);
+            setSelectedEntity(null);
           }}
-        />
-        <Background 
-          variant="dots" 
-          gap={25} 
-          size={1.2} 
-          color="#f3f4f6"
-          style={{ backgroundColor: '#fafafa' }}
-        />
-      </ReactFlow>
-      
-      {/* Status Display */}
-      {draggingNode && (
-        <div className="absolute top-4 left-4 bg-white p-4 rounded-lg shadow-lg z-50 border">
-          <div className="font-semibold text-gray-800 mb-1">
-            🎯 Seeker: {draggingNode.data.name}
-          </div>
-          <div className="text-sm text-gray-600 mb-1">
-            Active Zones: {nodes.filter((n: any) => n.data.proximityLevel).length}
-          </div>
-          <div className="text-sm">
-            Connection Ready: <span className={nodes.some((n: any) => n.data.proximityLevel === 'CONNECTION') ? 'text-green-600 font-bold' : 'text-gray-400'}>
-              {nodes.some((n: any) => n.data.proximityLevel === 'CONNECTION') ? `YES (Hold ${currentSensitivity.dwellTime}ms)` : 'NO'}
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Connection Stats Overlay */}
-      <div className="absolute top-4 right-4 bg-white rounded-lg shadow-lg p-4 min-w-[200px] border">
-        <div className="text-sm font-semibold text-gray-800 mb-2">Connection Statistics</div>
-        <div className="space-y-1 text-xs text-gray-600">
-          <div>Total Entities: {nodes.filter((n: any) => n.data.type !== 'Individual').length}</div>
-          <div>Active Connections: {edges.length}</div>
-          <div>Recent Connections: {recentEdges.length}</div>
-          <div>Magnetic Range: {currentSensitivity.approachZone}px</div>
-          <div>Connect Zone: {currentSensitivity.connectionZone}px</div>
-          <div>Dwell Time: {currentSensitivity.dwellTime}ms</div>
-        </div>
-      </div>
-
-      {/* Undo Hint */}
-      {recentEdges.length > 0 && (
-        <div className="absolute bottom-4 right-4 bg-black bg-opacity-80 text-white px-3 py-2 rounded-lg text-sm z-50">
-          Press ESC to undo ({recentEdges.length} available)
-        </div>
-      )}
-
-      {/* Professional Entity Information Panel */}
-      {showHoverCard && hoveredNode && hoverPosition && (
-        <EntityInfoPanel
-          data={hoveredNode}
-          position={hoverPosition}
-          visible={showHoverCard}
+          onEntityUpdated={handleEntityUpdated}
         />
       )}
-
-      {/* In-Canvas Entity Edit Panel */}
-      <EntityEditPanel
-        entity={selectedEntity}
-        isOpen={editPanelOpen}
-        onClose={() => {
-          setEditPanelOpen(false);
-          setSelectedEntity(null);
-        }}
-        onEntityUpdated={handleEntityUpdated}
-      />
     </div>
   );
 }
