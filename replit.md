@@ -125,6 +125,14 @@ The application uses a unified repository pattern with enterprise-grade data man
 
 ## Changelog
 
+### June 20, 2025 - Speech Bubble Hover System Complete
+- **Speech Bubble Redesign**: Transformed hover cards into speech bubbles emerging from top-right corner of nodes
+- **Dynamic Node Scaling**: Hover cards now scale proportionally with node size for visual consistency
+- **Intelligent Positioning**: Smart viewport detection with automatic flip logic for screen edge handling
+- **Multi-Directional Tails**: CSS speech bubble tails adapt direction based on positioning (left/right/top)
+- **Enhanced Visual Polish**: Refined card sizing, spacing, and typography for professional appearance
+- **Seamless Integration**: Speech bubbles feel naturally connected to nodes with proper offset and scaling
+
 ### June 20, 2025 - Hover Card System Perfected
 - **Complete Hover Card Fix**: Resolved persistent hover card issue through first principles debugging approach
 - **Mouse Event Flow Optimization**: Fixed conditional logic that was blocking hover card display during seeker node states
