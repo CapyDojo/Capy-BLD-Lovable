@@ -99,8 +99,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, sensitivi
               </div>
               <input
                 type="range"
-                min="100"
-                max="300"
+                min="120"
+                max="340"
                 step="10"
                 value={sensitivity.approachZone}
                 onChange={(e) => setSensitivity((prev: any) => ({ ...prev, approachZone: parseInt(e.target.value) }))}
@@ -116,8 +116,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, sensitivi
               </div>
               <input
                 type="range"
-                min="60"
-                max="200"
+                min="80"
+                max="240"
                 step="10"
                 value={sensitivity.connectionZone}
                 onChange={(e) => setSensitivity((prev: any) => ({ ...prev, connectionZone: parseInt(e.target.value) }))}
@@ -134,7 +134,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, sensitivi
               <input
                 type="range"
                 min="100"
-                max="1000"
+                max="1200"
                 step="100"
                 value={sensitivity.dwellTime}
                 onChange={(e) => setSensitivity((prev: any) => ({ ...prev, dwellTime: parseInt(e.target.value) }))}
@@ -145,7 +145,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, sensitivi
             {/* Preset Buttons */}
             <div className="flex gap-1 mt-3">
               <button
-                onClick={() => setSensitivity({ approachZone: 280, connectionZone: 160, dwellTime: 100 })}
+                onClick={() => setSensitivity({ approachZone: 320, connectionZone: 200, dwellTime: 200 })}
                 className="flex-1 px-2 py-1 text-xs bg-red-100 text-red-700 rounded hover:bg-red-200 transition-colors"
               >
                 Easy
@@ -157,7 +157,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, sensitivi
                 Normal
               </button>
               <button
-                onClick={() => setSensitivity({ approachZone: 140, connectionZone: 80, dwellTime: 600 })}
+                onClick={() => setSensitivity({ approachZone: 200, connectionZone: 100, dwellTime: 500 })}
                 className="flex-1 px-2 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 transition-colors"
               >
                 Precise
