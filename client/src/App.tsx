@@ -11,7 +11,7 @@ import { CapTableEditor } from "@/components/cap-table/CapTableEditor";
 import BumpConnect from "@/components/canvas/BumpConnect";
 import PureBumpConnect from "@/components/canvas/PureBumpConnect";
 import SimpleBumpConnect from "@/components/canvas/SimpleBumpConnect";
-import WorkingBumpConnect from "@/components/canvas/WorkingBumpConnect";
+import WorkingBumpConnect from "@/components/canvas/WorkingBumpConnectFixed";
 import { DocumentRepository } from "@/components/documents/DocumentRepository";
 import { ComplianceTimeline } from "@/components/compliance/ComplianceTimeline";
 
