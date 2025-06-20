@@ -380,8 +380,99 @@ export default function WorkingBumpConnect({ sensitivity }: WorkingBumpConnectPr
         
         setNodes(initialNodes as any);
         
-        const initialEdges: any[] = [];
-        setEdges(initialEdges);
+        // Create sample ownership edges for TechFlow startup structure
+        const sampleEdges = [
+          // Founders to TechFlow Inc
+          {
+            id: 'edge-alex-techflow',
+            source: 'entity-alex-chen',
+            target: 'entity-techflow-inc',
+            sourceHandle: 'bottom',
+            targetHandle: 'top-target',
+            type: 'smoothstep',
+            animated: false,
+            label: '5.25M shares (35%)',
+            style: { strokeWidth: 2, stroke: '#6366f1' },
+            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
+          },
+          {
+            id: 'edge-jordan-techflow',
+            source: 'entity-jordan-patel',
+            target: 'entity-techflow-inc',
+            sourceHandle: 'bottom',
+            targetHandle: 'top-target',
+            type: 'smoothstep',
+            animated: false,
+            label: '4.5M shares (30%)',
+            style: { strokeWidth: 2, stroke: '#6366f1' },
+            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
+          },
+          {
+            id: 'edge-sam-techflow',
+            source: 'entity-sam-rivera',
+            target: 'entity-techflow-inc',
+            sourceHandle: 'bottom',
+            targetHandle: 'top-target',
+            type: 'smoothstep',
+            animated: false,
+            label: '300K shares (2%)',
+            style: { strokeWidth: 2, stroke: '#6366f1' },
+            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
+          },
+          // Investors to TechFlow Inc
+          {
+            id: 'edge-sequoia-techflow',
+            source: 'entity-sequoia-capital',
+            target: 'entity-techflow-inc',
+            sourceHandle: 'bottom',
+            targetHandle: 'top-target',
+            type: 'smoothstep',
+            animated: false,
+            label: '3M shares (15%)',
+            style: { strokeWidth: 2, stroke: '#059669' },
+            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
+          },
+          {
+            id: 'edge-a16z-techflow',
+            source: 'entity-andreessen-horowitz',
+            target: 'entity-techflow-inc',
+            sourceHandle: 'bottom',
+            targetHandle: 'top-target',
+            type: 'smoothstep',
+            animated: false,
+            label: '1M shares (8%)',
+            style: { strokeWidth: 2, stroke: '#059669' },
+            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
+          },
+          {
+            id: 'edge-first-round-techflow',
+            source: 'entity-first-round',
+            target: 'entity-techflow-inc',
+            sourceHandle: 'bottom',
+            targetHandle: 'top-target',
+            type: 'smoothstep',
+            animated: false,
+            label: '2M shares (8%)',
+            style: { strokeWidth: 2, stroke: '#dc2626' },
+            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
+          },
+          // TechFlow Inc to subsidiary
+          {
+            id: 'edge-techflow-europe',
+            source: 'entity-techflow-inc',
+            target: 'entity-techflow-europe',
+            sourceHandle: 'bottom',
+            targetHandle: 'top-target',
+            type: 'smoothstep',
+            animated: false,
+            label: '1M shares (100%)',
+            style: { strokeWidth: 2, stroke: '#6366f1' },
+            labelStyle: { fontSize: 12, fontWeight: 'bold', fill: '#374151' }
+          }
+        ];
+        
+        setEdges(sampleEdges);
+        console.log(`Loaded ${sampleEdges.length} ownership edges for TechFlow startup structure`);
         
         setLoading(false);
         console.log('Working Bump Connect initialized');
